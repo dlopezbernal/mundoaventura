@@ -1,0 +1,32 @@
+# ─── Entornos virtuales de Python ───────────────────────────────
+# No versionamos el venv: cada máquina recrea el suyo con los requirements.
+venv/
+.venv/
+env/
+
+# ─── Cachés y temporales de Python ──────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# ─── Variables de entorno ───────────────────────────────────────
+# .env contiene configuración local (URLs, rutas). Solo se versiona .env.example.
+.env
+
+# ─── Modelos de IA (pesados) ────────────────────────────────────
+# Los pesos de los modelos NO se suben al repositorio (pesan cientos de MB).
+# Stable Diffusion se cachea en la caché de Hugging Face, no aquí.
+backend/models/*.pth
+backend/models/*.pt
+backend/models/*.safetensors
+
+# ─── Salidas / archivos generados durante pruebas ───────────────
+*.log
+outputs/
+
+# ─── Sistema operativo / editores ───────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

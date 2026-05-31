@@ -1,0 +1,20 @@
+# =====================================================================
+#  DEPENDENCIAS DEL BACKEND (servidor de IA)
+# ---------------------------------------------------------------------
+#  Instálalas dentro de tu entorno virtual con:
+#       pip install -r requirements-backend.txt
+#
+#  Ya NO se genera en local: la generación de imágenes se delega a
+#  Replicate.com (su GPU). Por eso este backend es MUY ligero: no
+#  necesita torch, diffusers, transformers ni rembg.
+# =====================================================================
+
+# --- Generación de imágenes (en la nube) ---
+replicate                 # Cliente de la API de Replicate.com (envía el prompt, recibe la imagen)
+
+# --- Servidor web / API ---
+fastapi                   # Framework de la API REST
+uvicorn[standard]         # Servidor ASGI que ejecuta la app FastAPI
+python-multipart          # Recibir la foto subida (modo "Usar mi foto")
+pydantic                  # Validación de datos de entrada/salida (lo usa FastAPI)
+python-dotenv             # Carga la configuración desde el archivo .env

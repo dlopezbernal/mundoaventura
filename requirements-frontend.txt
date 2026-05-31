@@ -1,0 +1,15 @@
+# =====================================================================
+#  DEPENDENCIAS DEL FRONTEND (interfaz de usuario)
+# ---------------------------------------------------------------------
+#  Instálalas con:
+#       pip install -r requirements-frontend.txt
+#
+#  Fíjate que aquí NO está PyTorch ni los modelos de IA: el frontend es
+#  ligero y solo necesita dibujar la interfaz y hablar con el backend por
+#  HTTP. Así puedes tener el frontend en tu PC y el backend pesado en Colab.
+# =====================================================================
+
+flet==0.28.3              # Framework de interfaz gráfica (API pre-0.80; el código usa ft.app, ImageFit, FilePicker por callback)
+requests                  # Cliente HTTP para llamar a la API del backend
+pillow                    # Manejo de imágenes en el cliente (tamaños, etc.)
+python-dotenv             # Lee BACKEND_URL desde el archivo .env

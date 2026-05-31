@@ -1,0 +1,4 @@
+# Esta carpeta guarda los checkpoints de los modelos (archivos .pth).
+# Los .pth NO se versionan (ver .gitignore); se descargan con:
+#     python scripts/download_models.py
+# Este archivo .gitkeep solo existe para que la carpeta no quede vacía en git.
