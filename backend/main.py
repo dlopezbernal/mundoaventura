@@ -17,7 +17,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend import config
-from backend.routers import generation
+from backend.routers import conversacion, generation
+from backend.services import translation_service
 
 # ---------------------------------------------------------------------------
 # 1) Crear la aplicación
@@ -48,8 +49,10 @@ app.add_middleware(
 # 3) Enchufar los routers (los endpoints de cada fase)
 # ---------------------------------------------------------------------------
 # Generación de la escena (ubicación + personaje) con Replicate.
-# (Las fases de voz/RAG se añadirán aquí en su momento.)
 app.include_router(generation.router)
+# Conversación con el personaje (RAG: ChromaDB + LLM en Replicate).
+# (La entrada por voz con Whisper se añadirá en el siguiente paso.)
+app.include_router(conversacion.router)
 
 
 # ---------------------------------------------------------------------------
@@ -60,16 +63,34 @@ def root():
     """Mensaje de bienvenida. Útil para comprobar que el server responde."""
     return {
         "proyecto": "Máquina del Tiempo en tu Habitación",
-        "fases_activas": ["Elegir ubicación + personaje → escena (Replicate)"],
+        "fases_activas": [
+            "Elegir ubicación + personaje → escena (Replicate)",
+            "Conversar con el personaje por texto (RAG: ChromaDB + LLM)",
+        ],
         "documentacion": "/docs",
     }
 
 
+@app.on_event("startup")
+def _verificar_dependencias():
+    """Al arrancar, comprueba que DeepL está disponible (es obligatorio).
+
+    No detenemos el servidor si falla (para que /docs y /health sigan accesibles),
+    pero avisamos claramente: el chat no funcionará hasta configurar DeepL.
+    """
+    est = translation_service.estado()
+    if est["deepl_ok"]:
+        print("[Arranque] DeepL conectado. ✅")
+    else:
+        print("[Arranque] ⚠️  DeepL NO disponible (OBLIGATORIO para el chat):")
+        print(f"[Arranque]     {est['deepl_mensaje']}")
+
+
 @app.get("/health", tags=["Info"])
 def health():
-    """Comprobación de estado: confirma el modelo de Replicate y si hay token.
+    """Comprobación de estado: token de Replicate, modelo, y conexión con DeepL.
 
     Devuelve la configuración actual. Muy útil para verificar de un vistazo que
-    el token de Replicate está configurado.
+    todo lo necesario (Replicate y DeepL) está bien configurado.
     """
-    return {"status": "ok", **config.describe()}
+    return {"status": "ok", **config.describe(), **translation_service.estado()}

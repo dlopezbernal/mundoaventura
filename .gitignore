@@ -21,6 +21,9 @@ backend/models/*.pth
 backend/models/*.pt
 backend/models/*.safetensors
 
+# ─── Base vectorial de ChromaDB (se regenera con: python -m backend.ingest) ─
+backend/chroma_db/
+
 # ─── Salidas / archivos generados durante pruebas ───────────────
 *.log
 outputs/

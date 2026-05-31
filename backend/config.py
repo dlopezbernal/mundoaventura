@@ -66,6 +66,83 @@ IMG_OUTPUT_FORMAT: str = os.getenv("IMG_OUTPUT_FORMAT", "png").strip()
 IMG_NUM_STEPS: int = int(os.getenv("IMG_NUM_STEPS", "4"))
 
 
+# ---------------------------------------------------------------------------
+# 3) Conversación (RAG): LLM en Replicate + base vectorial ChromaDB
+# ---------------------------------------------------------------------------
+# Modelo de lenguaje que responde como el personaje. Por defecto Llama 3 (8B):
+# rápido, barato y suficientemente bueno para respuestas cortas para niños.
+REPLICATE_LLM_MODEL: str = os.getenv(
+    "REPLICATE_LLM_MODEL", "meta/meta-llama-3-8b-instruct"
+).strip()
+
+# Tope de longitud de la respuesta del LLM (en "tokens" ≈ trozos de palabra).
+LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "300"))
+
+# Cuántas fichas recupera ChromaDB por pregunta para dárselas al LLM como contexto.
+RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "3"))
+
+# --- Evaluator: cómo se decide si una pregunta se responde con el RAG o no ---
+# Modos (ver rag_service.py):
+#   "umbral"  → SOLO la distancia de ChromaDB decide (gratis, sin LLM).
+#   "llm"     → SOLO el LLM-juez decide (más listo, pero cuesta una llamada extra).
+#   "hibrido" → el umbral resuelve los casos claros (gratis) y el LLM solo desempata
+#               los dudosos. Mejor relación calidad/coste. (Recomendado)
+EVALUATOR_MODE: str = os.getenv("EVALUATOR_MODE", "hibrido").strip().lower()
+if EVALUATOR_MODE not in ("umbral", "llm", "hibrido"):
+    EVALUATOR_MODE = "hibrido"  # valor seguro si el .env trae algo raro
+
+# Umbrales de DISTANCIA de ChromaDB (métrica coseno: 0 = idéntico, 2 = opuesto).
+#   distancia <= BAJO  → claramente relevante  (RAG)
+#   distancia >= ALTO  → claramente irrelevante (GENERAL)
+#   entre ambos        → "dudoso" (en modo híbrido, lo desempata el LLM)
+# Son ORIENTATIVOS: actívate DEBUG (muestra "d=...") y ajústalos a tus preguntas.
+# Valores calibrados CON traducción activa (pregunta y fichas en inglés):
+# los aciertos caen ~0.68 (< BAJO → RAG gratis) y lo irrelevante ~0.95+ (≥ ALTO).
+EVALUATOR_UMBRAL_BAJO: float = float(os.getenv("EVALUATOR_UMBRAL_BAJO", "0.75"))
+EVALUATOR_UMBRAL_ALTO: float = float(os.getenv("EVALUATOR_UMBRAL_ALTO", "0.95"))
+
+# --- Traducción (DeepL) ---
+# Los documentos están en INGLÉS (mejora la calidad de los embeddings). Para
+# buscar bien, traducimos la pregunta del niño ES→EN con DeepL antes del retrieval.
+# Sin clave, el sistema sigue funcionando (busca con la pregunta en español, peor).
+# Consigue una clave gratis (500.000 caracteres/mes) en https://www.deepl.com/pro-api
+DEEPL_API_KEY: str = os.getenv("DEEPL_API_KEY", "").strip()
+
+# Carpeta donde ChromaDB guarda su índice vectorial (persistente entre reinicios).
+CHROMA_DIR: Path = (PROJECT_ROOT / os.getenv("CHROMA_DIR", "backend/chroma_db")).resolve()
+
+# --- Ingesta de documentos (chunking) ---
+# Carpeta raíz de los documentos, organizada por personaje:
+#   backend/documentos/<personaje_id>/<archivo.pdf|.txt|.md>
+DOCUMENTOS_DIR: Path = (
+    PROJECT_ROOT / os.getenv("DOCUMENTOS_DIR", "backend/documentos")
+).resolve()
+
+# Troceado (chunking) con solape, en caracteres:
+#   CHUNK_SIZE    → tamaño de cada fragmento.
+#   CHUNK_OVERLAP → cuántos caracteres se repiten entre un chunk y el siguiente,
+#                   para no perder ideas que queden partidas en la frontera.
+CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "800"))
+CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "120"))
+
+# Nombre de la colección de ChromaDB donde viven los chunks de los documentos.
+CHROMA_COLLECTION: str = os.getenv("CHROMA_COLLECTION", "documentos_en")
+
+
+def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
+    """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""
+    return os.getenv(nombre, por_defecto).strip().lower() in ("1", "true", "yes", "on")
+
+
+# ---------------------------------------------------------------------------
+# 4) Modo desarrollo
+# ---------------------------------------------------------------------------
+# Cuando DEBUG está activo, el frontend muestra una etiqueta de origen en cada
+# respuesta del chat ([RAG] / [LLM]) para ver de dónde sale la información.
+# En la versión final para el usuario se deja en false (respuestas limpias).
+DEBUG: bool = _leer_bool("DEBUG", "false")
+
+
 def describe() -> dict:
     """Devuelve la configuración actual en forma de diccionario.
 
@@ -75,7 +152,13 @@ def describe() -> dict:
     return {
         "replicate_model": REPLICATE_MODEL,
         "replicate_edit_model": REPLICATE_EDIT_MODEL,
+        "replicate_llm_model": REPLICATE_LLM_MODEL,
         "aspect_ratio": IMG_ASPECT_RATIO,
         "output_format": IMG_OUTPUT_FORMAT,
         "token_configurado": bool(REPLICATE_API_TOKEN),
+        "evaluator_mode": EVALUATOR_MODE,
+        "evaluator_umbral_bajo": EVALUATOR_UMBRAL_BAJO,
+        "evaluator_umbral_alto": EVALUATOR_UMBRAL_ALTO,
+        "deepl_configurado": bool(DEEPL_API_KEY),
+        "debug": DEBUG,
     }

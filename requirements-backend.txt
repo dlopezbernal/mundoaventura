@@ -9,8 +9,18 @@
 #  necesita torch, diffusers, transformers ni rembg.
 # =====================================================================
 
-# --- Generación de imágenes (en la nube) ---
-replicate                 # Cliente de la API de Replicate.com (envía el prompt, recibe la imagen)
+# --- Generación de imágenes y conversación (en la nube) ---
+replicate                 # Cliente de Replicate.com: genera imágenes y consulta el LLM (chat)
+
+# --- Conversación / RAG ---
+chromadb                  # Base de datos vectorial local (CPU). Guarda e indexa los chunks.
+                          # Trae su propio modelo de embeddings (onnx, CPU): no necesita torch ni claves.
+deepl                     # Cliente de la API de DeepL: traduce la pregunta ES→EN para mejorar la
+                          # recuperación (los embeddings funcionan mejor sobre texto en inglés).
+
+# --- Ingesta de documentos ---
+langchain-text-splitters  # Troceado (chunking) con solape: RecursiveCharacterTextSplitter.
+pypdf                     # Lectura del texto de archivos PDF.
 
 # --- Servidor web / API ---
 fastapi                   # Framework de la API REST

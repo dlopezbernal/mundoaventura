@@ -13,16 +13,45 @@ Arráncala con:
     flet run frontend/main.py
 """
 
+import os
 import threading
 
 import flet as ft
 
-import api_client
+import api_client  # al importarse, carga el .env (incluida la variable DEBUG)
 from personajes import GRUPOS, PERSONAJES, personajes_de_grupo
 from ubicaciones import UBICACIONES
 
 # Id especial (no es una ubicación real) para el modo "Usar mi foto".
 FOTO_ID = "__foto__"
+
+# Modo desarrollo: si DEBUG está activo, el chat muestra una etiqueta de origen
+# ([RAG]/[LLM]) en cada respuesta. En la versión final para el usuario, no.
+DEBUG = os.getenv("DEBUG", "false").strip().lower() in ("1", "true", "yes", "on")
+
+# Icono según el origen de la respuesta (solo se muestra si DEBUG).
+ICONO_ORIGEN = {
+    "RAG": "🟢",       # fundamentada en la enciclopedia
+    "GENERAL": "🟡",   # conocimiento propio del modelo (no RAG)
+}
+
+
+def construir_tag_debug(result: dict) -> str:
+    """Crea la etiqueta de depuración con origen + método + distancia.
+
+    Ej.: "🟢 [RAG · umbral · d=0.42] "  ó  "🟡 [GENERAL · llm] "
+    Solo se usa cuando DEBUG está activo.
+    """
+    origen = result.get("origen", "?")
+    icono = ICONO_ORIGEN.get(origen, "⚪")
+    partes = [origen]
+    if result.get("metodo"):
+        partes.append(result["metodo"])
+    if result.get("distancia") is not None:
+        partes.append(f"d={result['distancia']:.2f}")
+    if result.get("pregunta_traducida"):
+        partes.append(f'"{result["pregunta_traducida"]}"')
+    return f"{icono} [{' · '.join(partes)}] "
 
 
 def main(page: ft.Page):
@@ -41,6 +70,7 @@ def main(page: ft.Page):
         "ubicacion_id": None,   # ubicación elegida ("laboratorio"..., o FOTO_ID)
         "personaje_id": None,   # personaje elegido
         "foto_path": None,      # ruta de la foto subida (solo en modo FOTO_ID)
+        "chat_personaje": None,  # personaje que está EN PANTALLA (al que se pregunta)
     }
 
     status_text = ft.Text("Elige un lugar y un personaje para empezar.", size=14)
@@ -208,8 +238,15 @@ def main(page: ft.Page):
             result_image.visible = True
             status_text.value = (
                 f"🎉 ¡Aquí tienes a {PERSONAJES[pid]['label']} en {nombre_lugar()}! "
-                "Prueba otra combinación."
+                "Ahora puedes hacerle preguntas abajo. 💬"
             )
+            # Activamos el chat para ESTE personaje (al que se ve en pantalla).
+            state["chat_personaje"] = pid
+            chat_titulo.value = f"💬 Habla con {PERSONAJES[pid]['label']}"
+            chat_column.controls.clear()  # nueva escena = conversación nueva
+            chat_panel.visible = True
+            pregunta_field.disabled = False
+            preguntar_button.disabled = False
         except api_client.BackendError as exc:
             status_text.value = f"❌ {exc}"
         finally:
@@ -237,6 +274,91 @@ def main(page: ft.Page):
     check_button = ft.OutlinedButton("🔌 Probar backend", on_click=on_check_backend)
 
     # -----------------------------------------------------------------------
+    # Conversación con el personaje (RAG) — aparece tras generar la escena
+    # -----------------------------------------------------------------------
+    chat_titulo = ft.Text("💬 Habla con el personaje", size=16, weight=ft.FontWeight.BOLD)
+
+    # Columna donde se van apilando las preguntas (niño) y respuestas (personaje).
+    chat_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=240)
+
+    # Caja de texto para escribir la pregunta. (La voz/micro llegará en el siguiente paso.)
+    pregunta_field = ft.TextField(
+        hint_text="Escribe tu pregunta... (ej. ¿Qué comes?)",
+        expand=True,
+        disabled=True,
+        on_submit=lambda _e: preguntar(_e),  # permite enviar con la tecla Enter
+    )
+    preguntar_button = ft.ElevatedButton("Preguntar", disabled=True)
+
+    def _add_burbuja(texto: str, es_nino: bool):
+        """Añade una 'burbuja' de conversación a la columna del chat."""
+        chat_column.controls.append(
+            ft.Container(
+                content=ft.Text(texto, size=13, selectable=True),
+                bgcolor=ft.Colors.BLUE_50 if es_nino else ft.Colors.GREEN_50,
+                padding=10,
+                border_radius=10,
+                alignment=ft.alignment.center_right if es_nino else ft.alignment.center_left,
+            )
+        )
+
+    def preguntar(_):
+        pid = state["chat_personaje"]
+        texto = (pregunta_field.value or "").strip()
+        if not pid or not texto:
+            return  # no hay personaje en pantalla o la caja está vacía
+
+        # Mostramos la pregunta del niño y limpiamos la caja.
+        _add_burbuja(f"🧒 {texto}", es_nino=True)
+        pregunta_field.value = ""
+        pregunta_field.disabled = True
+        preguntar_button.disabled = True
+        # "Pensando..." como burbuja temporal del personaje.
+        pensando = ft.Text("🤔 Pensando...", size=13, italic=True)
+        chat_column.controls.append(pensando)
+        page.update()
+
+        threading.Thread(
+            target=_run_ask, args=(pid, texto, pensando), daemon=True
+        ).start()
+
+    def _run_ask(pid: str, texto: str, pensando: ft.Text):
+        try:
+            result = api_client.ask(pid, texto)
+            respuesta = result.get("respuesta", "(sin respuesta)")
+            chat_column.controls.remove(pensando)  # quitamos el "Pensando..."
+            # En modo DEBUG anteponemos el origen + método + distancia.
+            prefijo = construir_tag_debug(result) if DEBUG else ""
+            _add_burbuja(
+                f"{prefijo}{PERSONAJES[pid]['emoji']} {respuesta}", es_nino=False
+            )
+        except api_client.BackendError as exc:
+            pensando.value = f"❌ {exc}"
+        finally:
+            pregunta_field.disabled = False
+            preguntar_button.disabled = False
+            page.update()
+
+    preguntar_button.on_click = preguntar
+
+    # Panel completo del chat (oculto hasta que se genera una escena).
+    chat_panel = ft.Container(
+        visible=False,
+        padding=12,
+        margin=ft.margin.only(top=10),
+        border=ft.border.all(1, ft.Colors.GREY_300),
+        border_radius=12,
+        content=ft.Column(
+            [
+                chat_titulo,
+                chat_column,
+                ft.Row([pregunta_field, preguntar_button]),
+            ],
+            spacing=10,
+        ),
+    )
+
+    # -----------------------------------------------------------------------
     # Montaje final de la pantalla
     # -----------------------------------------------------------------------
     page.add(
@@ -262,6 +384,7 @@ def main(page: ft.Page):
         ft.Row([generate_button]),
         ft.Row([progress, status_text], vertical_alignment=ft.CrossAxisAlignment.CENTER),
         ft.Container(content=result_image, border=ft.border.all(1, ft.Colors.GREY_300)),
+        chat_panel,
     )
 
 

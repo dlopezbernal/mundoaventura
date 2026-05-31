@@ -63,3 +63,14 @@ PROMPTS = {
         ),
     },
 }
+
+
+# Nombre con el que cada personaje se presenta al hablar en primera persona en el
+# chat (sistema RAG). Las claves deben coincidir con las de PROMPTS y con el
+# nombre de la carpeta en backend/documentos/<personaje_id>/.
+NOMBRES = {
+    "triceratops": "Triceratops",
+    "t-rex": "Tiranosaurio Rex",
+    "leonardo_da_vinci": "Leonardo da Vinci",
+    "sherlock_holmes": "Sherlock Holmes",
+}

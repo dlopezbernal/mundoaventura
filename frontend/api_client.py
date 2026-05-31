@@ -68,6 +68,34 @@ def generate(ubicacion_id: str, personaje_id: str) -> dict:
         raise BackendError(f"Fallo de conexión con el backend: {exc}")
 
 
+def ask(personaje_id: str, pregunta: str) -> dict:
+    """Envía una pregunta (texto) al personaje y devuelve su respuesta (RAG).
+
+    Devuelve un dict con, entre otros:
+      - "respuesta": el texto que dice el personaje (en primera persona).
+      - "fuentes":   las fichas de la enciclopedia en las que se apoyó.
+    """
+    url = f"{BACKEND_URL}/api/ask"
+
+    try:
+        payload = {"personaje_id": personaje_id, "pregunta": pregunta}
+        # timeout holgado: la 1ª pregunta puede tardar (ChromaDB descarga su
+        # modelo de embeddings) y luego está la latencia del LLM en Replicate.
+        response = requests.post(url, json=payload, timeout=120)
+        response.raise_for_status()
+        return response.json()
+
+    except requests.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.response.json().get("detail", "")
+        except Exception:
+            detail = exc.response.text if exc.response is not None else ""
+        raise BackendError(f"El backend devolvió un error: {detail or exc}")
+    except requests.RequestException as exc:
+        raise BackendError(f"Fallo de conexión con el backend: {exc}")
+
+
 def generate_on_photo(image_path: str, personaje_id: str) -> dict:
     """Pide al backend estilizar la foto del niño y añadir el personaje.
 
