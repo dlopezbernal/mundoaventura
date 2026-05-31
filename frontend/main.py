@@ -1,13 +1,15 @@
 """
-frontend/main.py — Interfaz de usuario
-=======================================
+frontend/main.py — Interfaz de usuario (asistente por pasos)
+============================================================
 
-Aplicación Flet que guía al niño:
-  1. Elegir un LUGAR: una ubicación predefinida (laboratorio, bosque...) o
-     "📷 Mi foto" para subir una foto suya (se estiliza a Pixar 3D y se le añade
-     el personaje encima, todo coherente).
-  2. Elegir un PERSONAJE (t-rex, Leonardo da Vinci, Sherlock Holmes...).
-  3. Pulsar «Generar»: se envía al backend, que pide la imagen a Replicate.
+Aplicación Flet con un flujo guiado, pensado para niños de 8-12 años:
+
+  Paso 1 → Elegir un PERSONAJE.
+  Paso 2 → Elegir un LUGAR (o subir "Mi foto").
+  Paso 3 → Generar la escena y conversar con el personaje (chat RAG).
+
+Estilo "infantil y vivo": cabecera con degradado, barra de progreso de pasos,
+tarjetas grandes y redondeadas con emoji, y selección resaltada con animación.
 
 Arráncala con:
     flet run frontend/main.py
@@ -25,23 +27,15 @@ from ubicaciones import UBICACIONES
 # Id especial (no es una ubicación real) para el modo "Usar mi foto".
 FOTO_ID = "__foto__"
 
-# Modo desarrollo: si DEBUG está activo, el chat muestra una etiqueta de origen
-# ([RAG]/[LLM]) en cada respuesta. En la versión final para el usuario, no.
+# Modo desarrollo: si DEBUG está activo, el chat muestra una etiqueta de origen.
 DEBUG = os.getenv("DEBUG", "false").strip().lower() in ("1", "true", "yes", "on")
 
 # Icono según el origen de la respuesta (solo se muestra si DEBUG).
-ICONO_ORIGEN = {
-    "RAG": "🟢",       # fundamentada en la enciclopedia
-    "GENERAL": "🟡",   # conocimiento propio del modelo (no RAG)
-}
+ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡"}
 
 
 def construir_tag_debug(result: dict) -> str:
-    """Crea la etiqueta de depuración con origen + método + distancia.
-
-    Ej.: "🟢 [RAG · umbral · d=0.42] "  ó  "🟡 [GENERAL · llm] "
-    Solo se usa cuando DEBUG está activo.
-    """
+    """Etiqueta de depuración: origen + método + distancia + pregunta traducida."""
     origen = result.get("origen", "?")
     icono = ICONO_ORIGEN.get(origen, "⚪")
     partes = [origen]
@@ -56,165 +50,317 @@ def construir_tag_debug(result: dict) -> str:
 
 def main(page: ft.Page):
     # -----------------------------------------------------------------------
-    # Configuración general de la ventana
+    # Configuración general y tema
     # -----------------------------------------------------------------------
-    page.title = "Máquina del Tiempo — Elige lugar y personaje"
+    page.title = "Máquina del Tiempo"
     page.theme_mode = ft.ThemeMode.LIGHT
-    page.padding = 20
+    page.theme = ft.Theme(color_scheme_seed=ft.Colors.PURPLE)
+    page.bgcolor = "#FBF7FF"
+    page.padding = 0
     page.scroll = ft.ScrollMode.AUTO
 
+    # Estilos de botón reutilizables (grandes y redondeados).
+    BTN_PRIMARY = ft.ButtonStyle(
+        shape=ft.RoundedRectangleBorder(radius=28),
+        padding=ft.padding.symmetric(horizontal=26, vertical=18),
+        text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
+    )
+    BTN_ROUND = ft.ButtonStyle(
+        shape=ft.RoundedRectangleBorder(radius=24),
+        padding=ft.padding.symmetric(horizontal=18, vertical=14),
+    )
+
     # -----------------------------------------------------------------------
-    # "Estado" de la app.
+    # Estado de la app
     # -----------------------------------------------------------------------
     state = {
-        "ubicacion_id": None,   # ubicación elegida ("laboratorio"..., o FOTO_ID)
-        "personaje_id": None,   # personaje elegido
-        "foto_path": None,      # ruta de la foto subida (solo en modo FOTO_ID)
-        "chat_personaje": None,  # personaje que está EN PANTALLA (al que se pregunta)
+        "ubicacion_id": None,    # ubicación elegida (o FOTO_ID)
+        "personaje_id": None,    # personaje elegido
+        "foto_path": None,       # ruta de la foto subida (modo FOTO_ID)
+        "chat_personaje": None,  # personaje en pantalla (al que se pregunta)
+        "paso": 0,               # paso actual del asistente (0, 1, 2)
     }
 
-    status_text = ft.Text("Elige un lugar y un personaje para empezar.", size=14)
-    progress = ft.ProgressRing(visible=False)
+    # -----------------------------------------------------------------------
+    # Controles PERSISTENTES (se crean una vez y se reutilizan entre pasos,
+    # para que su contenido —imagen, chat— no se pierda al cambiar de paso).
+    # -----------------------------------------------------------------------
+    status_text = ft.Text("", size=14, color=ft.Colors.GREY_800)
+    progress = ft.ProgressRing(visible=False, width=22, height=22)
+    summary_text = ft.Text("", size=15, weight=ft.FontWeight.BOLD)
+    result_image = ft.Image(width=460, fit=ft.ImageFit.CONTAIN, visible=False)
+    generate_button = ft.ElevatedButton(
+        "🎨  ¡Generar!", bgcolor=ft.Colors.PINK_400, color=ft.Colors.WHITE, style=BTN_PRIMARY
+    )
 
-    result_image = ft.Image(width=512, fit=ft.ImageFit.CONTAIN, visible=False)
+    # Chat (RAG)
+    chat_titulo = ft.Text("💬 Habla con el personaje", size=16, weight=ft.FontWeight.BOLD)
+    chat_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=240)
+    pregunta_field = ft.TextField(
+        hint_text="Escribe tu pregunta... (ej. ¿Qué comes?)",
+        expand=True,
+        disabled=True,
+        border_radius=16,
+    )
+    preguntar_button = ft.ElevatedButton(
+        "Preguntar", disabled=True, bgcolor=ft.Colors.PURPLE_400, color=ft.Colors.WHITE,
+        style=BTN_ROUND,
+    )
+    chat_panel = ft.Container(
+        visible=False,
+        padding=14,
+        bgcolor=ft.Colors.WHITE,
+        border=ft.border.all(1, ft.Colors.GREY_200),
+        border_radius=18,
+        content=ft.Column(
+            [chat_titulo, chat_column, ft.Row([pregunta_field, preguntar_button])],
+            spacing=10,
+        ),
+    )
 
-    tarjetas_ubicacion: dict[str, ft.Container] = {}
-    tarjetas_personaje: dict[str, ft.Container] = {}
+    # Contenedor donde se dibuja el paso actual.
+    content = ft.Container(padding=24, width=880)
 
     # -----------------------------------------------------------------------
-    # Tarjetas (mismo patrón visual para ubicaciones y personajes)
+    # Helpers de presentación
     # -----------------------------------------------------------------------
-    def crear_tarjeta(item_id: str, emoji: str, label: str, on_click) -> ft.Container:
+    def nombre_lugar() -> str:
+        if state["ubicacion_id"] == FOTO_ID:
+            return "tu foto"
+        if state["ubicacion_id"]:
+            return UBICACIONES[state["ubicacion_id"]]["label"]
+        return ""
+
+    def tarjeta(emoji: str, label: str, seleccionada: bool, on_click) -> ft.Container:
+        """Tarjeta grande y redondeada (lugar o personaje), con resalte al elegir."""
         return ft.Container(
-            width=130,
-            height=120,
+            width=140,
+            height=140,
             padding=8,
-            border=ft.border.all(3, ft.Colors.GREY_300),
-            border_radius=12,
-            bgcolor=ft.Colors.WHITE,
-            alignment=ft.alignment.center,
+            bgcolor=ft.Colors.AMBER_50 if seleccionada else ft.Colors.WHITE,
+            border=ft.border.all(4, ft.Colors.AMBER_400 if seleccionada else ft.Colors.GREY_200),
+            border_radius=24,
             ink=True,
+            on_click=on_click,
+            alignment=ft.alignment.center,
+            scale=1.06 if seleccionada else 1.0,
+            animate_scale=ft.Animation(180, ft.AnimationCurve.EASE_OUT),
+            shadow=ft.BoxShadow(
+                blur_radius=10,
+                color=ft.Colors.with_opacity(0.15, ft.Colors.BLACK),
+                offset=ft.Offset(0, 4),
+            ),
             content=ft.Column(
                 [
-                    ft.Text(emoji, size=44),
-                    ft.Text(label, size=12, text_align=ft.TextAlign.CENTER),
+                    ft.Text(emoji, size=50),
+                    ft.Text(label, size=13, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=6,
             ),
-            on_click=lambda _e, i=item_id: on_click(i),
         )
 
-    def resaltar(tarjetas: dict[str, ft.Container], elegido_id: str):
-        """Marca con borde azul la tarjeta elegida y apaga las demás."""
-        for cid, card in tarjetas.items():
-            elegido = cid == elegido_id
-            card.border = ft.border.all(
-                3, ft.Colors.BLUE_400 if elegido else ft.Colors.GREY_300
+    def build_header() -> ft.Control:
+        hero = ft.Container(
+            gradient=ft.LinearGradient(
+                begin=ft.alignment.top_left,
+                end=ft.alignment.bottom_right,
+                colors=[ft.Colors.PURPLE_400, ft.Colors.PINK_300],
+            ),
+            border_radius=24,
+            padding=24,
+            content=ft.Row(
+                [
+                    ft.Column(
+                        [
+                            ft.Text("🕰️ Máquina del Tiempo", size=26,
+                                    weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                            ft.Text("¡Viaja sin salir de tu cuarto!", size=14, color=ft.Colors.WHITE),
+                        ],
+                        expand=True,
+                        spacing=2,
+                    ),
+                    ft.OutlinedButton(
+                        "🔌 Probar conexión",
+                        on_click=on_check_backend,
+                        style=ft.ButtonStyle(
+                            color=ft.Colors.WHITE,
+                            side=ft.BorderSide(1, ft.Colors.WHITE),
+                            shape=ft.RoundedRectangleBorder(radius=20),
+                        ),
+                    ),
+                ],
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+        )
+        return ft.Column([hero, build_stepper()], spacing=16)
+
+    def build_stepper() -> ft.Control:
+        items = []
+        nombres = [("1", "Personaje"), ("2", "Lugar"), ("3", "¡Listo!")]
+        for i, (num, nom) in enumerate(nombres):
+            activo = i == state["paso"]
+            hecho = i < state["paso"]
+            color = ft.Colors.PURPLE_400 if (activo or hecho) else ft.Colors.GREY_300
+            circulo = ft.Container(
+                width=34, height=34, border_radius=17, bgcolor=color,
+                alignment=ft.alignment.center,
+                content=ft.Text("✓" if hecho else num, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
             )
-            card.bgcolor = ft.Colors.BLUE_50 if elegido else ft.Colors.WHITE
-
-    def nombre_lugar() -> str:
-        """Texto del lugar elegido (ubicación predefinida o 'tu foto')."""
-        if state["ubicacion_id"] == FOTO_ID:
-            return "tu foto"
-        return UBICACIONES[state["ubicacion_id"]]["label"]
-
-    def actualizar_estado_boton():
-        """Habilita «Generar» solo cuando hay lugar y personaje elegidos."""
-        listo = bool(state["ubicacion_id"] and state["personaje_id"])
-        generate_button.disabled = not listo
-        if listo:
-            pj = PERSONAJES[state["personaje_id"]]["label"]
-            status_text.value = (
-                f"¡Listo! Vas a crear: {pj} en {nombre_lugar()}. Pulsa «Generar». 🎨"
+            items.append(
+                ft.Row(
+                    [circulo, ft.Text(nom, weight=ft.FontWeight.BOLD if activo else ft.FontWeight.NORMAL,
+                                      color=ft.Colors.GREY_900 if activo else ft.Colors.GREY_500)],
+                    spacing=6,
+                )
             )
+            if i < 2:
+                items.append(ft.Container(width=28, height=3, bgcolor=ft.Colors.GREY_300, border_radius=2))
+        return ft.Row(items, alignment=ft.MainAxisAlignment.CENTER,
+                      vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=8)
 
+    # -----------------------------------------------------------------------
+    # Paso 1 — Lugar
+    # -----------------------------------------------------------------------
+    def build_step_lugar() -> ft.Control:
+        tarjetas = []
+        for uid, datos in UBICACIONES.items():
+            tarjetas.append(
+                tarjeta(datos["emoji"], datos["label"], state["ubicacion_id"] == uid,
+                        lambda e, i=uid: seleccionar_ubicacion(i))
+            )
+        # Tarjeta especial "Mi foto".
+        foto_sel = state["ubicacion_id"] == FOTO_ID
+        foto_label = "✓ ¡Foto lista!" if (foto_sel and state["foto_path"]) else "Mi foto"
+        tarjetas.append(tarjeta("📷", foto_label, foto_sel, lambda e: abrir_selector_foto()))
+
+        nav = ft.Row(
+            [
+                ft.OutlinedButton("←  Atrás", on_click=lambda e: ir_paso(0), style=BTN_ROUND),
+                ft.ElevatedButton("Siguiente  →", on_click=lambda e: ir_paso(2),
+                                  disabled=not state["ubicacion_id"],
+                                  bgcolor=ft.Colors.PURPLE_400, color=ft.Colors.WHITE, style=BTN_PRIMARY),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+        return ft.Column(
+            [
+                ft.Text("¿A dónde quieres viajar? 📍", size=22, weight=ft.FontWeight.BOLD),
+                ft.Row(tarjetas, wrap=True, spacing=14, run_spacing=14),
+                ft.Text("📷 Si usas tu foto, ¡saca tu cuarto vacío! 😊", size=12,
+                        italic=True, color=ft.Colors.GREY_600),
+                status_text,
+                nav,
+            ],
+            spacing=16,
+        )
+
+    # -----------------------------------------------------------------------
+    # Paso 2 — Personaje
+    # -----------------------------------------------------------------------
+    def build_step_personaje() -> ft.Control:
+        secciones = [ft.Text("¿A quién quieres conocer? 🎭", size=22, weight=ft.FontWeight.BOLD)]
+        for titulo, categorias in GRUPOS.items():
+            fila = [
+                tarjeta(datos["emoji"], datos["label"], state["personaje_id"] == pid,
+                        lambda e, i=pid: seleccionar_personaje(i))
+                for pid, datos in personajes_de_grupo(categorias)
+            ]
+            if fila:
+                secciones.append(ft.Text(titulo, size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_700))
+                secciones.append(ft.Row(fila, wrap=True, spacing=14, run_spacing=14))
+
+        nav = ft.Row(
+            [
+                ft.ElevatedButton("Siguiente  →", on_click=lambda e: ir_paso(1),
+                                  disabled=not state["personaje_id"],
+                                  bgcolor=ft.Colors.PURPLE_400, color=ft.Colors.WHITE, style=BTN_PRIMARY),
+            ],
+            alignment=ft.MainAxisAlignment.END,
+        )
+        secciones.append(nav)
+        return ft.Column(secciones, spacing=12)
+
+    # -----------------------------------------------------------------------
+    # Paso 3 — Generar + resultado + chat
+    # -----------------------------------------------------------------------
+    def build_step_generar() -> ft.Control:
+        pid = state["personaje_id"]
+        pj = PERSONAJES[pid]["label"] if pid else ""
+        emoji = PERSONAJES[pid]["emoji"] if pid else ""
+        summary_text.value = f"Vas a crear:  {emoji} {pj}  en  {nombre_lugar()}"
+        if state["chat_personaje"]:
+            chat_titulo.value = f"💬 Habla con {PERSONAJES[state['chat_personaje']]['label']}"
+
+        nav = ft.Row(
+            [
+                ft.OutlinedButton("←  Atrás", on_click=lambda e: ir_paso(1), style=BTN_ROUND),
+                ft.OutlinedButton("🔄 Empezar de nuevo", on_click=empezar_de_nuevo, style=BTN_ROUND),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        )
+        return ft.Column(
+            [
+                ft.Text("¡Ya casi! 🎉", size=22, weight=ft.FontWeight.BOLD),
+                ft.Container(summary_text, padding=14, bgcolor=ft.Colors.PURPLE_50, border_radius=14),
+                ft.Row([generate_button, progress], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
+                status_text,
+                ft.Container(result_image, alignment=ft.alignment.center),
+                chat_panel,
+                nav,
+            ],
+            spacing=16,
+        )
+
+    # -----------------------------------------------------------------------
+    # Render: dibuja el paso actual
+    # -----------------------------------------------------------------------
+    def render():
+        if state["paso"] == 0:
+            cuerpo = build_step_personaje()
+        elif state["paso"] == 1:
+            cuerpo = build_step_lugar()
+        else:
+            cuerpo = build_step_generar()
+        content.content = ft.Column([build_header(), cuerpo], spacing=20)
+        page.update()
+
+    def ir_paso(n: int):
+        state["paso"] = n
+        status_text.value = ""
+        render()
+
+    # -----------------------------------------------------------------------
+    # Selección de lugar / personaje / foto
+    # -----------------------------------------------------------------------
     def seleccionar_ubicacion(uid: str):
         state["ubicacion_id"] = uid
-        state["foto_path"] = None          # salimos del modo foto
-        foto_card_label.value = "Mi foto"
-        resaltar(tarjetas_ubicacion, uid)
-        if not state["personaje_id"]:
-            status_text.value = "Ahora elige un personaje. 🦖"
-        actualizar_estado_boton()
-        page.update()
+        state["foto_path"] = None  # salimos del modo foto
+        render()
 
     def seleccionar_personaje(pid: str):
         state["personaje_id"] = pid
-        resaltar(tarjetas_personaje, pid)
-        if not state["ubicacion_id"]:
-            status_text.value = "Ahora elige un lugar (o sube tu foto). 🧪"
-        actualizar_estado_boton()
-        page.update()
+        render()
 
-    # -----------------------------------------------------------------------
-    # Modo "Usar mi foto": tarjeta especial que abre el selector de archivos
-    # -----------------------------------------------------------------------
     def on_foto_selected(e: ft.FilePickerResultEvent):
         if not e.files:
             return  # el usuario canceló
         state["foto_path"] = e.files[0].path
         state["ubicacion_id"] = FOTO_ID
-        foto_card_label.value = "✓ ¡Foto lista!"
-        resaltar(tarjetas_ubicacion, FOTO_ID)
-        if not state["personaje_id"]:
-            status_text.value = "Ahora elige un personaje. 🦖"
-        actualizar_estado_boton()
-        page.update()
+        render()
 
     file_picker = ft.FilePicker(on_result=on_foto_selected)
     page.overlay.append(file_picker)
 
-    def abrir_selector_foto(_i):
+    def abrir_selector_foto():
         file_picker.pick_files(
             allowed_extensions=["png", "jpg", "jpeg", "bmp", "webp"],
             allow_multiple=False,
         )
 
-    foto_card_label = ft.Text("Mi foto", size=12, text_align=ft.TextAlign.CENTER)
-
     # -----------------------------------------------------------------------
-    # Catálogo de LUGARES (ubicaciones predefinidas + tarjeta "Mi foto")
-    # -----------------------------------------------------------------------
-    fila_ubicaciones = ft.Row(wrap=True, spacing=10, run_spacing=10)
-    for uid, datos in UBICACIONES.items():
-        card = crear_tarjeta(uid, datos["emoji"], datos["label"], seleccionar_ubicacion)
-        tarjetas_ubicacion[uid] = card
-        fila_ubicaciones.controls.append(card)
-
-    # Tarjeta especial "Mi foto" (usa un label mutable para mostrar "¡Foto lista!").
-    foto_card = ft.Container(
-        width=130, height=120, padding=8,
-        border=ft.border.all(3, ft.Colors.GREY_300), border_radius=12,
-        bgcolor=ft.Colors.WHITE, alignment=ft.alignment.center, ink=True,
-        content=ft.Column(
-            [ft.Text("📷", size=44), foto_card_label],
-            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            alignment=ft.MainAxisAlignment.CENTER, spacing=6,
-        ),
-        on_click=abrir_selector_foto,
-    )
-    tarjetas_ubicacion[FOTO_ID] = foto_card
-    fila_ubicaciones.controls.append(foto_card)
-
-    # -----------------------------------------------------------------------
-    # Catálogo de PERSONAJES (agrupado por categoría)
-    # -----------------------------------------------------------------------
-    personaje_controls: list[ft.Control] = []
-    for titulo, categorias in GRUPOS.items():
-        personaje_controls.append(ft.Text(titulo, size=14, weight=ft.FontWeight.BOLD))
-        fila = ft.Row(wrap=True, spacing=10, run_spacing=10)
-        for pid, datos in personajes_de_grupo(categorias):
-            card = crear_tarjeta(pid, datos["emoji"], datos["label"], seleccionar_personaje)
-            tarjetas_personaje[pid] = card
-            fila.controls.append(card)
-        personaje_controls.append(fila)
-    catalogo_personajes = ft.Column(personaje_controls, spacing=8)
-
-    # -----------------------------------------------------------------------
-    # Generar la escena (llamada al backend en un hilo aparte)
+    # Generar la escena (en un hilo aparte para no congelar la interfaz)
     # -----------------------------------------------------------------------
     def generar(_):
         if not state["ubicacion_id"] or not state["personaje_id"]:
@@ -223,7 +369,7 @@ def main(page: ft.Page):
             return
         progress.visible = True
         generate_button.disabled = True
-        status_text.value = "Generando tu escena con Replicate... 🎨 (unos segundos)"
+        status_text.value = "Generando tu escena... 🎨 (unos segundos)"
         page.update()
         threading.Thread(target=_run_generate, daemon=True).start()
 
@@ -236,17 +382,14 @@ def main(page: ft.Page):
                 result = api_client.generate(state["ubicacion_id"], pid)
             result_image.src_base64 = result["result_png_base64"]
             result_image.visible = True
-            status_text.value = (
-                f"🎉 ¡Aquí tienes a {PERSONAJES[pid]['label']} en {nombre_lugar()}! "
-                "Ahora puedes hacerle preguntas abajo. 💬"
-            )
-            # Activamos el chat para ESTE personaje (al que se ve en pantalla).
+            # Activamos el chat para ESTE personaje.
             state["chat_personaje"] = pid
             chat_titulo.value = f"💬 Habla con {PERSONAJES[pid]['label']}"
-            chat_column.controls.clear()  # nueva escena = conversación nueva
+            chat_column.controls.clear()
             chat_panel.visible = True
             pregunta_field.disabled = False
             preguntar_button.disabled = False
+            status_text.value = "🎉 ¡Listo! Ahora puedes hacerle preguntas abajo. 💬"
         except api_client.BackendError as exc:
             status_text.value = f"❌ {exc}"
         finally:
@@ -254,50 +397,16 @@ def main(page: ft.Page):
             generate_button.disabled = False
             page.update()
 
-    generate_button = ft.ElevatedButton("🎨 Generar", disabled=True, on_click=generar)
-
     # -----------------------------------------------------------------------
-    # Botón opcional para comprobar la conexión con el backend
+    # Chat (RAG)
     # -----------------------------------------------------------------------
-    def on_check_backend(_):
-        try:
-            info = api_client.check_health()
-            token = "sí" if info.get("token_configurado") else "NO"
-            status_text.value = (
-                f"✅ Backend OK · modelo={info.get('replicate_model')} · "
-                f"token configurado: {token}"
-            )
-        except api_client.BackendError as exc:
-            status_text.value = f"❌ {exc}"
-        page.update()
-
-    check_button = ft.OutlinedButton("🔌 Probar backend", on_click=on_check_backend)
-
-    # -----------------------------------------------------------------------
-    # Conversación con el personaje (RAG) — aparece tras generar la escena
-    # -----------------------------------------------------------------------
-    chat_titulo = ft.Text("💬 Habla con el personaje", size=16, weight=ft.FontWeight.BOLD)
-
-    # Columna donde se van apilando las preguntas (niño) y respuestas (personaje).
-    chat_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=240)
-
-    # Caja de texto para escribir la pregunta. (La voz/micro llegará en el siguiente paso.)
-    pregunta_field = ft.TextField(
-        hint_text="Escribe tu pregunta... (ej. ¿Qué comes?)",
-        expand=True,
-        disabled=True,
-        on_submit=lambda _e: preguntar(_e),  # permite enviar con la tecla Enter
-    )
-    preguntar_button = ft.ElevatedButton("Preguntar", disabled=True)
-
     def _add_burbuja(texto: str, es_nino: bool):
-        """Añade una 'burbuja' de conversación a la columna del chat."""
         chat_column.controls.append(
             ft.Container(
                 content=ft.Text(texto, size=13, selectable=True),
                 bgcolor=ft.Colors.BLUE_50 if es_nino else ft.Colors.GREEN_50,
                 padding=10,
-                border_radius=10,
+                border_radius=12,
                 alignment=ft.alignment.center_right if es_nino else ft.alignment.center_left,
             )
         )
@@ -306,32 +415,23 @@ def main(page: ft.Page):
         pid = state["chat_personaje"]
         texto = (pregunta_field.value or "").strip()
         if not pid or not texto:
-            return  # no hay personaje en pantalla o la caja está vacía
-
-        # Mostramos la pregunta del niño y limpiamos la caja.
+            return
         _add_burbuja(f"🧒 {texto}", es_nino=True)
         pregunta_field.value = ""
         pregunta_field.disabled = True
         preguntar_button.disabled = True
-        # "Pensando..." como burbuja temporal del personaje.
         pensando = ft.Text("🤔 Pensando...", size=13, italic=True)
         chat_column.controls.append(pensando)
         page.update()
-
-        threading.Thread(
-            target=_run_ask, args=(pid, texto, pensando), daemon=True
-        ).start()
+        threading.Thread(target=_run_ask, args=(pid, texto, pensando), daemon=True).start()
 
     def _run_ask(pid: str, texto: str, pensando: ft.Text):
         try:
             result = api_client.ask(pid, texto)
             respuesta = result.get("respuesta", "(sin respuesta)")
-            chat_column.controls.remove(pensando)  # quitamos el "Pensando..."
-            # En modo DEBUG anteponemos el origen + método + distancia.
+            chat_column.controls.remove(pensando)
             prefijo = construir_tag_debug(result) if DEBUG else ""
-            _add_burbuja(
-                f"{prefijo}{PERSONAJES[pid]['emoji']} {respuesta}", es_nino=False
-            )
+            _add_burbuja(f"{prefijo}{PERSONAJES[pid]['emoji']} {respuesta}", es_nino=False)
         except api_client.BackendError as exc:
             pensando.value = f"❌ {exc}"
         finally:
@@ -339,53 +439,46 @@ def main(page: ft.Page):
             preguntar_button.disabled = False
             page.update()
 
+    # -----------------------------------------------------------------------
+    # Empezar de nuevo / comprobar backend
+    # -----------------------------------------------------------------------
+    def empezar_de_nuevo(_):
+        state.update(
+            {"ubicacion_id": None, "personaje_id": None, "foto_path": None,
+             "chat_personaje": None, "paso": 0}
+        )
+        result_image.visible = False
+        result_image.src_base64 = None
+        chat_panel.visible = False
+        chat_column.controls.clear()
+        pregunta_field.value = ""
+        pregunta_field.disabled = True
+        preguntar_button.disabled = True
+        status_text.value = ""
+        render()
+
+    def on_check_backend(_):
+        try:
+            info = api_client.check_health()
+            token = "sí" if info.get("token_configurado") else "NO"
+            deepl = "ok" if info.get("deepl_ok") else "NO"
+            msg = (
+                f"✅ Backend OK · modelo={info.get('replicate_model')} · "
+                f"token={token} · DeepL={deepl}"
+            )
+        except api_client.BackendError as exc:
+            msg = f"❌ {exc}"
+        page.open(ft.SnackBar(ft.Text(msg)))
+
+    # -----------------------------------------------------------------------
+    # Conectar handlers a los controles persistentes y montar la página
+    # -----------------------------------------------------------------------
+    generate_button.on_click = generar
     preguntar_button.on_click = preguntar
+    pregunta_field.on_submit = preguntar
 
-    # Panel completo del chat (oculto hasta que se genera una escena).
-    chat_panel = ft.Container(
-        visible=False,
-        padding=12,
-        margin=ft.margin.only(top=10),
-        border=ft.border.all(1, ft.Colors.GREY_300),
-        border_radius=12,
-        content=ft.Column(
-            [
-                chat_titulo,
-                chat_column,
-                ft.Row([pregunta_field, preguntar_button]),
-            ],
-            spacing=10,
-        ),
-    )
-
-    # -----------------------------------------------------------------------
-    # Montaje final de la pantalla
-    # -----------------------------------------------------------------------
-    page.add(
-        ft.Text("🕰️ Elige un lugar y un personaje", size=22, weight=ft.FontWeight.BOLD),
-        ft.Text(
-            "Combina cualquier lugar con cualquier personaje (¡un t-rex en un "
-            "laboratorio!) o sube tu propia foto y conviértela en una escena Pixar.",
-            size=13,
-            color=ft.Colors.GREY_700,
-        ),
-        ft.Row([check_button]),
-        ft.Text("📍 Lugar", size=16, weight=ft.FontWeight.BOLD),
-        fila_ubicaciones,
-        ft.Text(
-            "📷 Si usas tu foto, ¡saca tu cuarto vacío! Si sale gente, puede quedar "
-            "un poco rara. 😊",
-            size=12,
-            italic=True,
-            color=ft.Colors.GREY_700,
-        ),
-        ft.Text("🎭 Personaje", size=16, weight=ft.FontWeight.BOLD),
-        catalogo_personajes,
-        ft.Row([generate_button]),
-        ft.Row([progress, status_text], vertical_alignment=ft.CrossAxisAlignment.CENTER),
-        ft.Container(content=result_image, border=ft.border.all(1, ft.Colors.GREY_300)),
-        chat_panel,
-    )
+    page.add(ft.Row([content], alignment=ft.MainAxisAlignment.CENTER))
+    render()
 
 
 if __name__ == "__main__":

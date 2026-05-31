@@ -62,6 +62,13 @@ PROMPTS = {
             "rounded friendly face"
         ),
     },
+    "peter_pan": {
+        "prompt": (
+            "Peter Pan as a joyful adventurous magical boy, big expressive eyes, "
+            "wearing clothes made of green leaves, flying with glowing fairy dust, "
+            "friendly rounded face"
+        ),
+    },
 }
 
 
@@ -73,4 +80,5 @@ NOMBRES = {
     "t-rex": "Tiranosaurio Rex",
     "leonardo_da_vinci": "Leonardo da Vinci",
     "sherlock_holmes": "Sherlock Holmes",
+    "peter_pan": "Peter Pan",
 }

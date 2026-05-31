@@ -25,17 +25,23 @@ PERSONAJES = {
         "emoji": "🦖",
     },
 
-    # --- Personajes Históricos / Ficticios ---
+    # --- Personajes Históricos 
     "leonardo_da_vinci": {
         "label": "Leonardo da Vinci",
         "categoria": "historico",
         "emoji": "🎨",
     },
+    # --- Personajes Ficticios
     "sherlock_holmes": {
         "label": "Sherlock Holmes",
         "categoria": "ficticio",
         "emoji": "🕵️",
     },
+    "peter_pan": {
+        "label": "Peter Pan",
+        "categoria": "ficticio",
+        "emoji": "👦",
+    }
 }
 
 # Cómo agrupar el catálogo en la interfaz: título de sección -> categorías que incluye.

@@ -141,9 +141,9 @@ Comprueba que abre en http://127.0.0.1:8000/docs. En `GET /health` debe aparecer
 flet run frontend/main.py
 ```
 
-Elige un lugar y un personaje, pulsa «Generar» y verás la escena generada en unos segundos.
-Después aparece un **chat** debajo: escríbele una pregunta al personaje (ej. "¿Qué comes?")
-y te responderá en primera persona.
+La interfaz es un **asistente por pasos**: **1)** elige un personaje, **2)** elige un lugar (o sube
+tu foto), **3)** pulsa «¡Generar!» y verás la escena. Después, en ese mismo paso, aparece un
+**chat**: escríbele una pregunta al personaje (ej. "¿Qué comes?") y te responderá en primera persona.
 
 > Antes de usar el chat hay que **indexar los documentos una vez** (ver
 > [§ Preparar la base de conocimiento](#-preparar-la-base-de-conocimiento-documentos--chunking)).
