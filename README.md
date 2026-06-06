@@ -142,12 +142,19 @@ flet run frontend/main.py
 ```
 
 La interfaz es un **asistente por pasos**: **1)** elige un personaje, **2)** elige un lugar (o sube
-tu foto), **3)** pulsa «¡Generar!» y verás la escena. Después, en ese mismo paso, aparece un
-**chat**: escríbele una pregunta al personaje (ej. "¿Qué comes?") y te responderá en primera persona.
+tu foto) y pulsa «Siguiente». Al llegar al **paso 3 («¡Listo!») la escena se genera sola** (sin
+botón intermedio) y, debajo, aparece un **chat**: escríbele una pregunta al personaje (ej. "¿Qué
+comes?") y te responderá en primera persona. Si vuelves atrás y cambias la elección, al volver al
+paso 3 se regenera; si no cambias nada, se conserva la escena y el chat.
 
 > Antes de usar el chat hay que **indexar los documentos una vez** (ver
 > [§ Preparar la base de conocimiento](#-preparar-la-base-de-conocimiento-documentos--chunking)).
 > La **primera** pregunta tarda un poco más (ChromaDB descarga su modelo de embeddings, en CPU).
+
+> **Modo desarrollo (`DEBUG=true`):** activa herramientas de diagnóstico que **no** ve el niño:
+> el botón **🔌 Probar conexión** en la cabecera del frontend (consulta `/health`) y la traza del
+> **origen de cada respuesta** del chat en la **consola del backend** (ver la sección
+> *«Origen de la respuesta»* más abajo). Con `DEBUG=false` no se imprime nada y la interfaz queda limpia.
 
 ---
 
@@ -239,17 +246,26 @@ ChromaDB, etiquetando cada fragmento con su personaje. Verás un resumen por arc
 | `hibrido` | Llamada extra **solo en dudas** | Alta donde importa | **Producción / capstone** |
 
 > Los umbrales `EVALUATOR_UMBRAL_BAJO` / `EVALUATOR_UMBRAL_ALTO` son orientativos. Actívate
-> `DEBUG=true` para ver la distancia real (`d=...`) de tus preguntas y ajustarlos.
+> `DEBUG=true` para ver por consola la distancia real (`d=...`) de tus preguntas y ajustarlos.
 
-### 🏷️ Etiqueta de origen (modo desarrollo)
+### 🏷️ Origen de la respuesta (modo desarrollo, consola del backend)
 
-Con `DEBUG=true` en el `.env`, cada respuesta del chat muestra **origen · método · distancia**,
-útil para depurar y para **comparar modos**:
+Para saber si una respuesta vino del **RAG** o del conocimiento **GENERAL** del modelo, con
+`DEBUG=true` en el `.env` el **backend lo imprime en SU consola** (la del `uvicorn`), no en el
+chat ni en el frontend. Se hace en el backend porque ahí ya se calcula todo: así el frontend **no
+recibe ni procesa** datos de depuración (más ligero) y la interfaz que ve el niño queda **siempre
+limpia**. En la consola del backend verás líneas como:
 
-- 🟢 **[RAG · umbral · d=0.42]** → fundamentada en la enciclopedia; lo decidió el umbral.
-- 🟡 **[GENERAL · llm]** → conocimiento propio del modelo; lo decidió el LLM-juez (p. ej. "2+2 = 4").
+```
+[CHAT] 🟢 [RAG · umbral · d=0.42 · "what do you eat"]
+[CHAT] 🟡 [GENERAL · llm · "how much is 2+2"]
+```
 
-Con `DEBUG=false` (versión final para el usuario) las respuestas salen limpias, sin etiqueta.
+- 🟢 **RAG** → fundamentada en la enciclopedia (con el método —`umbral`/`llm`— y la distancia).
+- 🟡 **GENERAL** → conocimiento propio del modelo (p. ej. "2+2 = 4").
+
+Con `DEBUG=false` (versión final para el usuario) no se imprime nada. El JSON de `/api/ask` sigue
+incluyendo `origen`/`metodo`/`distancia` (por si los necesitas), pero el frontend ya no los usa.
 
 ---
 
@@ -302,6 +318,20 @@ gastaría mucha cuota. Ver [§ traducción](#-cómo-funciona-la-conversación-ra
 (gratis) para los casos claros y un **LLM-juez** solo para los dudosos.
 **Por qué:** combina el coste cero del umbral con la inteligencia del LLM donde de verdad hace
 falta. Configurable con `EVALUATOR_MODE` para poder comparar los tres modos.
+
+### 5. Orden del prompt de imagen (CLIP vs T5) + aviso de longitud
+
+**Decisión:** montar el prompt de generación de **más a menos importante** —primero el **sujeto**
+(personaje + ubicación), luego el **encuadre** y al final el **estilo**— y **avisar con un
+warning** (no un error) cuando el prompt supera el límite de tokens de **CLIP**.
+
+**Por qué:** FLUX codifica el prompt con **dos** codificadores a la vez: **CLIP**, que **trunca a
+~77 tokens** (`CLIP_TOKEN_LIMIT` en el `.env`), y **T5**, que admite prompts largos. Si ponemos lo
+esencial al principio, **entra siempre en CLIP**; lo que cae al final (encuadre/estilo) puede
+quedar fuera de CLIP pero **T5 lo sigue leyendo**, así que apenas afecta al resultado. El warning
+(en la consola del backend, prefijo `[GEN]`) solo informa de que CLIP recortará; **la imagen se
+genera igual**. La longitud se estima al alza contando palabras y signos (no usamos el tokenizador
+exacto de CLIP), suficiente para decidir cuándo avisar.
 
 ---
 

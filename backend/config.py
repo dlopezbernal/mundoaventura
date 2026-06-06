@@ -65,6 +65,14 @@ IMG_OUTPUT_FORMAT: str = os.getenv("IMG_OUTPUT_FORMAT", "png").strip()
 # mejoran y solo restan velocidad. Lo dejamos configurable pero con 4 por defecto.
 IMG_NUM_STEPS: int = int(os.getenv("IMG_NUM_STEPS", "4"))
 
+# Límite de tokens del codificador de texto CLIP de FLUX. FLUX usa DOS codificadores
+# en paralelo: CLIP (corto, trunca a ~77 tokens) y T5 (largo, admite cientos). Si el
+# prompt supera este límite, CLIP descarta el final del texto, pero T5 lo sigue
+# leyendo. Por eso colocamos lo más importante AL PRINCIPIO (entra en CLIP) y el
+# estilo/encuadre AL FINAL (puede caer fuera de CLIP, pero T5 lo tiene en cuenta) y,
+# si nos pasamos, avisamos con un warning (no es un error: la imagen se genera igual).
+CLIP_TOKEN_LIMIT: int = int(os.getenv("CLIP_TOKEN_LIMIT", "77"))
+
 
 # ---------------------------------------------------------------------------
 # 3) Conversación (RAG): LLM en Replicate + base vectorial ChromaDB
@@ -155,6 +163,7 @@ def describe() -> dict:
         "replicate_llm_model": REPLICATE_LLM_MODEL,
         "aspect_ratio": IMG_ASPECT_RATIO,
         "output_format": IMG_OUTPUT_FORMAT,
+        "clip_token_limit": CLIP_TOKEN_LIMIT,
         "token_configurado": bool(REPLICATE_API_TOKEN),
         "evaluator_mode": EVALUATOR_MODE,
         "evaluator_umbral_bajo": EVALUATOR_UMBRAL_BAJO,

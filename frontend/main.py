@@ -27,25 +27,10 @@ from ubicaciones import UBICACIONES
 # Id especial (no es una ubicación real) para el modo "Usar mi foto".
 FOTO_ID = "__foto__"
 
-# Modo desarrollo: si DEBUG está activo, el chat muestra una etiqueta de origen.
+# Modo desarrollo: si DEBUG está activo, se muestra el botón "Probar conexión".
+# El origen de cada respuesta del chat (RAG/GENERAL) lo traza el BACKEND en su
+# propia consola (ver backend/services/rag_service.py), no el frontend.
 DEBUG = os.getenv("DEBUG", "false").strip().lower() in ("1", "true", "yes", "on")
-
-# Icono según el origen de la respuesta (solo se muestra si DEBUG).
-ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡"}
-
-
-def construir_tag_debug(result: dict) -> str:
-    """Etiqueta de depuración: origen + método + distancia + pregunta traducida."""
-    origen = result.get("origen", "?")
-    icono = ICONO_ORIGEN.get(origen, "⚪")
-    partes = [origen]
-    if result.get("metodo"):
-        partes.append(result["metodo"])
-    if result.get("distancia") is not None:
-        partes.append(f"d={result['distancia']:.2f}")
-    if result.get("pregunta_traducida"):
-        partes.append(f'"{result["pregunta_traducida"]}"')
-    return f"{icono} [{' · '.join(partes)}] "
 
 
 def main(page: ft.Page):
@@ -79,6 +64,8 @@ def main(page: ft.Page):
         "foto_path": None,       # ruta de la foto subida (modo FOTO_ID)
         "chat_personaje": None,  # personaje en pantalla (al que se pregunta)
         "paso": 0,               # paso actual del asistente (0, 1, 2)
+        "generando": False,      # True mientras se está generando la escena
+        "generado_para": None,   # (personaje, ubicacion, foto) de la última escena hecha
     }
 
     # -----------------------------------------------------------------------
@@ -89,13 +76,12 @@ def main(page: ft.Page):
     progress = ft.ProgressRing(visible=False, width=22, height=22)
     summary_text = ft.Text("", size=15, weight=ft.FontWeight.BOLD)
     result_image = ft.Image(width=460, fit=ft.ImageFit.CONTAIN, visible=False)
-    generate_button = ft.ElevatedButton(
-        "🎨  ¡Generar!", bgcolor=ft.Colors.PINK_400, color=ft.Colors.WHITE, style=BTN_PRIMARY
-    )
 
     # Chat (RAG)
     chat_titulo = ft.Text("💬 Habla con el personaje", size=16, weight=ft.FontWeight.BOLD)
-    chat_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=240)
+    # auto_scroll=True: al añadir una burbuja (pregunta o respuesta) el chat baja solo
+    # hasta el final, para no tener que arrastrar a mano y ver siempre lo último.
+    chat_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=240, auto_scroll=True)
     pregunta_field = ft.TextField(
         hint_text="Escribe tu pregunta... (ej. ¿Qué comes?)",
         expand=True,
@@ -162,6 +148,31 @@ def main(page: ft.Page):
         )
 
     def build_header() -> ft.Control:
+        fila_cabecera = [
+            ft.Column(
+                [
+                    ft.Text("🕰️ Máquina del Tiempo", size=26,
+                            weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
+                    ft.Text("¡Viaja sin salir de tu cuarto!", size=14, color=ft.Colors.WHITE),
+                ],
+                expand=True,
+                spacing=2,
+            ),
+        ]
+        # "Probar conexión" es una herramienta de diagnóstico: solo en modo DEBUG.
+        # En la versión final para el niño no aparece.
+        if DEBUG:
+            fila_cabecera.append(
+                ft.OutlinedButton(
+                    "🔌 Probar conexión",
+                    on_click=on_check_backend,
+                    style=ft.ButtonStyle(
+                        color=ft.Colors.WHITE,
+                        side=ft.BorderSide(1, ft.Colors.WHITE),
+                        shape=ft.RoundedRectangleBorder(radius=20),
+                    ),
+                )
+            )
         hero = ft.Container(
             gradient=ft.LinearGradient(
                 begin=ft.alignment.top_left,
@@ -171,26 +182,7 @@ def main(page: ft.Page):
             border_radius=24,
             padding=24,
             content=ft.Row(
-                [
-                    ft.Column(
-                        [
-                            ft.Text("🕰️ Máquina del Tiempo", size=26,
-                                    weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                            ft.Text("¡Viaja sin salir de tu cuarto!", size=14, color=ft.Colors.WHITE),
-                        ],
-                        expand=True,
-                        spacing=2,
-                    ),
-                    ft.OutlinedButton(
-                        "🔌 Probar conexión",
-                        on_click=on_check_backend,
-                        style=ft.ButtonStyle(
-                            color=ft.Colors.WHITE,
-                            side=ft.BorderSide(1, ft.Colors.WHITE),
-                            shape=ft.RoundedRectangleBorder(radius=20),
-                        ),
-                    ),
-                ],
+                fila_cabecera,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
         )
@@ -289,7 +281,7 @@ def main(page: ft.Page):
         pid = state["personaje_id"]
         pj = PERSONAJES[pid]["label"] if pid else ""
         emoji = PERSONAJES[pid]["emoji"] if pid else ""
-        summary_text.value = f"Vas a crear:  {emoji} {pj}  en  {nombre_lugar()}"
+        summary_text.value = f"{emoji} {pj}  en  {nombre_lugar()}"
         if state["chat_personaje"]:
             chat_titulo.value = f"💬 Habla con {PERSONAJES[state['chat_personaje']]['label']}"
 
@@ -300,12 +292,13 @@ def main(page: ft.Page):
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
+        # La escena se genera AUTOMÁTICAMENTE al llegar a este paso (ver _auto_generar):
+        # ya no hay botón "¡Generar!". Aquí solo mostramos el progreso, la imagen y el chat.
         return ft.Column(
             [
-                ft.Text("¡Ya casi! 🎉", size=22, weight=ft.FontWeight.BOLD),
+                ft.Text("¡Tu escena! 🎉", size=22, weight=ft.FontWeight.BOLD),
                 ft.Container(summary_text, padding=14, bgcolor=ft.Colors.PURPLE_50, border_radius=14),
-                ft.Row([generate_button, progress], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
-                status_text,
+                ft.Row([progress, status_text], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
                 ft.Container(result_image, alignment=ft.alignment.center),
                 chat_panel,
                 nav,
@@ -330,6 +323,9 @@ def main(page: ft.Page):
         state["paso"] = n
         status_text.value = ""
         render()
+        # Al entrar en el paso final, generamos la escena automáticamente.
+        if n == 2:
+            _auto_generar()
 
     # -----------------------------------------------------------------------
     # Selección de lugar / personaje / foto
@@ -362,13 +358,29 @@ def main(page: ft.Page):
     # -----------------------------------------------------------------------
     # Generar la escena (en un hilo aparte para no congelar la interfaz)
     # -----------------------------------------------------------------------
-    def generar(_):
-        if not state["ubicacion_id"] or not state["personaje_id"]:
-            status_text.value = "Elige un lugar y un personaje primero. 🙂"
-            page.update()
+    def _auto_generar():
+        """Genera la escena al entrar en el paso final, solo si hace falta.
+
+        Evita regenerar si ya hay una escena para esta misma selección (p. ej. al
+        ir "Atrás" y volver sin cambiar nada) o si ya se está generando.
+        """
+        if state["generando"]:
             return
+        if not state["ubicacion_id"] or not state["personaje_id"]:
+            return
+        seleccion = (state["personaje_id"], state["ubicacion_id"], state["foto_path"])
+        if seleccion == state["generado_para"]:
+            return  # ya tenemos esta escena hecha: conservamos imagen y chat
+        _iniciar_generacion()
+
+    def _iniciar_generacion():
+        state["generando"] = True
         progress.visible = True
-        generate_button.disabled = True
+        # Mientras (re)generamos, ocultamos la escena y el chat anteriores.
+        result_image.visible = False
+        chat_panel.visible = False
+        pregunta_field.disabled = True
+        preguntar_button.disabled = True
         status_text.value = "Generando tu escena... 🎨 (unos segundos)"
         page.update()
         threading.Thread(target=_run_generate, daemon=True).start()
@@ -382,6 +394,8 @@ def main(page: ft.Page):
                 result = api_client.generate(state["ubicacion_id"], pid)
             result_image.src_base64 = result["result_png_base64"]
             result_image.visible = True
+            # Recordamos para qué selección se hizo, para no regenerarla sin motivo.
+            state["generado_para"] = (pid, state["ubicacion_id"], state["foto_path"])
             # Activamos el chat para ESTE personaje.
             state["chat_personaje"] = pid
             chat_titulo.value = f"💬 Habla con {PERSONAJES[pid]['label']}"
@@ -393,8 +407,8 @@ def main(page: ft.Page):
         except api_client.BackendError as exc:
             status_text.value = f"❌ {exc}"
         finally:
+            state["generando"] = False
             progress.visible = False
-            generate_button.disabled = False
             page.update()
 
     # -----------------------------------------------------------------------
@@ -430,8 +444,8 @@ def main(page: ft.Page):
             result = api_client.ask(pid, texto)
             respuesta = result.get("respuesta", "(sin respuesta)")
             chat_column.controls.remove(pensando)
-            prefijo = construir_tag_debug(result) if DEBUG else ""
-            _add_burbuja(f"{prefijo}{PERSONAJES[pid]['emoji']} {respuesta}", es_nino=False)
+            # El origen (RAG/GENERAL) lo traza el backend en su consola, no el cliente.
+            _add_burbuja(f"{PERSONAJES[pid]['emoji']} {respuesta}", es_nino=False)
         except api_client.BackendError as exc:
             pensando.value = f"❌ {exc}"
         finally:
@@ -445,7 +459,8 @@ def main(page: ft.Page):
     def empezar_de_nuevo(_):
         state.update(
             {"ubicacion_id": None, "personaje_id": None, "foto_path": None,
-             "chat_personaje": None, "paso": 0}
+             "chat_personaje": None, "paso": 0,
+             "generando": False, "generado_para": None}
         )
         result_image.visible = False
         result_image.src_base64 = None
@@ -473,7 +488,6 @@ def main(page: ft.Page):
     # -----------------------------------------------------------------------
     # Conectar handlers a los controles persistentes y montar la página
     # -----------------------------------------------------------------------
-    generate_button.on_click = generar
     preguntar_button.on_click = preguntar
     pregunta_field.on_submit = preguntar
 

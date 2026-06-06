@@ -36,6 +36,28 @@ from backend.services import translation_service
 _client: chromadb.ClientAPI | None = None
 _collection = None
 
+# Icono por origen, solo para la traza de consola en modo DEBUG.
+_ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡"}
+
+
+def _trazar_origen(
+    origen: str, metodo: str, distancia: float | None, pregunta_en: str
+) -> None:
+    """Imprime por la consola del BACKEND si la respuesta vino del RAG o no.
+
+    Solo en modo DEBUG (config.DEBUG). Antes esto se calculaba/mostraba en el
+    frontend; se hace aquí porque el backend ya tiene todos los datos, así no hay
+    que enviarlos ni procesarlos en el cliente.
+    """
+    if not config.DEBUG:
+        return
+    icono = _ICONO_ORIGEN.get(origen, "⚪")
+    partes = [origen, metodo]
+    if distancia is not None:
+        partes.append(f"d={distancia:.2f}")
+    partes.append(f'"{pregunta_en}"')
+    print(f"[CHAT] {icono} [{' · '.join(partes)}]")
+
 
 def _get_collection():
     """Devuelve la colección de ChromaDB, creándola e indexándola la 1ª vez."""
@@ -306,6 +328,9 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         system, user = _construir_prompt_general(nombre, pregunta)
         respuesta = _llamar_llm(system, user)
         fuentes = []  # no hay fichas detrás de esta respuesta
+
+    # Traza de depuración (solo si DEBUG): en la consola del BACKEND, no del cliente.
+    _trazar_origen(origen, metodo, distancia, pregunta_en)
 
     return {
         "success": True,

@@ -21,9 +21,20 @@ deja activo el safety checker de Replicate.
 
 Salida de replicate.run: FLUX schnell devuelve una LISTA de FileOutput; Kontext
 devuelve un único FileOutput. _salida_a_base64 maneja ambos casos.
+
+Orden del prompt (CLIP vs T5)
+-----------------------------
+FLUX codifica el prompt con DOS codificadores a la vez: CLIP (corto, trunca a ~77
+tokens) y T5 (largo). Para que nada importante se pierda si CLIP recorta, montamos
+el prompt de MÁS a MENOS importante: primero el SUJETO (personaje + ubicación), que
+es lo que no puede faltar y entra dentro de CLIP, y al final el ENCUADRE y el ESTILO,
+que si caen fuera de CLIP los sigue leyendo T5 y apenas afectan al resultado. Si el
+prompt supera el límite de CLIP, _avisar_si_prompt_largo emite un warning (no es un
+error: la imagen se genera igual).
 """
 
 import base64
+import re
 
 import replicate
 
@@ -36,6 +47,33 @@ def _salida_a_base64(output) -> str:
     """Lee la imagen devuelta por Replicate (lista o único FileOutput) a base64."""
     primera = output[0] if isinstance(output, (list, tuple)) else output
     return base64.b64encode(primera.read()).decode("utf-8")
+
+
+def _estimar_tokens(texto: str) -> int:
+    """Estima (al alza) cuántos tokens ocupa el prompt.
+
+    No tenemos el tokenizador exacto de CLIP a mano, así que aproximamos contando
+    palabras y signos de puntuación (cada signo suele ser un token aparte). Es una
+    estimación conservadora, suficiente para decidir si avisar de que CLIP truncará.
+    """
+    return len(re.findall(r"\w+|[^\w\s]", texto))
+
+
+def _avisar_si_prompt_largo(prompt: str) -> None:
+    """Avisa (warning, no error) si el prompt supera el límite de tokens de CLIP.
+
+    FLUX seguirá generando la imagen: T5 lee el prompt completo. El aviso solo
+    recuerda que el final del prompt (encuadre/estilo) puede quedar fuera de CLIP,
+    razón por la que colocamos ahí lo MENOS crítico (ver docstring del módulo).
+    """
+    tokens = _estimar_tokens(prompt)
+    if tokens > config.CLIP_TOKEN_LIMIT:
+        print(
+            f"[GEN] ⚠️  El prompt (~{tokens} tokens) supera el límite de CLIP "
+            f"({config.CLIP_TOKEN_LIMIT}). CLIP truncará el final, pero T5 lo leerá "
+            "completo. Lo importante va al principio, así que la imagen no debería "
+            "verse afectada."
+        )
 
 
 def _exigir_token() -> None:
@@ -58,13 +96,17 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
         raise ValueError(f"Ubicación desconocida: '{ubicacion_id}'.")
     _exigir_token()
 
-    # Prompt final = personaje + ubicación + encuadre + estilo común.
+    # Prompt final, de MÁS a MENOS importante (ver docstring del módulo: CLIP vs T5):
+    #   1) SUJETO     → personaje + ubicación (lo esencial, entra en CLIP).
+    #   2) ENCUADRE   → FRAMING (cómo de lejos/grande sale el personaje).
+    #   3) ESTILO     → STYLE_SUFFIX (look común; si CLIP lo recorta, T5 lo lee).
     personaje = personajes_cfg.PROMPTS[personaje_id]["prompt"]
     ubicacion = ubicaciones_cfg.UBICACIONES[ubicacion_id]["prompt"]
     prompt = (
         f"{personaje}, {ubicacion}, "
         f"{personajes_cfg.FRAMING}, {personajes_cfg.STYLE_SUFFIX}"
     )
+    _avisar_si_prompt_largo(prompt)
 
     output = replicate.run(
         config.REPLICATE_MODEL,
@@ -106,8 +148,9 @@ def generar_en_foto(
     _exigir_token()
 
     personaje = personajes_cfg.PROMPTS[personaje_id]["prompt"]
-    # Instrucción de edición: estilizar + añadir, manteniendo el sitio reconocible
-    # y dejando ver el fondo (mismo criterio de encuadre que el modo predefinido).
+    # Instrucción de edición, también de MÁS a MENOS importante (CLIP vs T5):
+    # primero QUÉ hacer y a QUIÉN añadir, y al final el estilo común (STYLE_SUFFIX),
+    # que es lo que mejor tolera caer fuera de CLIP.
     instruccion = (
         "Transform this photo into a 3D Pixar style animated movie scene. "
         f"Add {personaje} standing in the scene, placed naturally and a bit in the "
@@ -115,6 +158,7 @@ def generar_en_foto(
         "Keep the room layout and main objects recognizable. "
         f"{personajes_cfg.STYLE_SUFFIX}"
     )
+    _avisar_si_prompt_largo(instruccion)
 
     # Pasamos la imagen como data URI (forma fiable de mandar bytes a Replicate).
     data_uri = f"data:{mime};base64,{base64.b64encode(image_bytes).decode('utf-8')}"
