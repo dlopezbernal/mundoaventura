@@ -143,7 +143,8 @@ flet run frontend/main.py
 
 La interfaz es un **asistente por pasos**: **1)** elige un personaje, **2)** elige un lugar (o sube
 tu foto) y pulsa «Siguiente». Al llegar al **paso 3 («¡Listo!») la escena se genera sola** (sin
-botón intermedio) y, debajo, aparece un **chat**: escríbele una pregunta al personaje (ej. "¿Qué
+botón intermedio), mostrando mientras tanto una **animación «Creando…»** para amenizar la espera;
+al terminar aparece la escena y, debajo, un **chat**: escríbele una pregunta al personaje (ej. "¿Qué
 comes?") y te responderá en primera persona. Si vuelves atrás y cambias la elección, al volver al
 paso 3 se regenera; si no cambias nada, se conserva la escena y el chat.
 

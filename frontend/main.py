@@ -17,6 +17,7 @@ Arráncala con:
 
 import os
 import threading
+import time
 
 import flet as ft
 
@@ -73,8 +74,48 @@ def main(page: ft.Page):
     # para que su contenido —imagen, chat— no se pierda al cambiar de paso).
     # -----------------------------------------------------------------------
     status_text = ft.Text("", size=14, color=ft.Colors.GREY_800)
-    progress = ft.ProgressRing(visible=False, width=22, height=22)
     summary_text = ft.Text("", size=15, weight=ft.FontWeight.BOLD)
+
+    # --- Panel de carga animado ("Creando...") ---------------------------------
+    # Mientras se genera la escena, ocupamos el hueco de la imagen con un panel
+    # vivo (emoji que late y cambia + texto con puntos en movimiento + barra), para
+    # que el niño tenga algo bonito que mirar y no vea un espacio vacío. La animación
+    # la mueve un hilo aparte (_animar_carga) mientras dura la generación.
+    loading_emoji = ft.Text(
+        "🎨", size=72, text_align=ft.TextAlign.CENTER,
+        animate_scale=ft.Animation(420, ft.AnimationCurve.EASE_IN_OUT),
+        animate_rotation=ft.Animation(420, ft.AnimationCurve.EASE_IN_OUT),
+    )
+    loading_text = ft.Text(
+        "Creando tu escena", size=18, weight=ft.FontWeight.BOLD,
+        color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER,
+    )
+    loading_panel = ft.Container(
+        visible=False,
+        width=460,
+        height=260,
+        border_radius=18,
+        gradient=ft.LinearGradient(
+            begin=ft.alignment.top_left,
+            end=ft.alignment.bottom_right,
+            colors=[ft.Colors.PURPLE_300, ft.Colors.PINK_200],
+        ),
+        alignment=ft.alignment.center,
+        content=ft.Column(
+            [
+                loading_emoji,
+                loading_text,
+                ft.ProgressBar(
+                    width=240,
+                    color=ft.Colors.WHITE,
+                    bgcolor=ft.Colors.with_opacity(0.3, ft.Colors.WHITE),
+                ),
+            ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=16,
+        ),
+    )
     result_image = ft.Image(width=460, fit=ft.ImageFit.CONTAIN, visible=False)
 
     # Chat (RAG)
@@ -293,13 +334,15 @@ def main(page: ft.Page):
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
         # La escena se genera AUTOMÁTICAMENTE al llegar a este paso (ver _auto_generar):
-        # ya no hay botón "¡Generar!". Aquí solo mostramos el progreso, la imagen y el chat.
+        # ya no hay botón "¡Generar!". Mientras genera se ve loading_panel animado;
+        # al terminar, la imagen y el chat.
         return ft.Column(
             [
                 ft.Text("¡Tu escena! 🎉", size=22, weight=ft.FontWeight.BOLD),
                 ft.Container(summary_text, padding=14, bgcolor=ft.Colors.PURPLE_50, border_radius=14),
-                ft.Row([progress, status_text], vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=12),
+                ft.Container(loading_panel, alignment=ft.alignment.center),
                 ft.Container(result_image, alignment=ft.alignment.center),
+                status_text,
                 chat_panel,
                 nav,
             ],
@@ -373,16 +416,39 @@ def main(page: ft.Page):
             return  # ya tenemos esta escena hecha: conservamos imagen y chat
         _iniciar_generacion()
 
+    def _animar_carga():
+        """Anima el panel de carga (emoji + puntos) mientras dura la generación.
+
+        Corre en su propio hilo y se detiene solo cuando state['generando'] pasa a
+        False. Cicla emojis "creativos", hace latir/girar el emoji y mueve los puntos
+        de "Creando..." para que la espera resulte entretenida.
+        """
+        frames = ["🎨", "🖌️", "✨", "🪄", "🌈", "🖼️"]
+        i = 0
+        while state["generando"]:
+            loading_emoji.value = frames[i % len(frames)]
+            loading_emoji.scale = 1.25 if i % 2 == 0 else 1.0
+            loading_emoji.rotate = 0.12 if i % 2 == 0 else -0.12
+            loading_text.value = "Creando tu escena" + "." * (1 + i % 3)
+            i += 1
+            try:
+                page.update()
+            except Exception:
+                break  # la página se cerró: salimos sin ruido
+            time.sleep(0.45)
+
     def _iniciar_generacion():
         state["generando"] = True
-        progress.visible = True
+        loading_panel.visible = True
         # Mientras (re)generamos, ocultamos la escena y el chat anteriores.
         result_image.visible = False
         chat_panel.visible = False
         pregunta_field.disabled = True
         preguntar_button.disabled = True
-        status_text.value = "Generando tu escena... 🎨 (unos segundos)"
+        status_text.value = ""  # el propio panel ya dice "Creando..."
         page.update()
+        # Un hilo anima el panel y otro hace la llamada (la red) sin congelar la UI.
+        threading.Thread(target=_animar_carga, daemon=True).start()
         threading.Thread(target=_run_generate, daemon=True).start()
 
     def _run_generate():
@@ -407,8 +473,8 @@ def main(page: ft.Page):
         except api_client.BackendError as exc:
             status_text.value = f"❌ {exc}"
         finally:
-            state["generando"] = False
-            progress.visible = False
+            state["generando"] = False  # detiene el hilo de animación
+            loading_panel.visible = False
             page.update()
 
     # -----------------------------------------------------------------------
@@ -462,6 +528,7 @@ def main(page: ft.Page):
              "chat_personaje": None, "paso": 0,
              "generando": False, "generado_para": None}
         )
+        loading_panel.visible = False
         result_image.visible = False
         result_image.src_base64 = None
         chat_panel.visible = False
