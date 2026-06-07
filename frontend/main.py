@@ -92,8 +92,8 @@ def main(page: ft.Page):
     )
     loading_panel = ft.Container(
         visible=False,
-        width=460,
-        height=260,
+        width=560,
+        height=320,
         border_radius=18,
         gradient=ft.LinearGradient(
             begin=ft.alignment.top_left,
@@ -116,13 +116,13 @@ def main(page: ft.Page):
             spacing=16,
         ),
     )
-    result_image = ft.Image(width=460, fit=ft.ImageFit.CONTAIN, visible=False)
+    result_image = ft.Image(width=560, fit=ft.ImageFit.CONTAIN, visible=False)
 
     # Chat (RAG)
     chat_titulo = ft.Text("💬 Habla con el personaje", size=16, weight=ft.FontWeight.BOLD)
     # auto_scroll=True: al añadir una burbuja (pregunta o respuesta) el chat baja solo
     # hasta el final, para no tener que arrastrar a mano y ver siempre lo último.
-    chat_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=240, auto_scroll=True)
+    chat_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=320, auto_scroll=True)
     pregunta_field = ft.TextField(
         hint_text="Escribe tu pregunta... (ej. ¿Qué comes?)",
         expand=True,
@@ -135,6 +135,7 @@ def main(page: ft.Page):
     )
     chat_panel = ft.Container(
         visible=False,
+        expand=True,  # en el paso 3 ocupa el ancho que sobra a la derecha de la imagen
         padding=14,
         bgcolor=ft.Colors.WHITE,
         border=ft.border.all(1, ft.Colors.GREY_200),
@@ -145,8 +146,9 @@ def main(page: ft.Page):
         ),
     )
 
-    # Contenedor donde se dibuja el paso actual.
-    content = ft.Container(padding=24, width=880)
+    # Contenedor donde se dibuja el paso actual. Más ancho para que en el paso final
+    # quepan las dos columnas (imagen grande + chat) sin agobiar.
+    content = ft.Container(padding=24, width=1100)
 
     # -----------------------------------------------------------------------
     # Helpers de presentación
@@ -188,7 +190,7 @@ def main(page: ft.Page):
             ),
         )
 
-    def build_header() -> ft.Control:
+    def build_header(mostrar_pasos: bool = True) -> ft.Control:
         fila_cabecera = [
             ft.Column(
                 [
@@ -227,7 +229,13 @@ def main(page: ft.Page):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
         )
-        return ft.Column([hero, build_stepper()], spacing=16)
+        # Los "pasos" (Personaje · Lugar · ¡Listo!) guían en los pasos de elección,
+        # pero en el paso final (escena + chat) estorban: ahí damos todo el foco a la
+        # imagen y al chat, así que se ocultan (mostrar_pasos=False).
+        elementos = [hero]
+        if mostrar_pasos:
+            elementos.append(build_stepper())
+        return ft.Column(elementos, spacing=16)
 
     def build_stepper() -> ft.Control:
         items = []
@@ -322,10 +330,12 @@ def main(page: ft.Page):
         pid = state["personaje_id"]
         pj = PERSONAJES[pid]["label"] if pid else ""
         emoji = PERSONAJES[pid]["emoji"] if pid else ""
-        summary_text.value = f"{emoji} {pj}  en  {nombre_lugar()}"
+        summary_text.value = f"{emoji}  {pj} · {nombre_lugar()}"
         if state["chat_personaje"]:
             chat_titulo.value = f"💬 Habla con {PERSONAJES[state['chat_personaje']]['label']}"
 
+        # Nav compacto ARRIBA: así Atrás / Empezar de nuevo quedan SIEMPRE visibles
+        # (antes, apilados al final, había que hacer scroll para verlos).
         nav = ft.Row(
             [
                 ft.OutlinedButton("←  Atrás", on_click=lambda e: ir_paso(1), style=BTN_ROUND),
@@ -333,21 +343,39 @@ def main(page: ft.Page):
             ],
             alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         )
-        # La escena se genera AUTOMÁTICAMENTE al llegar a este paso (ver _auto_generar):
-        # ya no hay botón "¡Generar!". Mientras genera se ve loading_panel animado;
-        # al terminar, la imagen y el chat.
-        return ft.Column(
-            [
-                ft.Text("¡Tu escena! 🎉", size=22, weight=ft.FontWeight.BOLD),
-                ft.Container(summary_text, padding=14, bgcolor=ft.Colors.PURPLE_50, border_radius=14),
-                ft.Container(loading_panel, alignment=ft.alignment.center),
-                ft.Container(result_image, alignment=ft.alignment.center),
-                status_text,
-                chat_panel,
-                nav,
-            ],
-            spacing=16,
+
+        # COLUMNA IZQUIERDA — la imagen es la protagonista (o el panel de carga
+        # mientras se genera). Debajo, una etiqueta compacta con personaje · lugar
+        # (sustituye al antiguo título "¡Tu escena!" + caja grande de resumen).
+        caption = ft.Container(
+            summary_text,
+            padding=ft.padding.symmetric(horizontal=14, vertical=8),
+            bgcolor=ft.Colors.PURPLE_50,
+            border_radius=12,
         )
+        columna_imagen = ft.Container(
+            width=580,
+            content=ft.Column(
+                [
+                    ft.Container(loading_panel, alignment=ft.alignment.center),
+                    ft.Container(result_image, alignment=ft.alignment.center),
+                    caption,
+                    status_text,
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=12,
+            ),
+        )
+
+        # DOS COLUMNAS: imagen (izquierda) + chat a toda la altura (derecha). La
+        # escena se genera AUTOMÁTICAMENTE al llegar al paso (ver _auto_generar):
+        # ya no hay botón "¡Generar!".
+        dos_columnas = ft.Row(
+            [columna_imagen, chat_panel],
+            vertical_alignment=ft.CrossAxisAlignment.START,
+            spacing=18,
+        )
+        return ft.Column([nav, dos_columnas], spacing=16)
 
     # -----------------------------------------------------------------------
     # Render: dibuja el paso actual
@@ -355,11 +383,14 @@ def main(page: ft.Page):
     def render():
         if state["paso"] == 0:
             cuerpo = build_step_personaje()
+            header = build_header()
         elif state["paso"] == 1:
             cuerpo = build_step_lugar()
+            header = build_header()
         else:
             cuerpo = build_step_generar()
-        content.content = ft.Column([build_header(), cuerpo], spacing=20)
+            header = build_header(mostrar_pasos=False)  # foco en imagen + chat
+        content.content = ft.Column([header, cuerpo], spacing=20)
         page.update()
 
     def ir_paso(n: int):
@@ -469,7 +500,7 @@ def main(page: ft.Page):
             chat_panel.visible = True
             pregunta_field.disabled = False
             preguntar_button.disabled = False
-            status_text.value = "🎉 ¡Listo! Ahora puedes hacerle preguntas abajo. 💬"
+            status_text.value = "🎉 ¡Listo! Ya puedes hablar con tu personaje. 💬"
         except api_client.BackendError as exc:
             status_text.value = f"❌ {exc}"
         finally:
