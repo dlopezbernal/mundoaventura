@@ -63,6 +63,7 @@ capston/
 ├── backend/                  # Servidor de IA (FastAPI)
 │   ├── main.py               # Arranque de la app y rutas globales
 │   ├── config.py             # Configuración (Replicate, LLM, ChromaDB) desde .env
+│   ├── debug_log.py          # Traza en consola de los prompts enviados (solo con DEBUG)
 │   ├── personajes.py         # Prompts + NOMBRES de cada personaje + estilo común
 │   ├── ubicaciones.py        # Prompts de cada ubicación
 │   ├── ingest.py             # Ingesta: trocea (chunking) e indexa los documentos
@@ -153,9 +154,11 @@ paso 3 se regenera; si no cambias nada, se conserva la escena y el chat.
 > La **primera** pregunta tarda un poco más (ChromaDB descarga su modelo de embeddings, en CPU).
 
 > **Modo desarrollo (`DEBUG=true`):** activa herramientas de diagnóstico que **no** ve el niño:
-> el botón **🔌 Probar conexión** en la cabecera del frontend (consulta `/health`) y la traza del
-> **origen de cada respuesta** del chat en la **consola del backend** (ver la sección
-> *«Origen de la respuesta»* más abajo). Con `DEBUG=false` no se imprime nada y la interfaz queda limpia.
+> el botón **🔌 Probar conexión** en la cabecera del frontend (consulta `/health`), la traza del
+> **origen de cada respuesta** del chat (ver *«Origen de la respuesta»*) y la **traza de todos los
+> prompts** que el backend envía al LLM, a la generación de imagen y a DeepL (ver *«Traza de
+> prompts»*), todo en la **consola del backend**. Con `DEBUG=false` no se imprime nada y la
+> interfaz queda limpia.
 
 ---
 
@@ -218,9 +221,11 @@ ChromaDB, etiquetando cada fragmento con su personaje. Verás un resumen por arc
 
 1. Escribes una pregunta → el frontend la manda a `POST /api/ask` con el `personaje_id`.
 2. **Traducción (DeepL, obligatoria):** los documentos están en **inglés** (los embeddings rinden
-   mucho mejor en inglés), así que la pregunta del niño se traduce **ES→EN** antes de buscar. Solo
-   se traduce la pregunta; la **respuesta el LLM la genera directamente en español** (no se traduce
-   de vuelta). Sin DeepL la recuperación falla, así que el chat devuelve un error claro en su lugar.
+   mucho mejor en inglés), así que la pregunta del niño se traduce **ES→EN** antes de buscar. Esa
+   versión en inglés se usa en **todas las peticiones al modelo** (retrieval, Evaluator y generación),
+   porque Llama 3 obedece mejor en inglés. Solo se traduce la pregunta; la **respuesta el LLM la
+   genera directamente en español** (no se traduce de vuelta). Sin DeepL la recuperación falla, así
+   que el chat devuelve un error claro en su lugar.
 3. **Retrieval:** **ChromaDB** busca, entre los fragmentos (chunks) de **ese** personaje, los más
    parecidos a la pregunta (ya en inglés), y devuelve su **distancia coseno** (0 = idéntico,
    2 = opuesto). Los fragmentos los generó `backend/ingest.py` a partir de los documentos.
@@ -262,11 +267,102 @@ limpia**. En la consola del backend verás líneas como:
 [CHAT] 🟡 [GENERAL · llm · "how much is 2+2"]
 ```
 
-- 🟢 **RAG** → fundamentada en la enciclopedia (con el método —`umbral`/`llm`— y la distancia).
-- 🟡 **GENERAL** → conocimiento propio del modelo (p. ej. "2+2 = 4").
+El formato es `[CHAT] <icono> [<origen> · <metodo> · d=<distancia> · "<pregunta_en>"]`. **Lo más
+importante es entender que `origen` y `metodo` son DOS cosas distintas**, por eso aparecen juntas:
+
+#### Eje 1 — `origen`: de DÓNDE sale el contenido de la respuesta
+
+| `origen` | Icono | Qué significa |
+|----------|-------|---------------|
+| **RAG** | 🟢 | La respuesta está **fundamentada en las fichas** recuperadas de los documentos del personaje (ChromaDB). El LLM responde usando **solo** esa información → fiable y verificable. |
+| **GENERAL** | 🟡 | Las fichas **no servían**, así que el personaje responde con el **conocimiento propio del modelo** (lo que Llama 3 ya sabe). Útil para lo que está fuera de los documentos (p. ej. "¿cuánto es 2+2?"), pero **no respaldado por tus fuentes**. |
+
+Se decide en `_decidir_origen` ([backend/services/rag_service.py](backend/services/rag_service.py)):
+si las fichas recuperadas se consideran relevantes → **RAG**; si no → **GENERAL**. Internamente, cada
+camino usa un prompt distinto (`_construir_prompt` para RAG, `_construir_prompt_general` para GENERAL).
+
+#### Eje 2 — `metodo`: CÓMO se tomó esa decisión
+
+| `metodo` | Coste | Qué significa |
+|----------|-------|---------------|
+| **umbral** | **0** (sin LLM) | Se decidió **solo con la distancia coseno** de ChromaDB (`d=...`). Si la mejor ficha está por debajo de `EVALUATOR_UMBRAL_BAJO` → RAG; por encima de `EVALUATOR_UMBRAL_ALTO` → GENERAL. |
+| **llm** | 1 llamada extra | La distancia cayó en la **zona dudosa** (entre los dos umbrales), así que se llamó al **LLM-juez** (Evaluator), que responde `YES`/`NO` sobre si las fichas sirven. Más listo, pero cuesta una llamada. |
+
+Qué `metodo` aparece depende de `EVALUATOR_MODE` en el `.env` (ver la comparativa de arriba):
+`umbral` → siempre `· umbral`; `llm` → siempre `· llm`; `hibrido` → mezcla (umbral para los casos
+claros, llm solo para desempatar los dudosos).
+
+#### Las 4 combinaciones que puedes ver
+
+| Traza | Lectura |
+|-------|---------|
+| `RAG · umbral` | La pregunta se parecía mucho a una ficha (`d` baja). Decidido **gratis** y respondido con los documentos. **El caso ideal.** |
+| `GENERAL · umbral` | Ninguna ficha se parecía (`d` alta). **Gratis**, y el personaje tiró de conocimiento propio. |
+| `RAG · llm` | Caso **dudoso**; el LLM-juez dijo "sí, las fichas valen" → respuesta fundamentada. |
+| `GENERAL · llm` | Caso **dudoso**; el LLM-juez dijo "no valen" → conocimiento propio. |
+
+> En modo `hibrido` verás las **4**; en modo `umbral` solo las dos `· umbral`; en modo `llm` solo
+> las dos `· llm`. La distancia `d=...` aparece siempre que haya fichas candidatas (sirve para
+> calibrar los umbrales).
+
+**En una frase:** `origen` = **qué fuente respondió** (documentos vs. modelo) · `metodo` = **quién
+tomó la decisión** (un número gratis vs. una llamada al LLM-juez).
 
 Con `DEBUG=false` (versión final para el usuario) no se imprime nada. El JSON de `/api/ask` sigue
 incluyendo `origen`/`metodo`/`distancia` (por si los necesitas), pero el frontend ya no los usa.
+
+### 🔎 Traza de prompts (modo desarrollo, consola del backend)
+
+Con `DEBUG=true` el backend imprime en **su** consola **todos los prompts que envía a un servicio
+externo**, para tenerlos a la vista de un vistazo y poder depurarlos/ajustarlos. La traza la
+centraliza `backend/debug_log.py` (`trazar_prompt`), que se llama en cada punto de envío. Se
+trazan:
+
+| Servicio | De dónde sale | Qué se imprime |
+|----------|---------------|----------------|
+| **LLM — RAG** | respuesta fundamentada en las fichas | `SYSTEM` + `USER` |
+| **LLM — GENERAL** | respuesta con el conocimiento propio del personaje | `SYSTEM` + `USER` |
+| **LLM — Evaluator (juez)** | la llamada `SI`/`NO` que decide si es RAG | `SYSTEM` + `USER` |
+| **Replicate — escena** | generación texto→imagen (`/api/generate`) | `PROMPT` |
+| **Replicate — edición foto** | modo «usar mi foto» (`/api/generate-on-photo`) | `PROMPT` |
+| **DeepL** | traducción ES→EN de la pregunta antes del retrieval | `PROMPT` (texto a traducir) |
+
+**Tipos de prompt (roles).** En las llamadas al **LLM** hay dos partes, y la traza las separa:
+
+- **`SYSTEM`** → el **rol y las reglas**. Va **en inglés** en los tres usos (personaje RAG, personaje
+  GENERAL y Evaluator), porque Llama 3 obedece mejor las instrucciones en inglés. En los del
+  personaje se incluye la orden explícita *«ALWAYS reply in Spanish»* para que la respuesta al niño
+  salga en español (ej.: *«You are Leonardo da Vinci, speaking to a child aged 8 to 12, ALWAYS reply
+  in Spanish…»*, en `backend/services/rag_service.py`).
+- **`USER`** → la **pregunta del niño** (ya traducida ES→EN) + las **fichas** recuperadas (también en
+  inglés). Solo la pregunta pasa por DeepL; los `system` son texto **fijo en inglés en el código** y
+  NO se traducen en runtime. Ver la decisión de diseño *«Todo lo que recibe el modelo va en inglés»*.
+
+La generación de imagen y DeepL no usan roles: envían un **único texto**, etiquetado `PROMPT`.
+
+Ejemplo de salida en la consola del backend al chatear:
+
+```
+┌─ PROMPT → Replicate · Evaluator (juez) (meta/meta-llama-3-8b-instruct) ───
+│ [SYSTEM]
+│   You are a strict evaluator for a RAG system. Your only task is to decide...
+│ [USER]
+│   Context cards:
+│   - ...
+│   Question: Where do you live?
+└──────────────
+
+┌─ PROMPT → Replicate · RAG (meta/meta-llama-3-8b-instruct) ───
+│ [SYSTEM]
+│   You are Sherlock Holmes, speaking in the first person to a child aged 8 to 12. ALWAYS reply in Spanish...
+│ [USER]
+│   Cards with data about me:
+│   - ...
+│   Child's question: Where do you live?
+└──────────────
+```
+
+Con `DEBUG=false` no se imprime ningún prompt (coste cero en la versión final).
 
 ---
 
@@ -305,13 +401,25 @@ torch) antes que volver a PyTorch.
 **Por qué:** una GPU modesta (GTX 1660, 6 GB) hace la inferencia local lenta e inestable; en la
 nube el backend solo manda un prompt y recibe el resultado, y el proyecto corre en cualquier PC.
 
-### 3. Documentos en inglés + traducción de la pregunta (DeepL)
+### 3. Todo lo que recibe el modelo va en inglés; la respuesta, en español
 
-**Decisión:** mantener la base de conocimiento en **inglés** y traducir solo la **pregunta**
-ES→EN en runtime (DeepL), en vez de usar embeddings multilingües o traducir todo el corpus.
-**Por qué:** los embeddings rinden mucho mejor en inglés (medido: sin traducir, la recuperación
-elegía fichas equivocadas); traducir solo la pregunta es barato, y traducir documentos extensos
-gastaría mucha cuota. Ver [§ traducción](#-cómo-funciona-la-conversación-rag-con-evaluator).
+**Decisión:** mantener la base de conocimiento en **inglés**, traducir la **pregunta** del niño
+ES→EN en runtime (DeepL) y escribir **todos los prompts que enviamos al LLM** —el `system`/`user`
+del personaje (RAG y GENERAL) y el del Evaluator, las fichas y la pregunta— **en inglés**. La única
+excepción es la **respuesta**, que el prompt pide explícitamente **en español** (es lo que lee el niño).
+
+**Por qué:**
+- **Embeddings:** rinden mucho mejor en inglés (medido: sin traducir, la recuperación elegía fichas
+  equivocadas). Traducir solo la pregunta es barato; traducir todo el corpus gastaría mucha cuota.
+- **Seguimiento de instrucciones:** el LLM por defecto (**Llama 3 8B**) está entrenado sobre todo en
+  inglés y **obedece mejor las instrucciones en inglés**; con la petición en castellano responde
+  peor. Por eso los `system`/`user` del personaje y del Evaluator van en inglés y se les pasa la
+  pregunta ya traducida (`pregunta_en`), no la original en español.
+- **La salida en español no penaliza:** el modelo es multilingüe al *generar*, así que produce la
+  respuesta en español sin pérdida de calidad aunque se le instruya en inglés.
+
+Ver [§ traducción](#-cómo-funciona-la-conversación-rag-con-evaluator) y *«Traza de prompts»* (para
+ver los prompts reales en consola con `DEBUG=true`).
 
 ### 4. Evaluator híbrido (umbral + LLM-juez)
 

@@ -39,6 +39,7 @@ import re
 import replicate
 
 from backend import config
+from backend import debug_log
 from backend import personajes as personajes_cfg
 from backend import ubicaciones as ubicaciones_cfg
 
@@ -107,6 +108,9 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
         f"{personajes_cfg.FRAMING}, {personajes_cfg.STYLE_SUFFIX}"
     )
     _avisar_si_prompt_largo(prompt)
+    debug_log.trazar_prompt(
+        f"Replicate · escena ({config.REPLICATE_MODEL})", prompt=prompt
+    )
 
     output = replicate.run(
         config.REPLICATE_MODEL,
@@ -159,6 +163,10 @@ def generar_en_foto(
         f"{personajes_cfg.STYLE_SUFFIX}"
     )
     _avisar_si_prompt_largo(instruccion)
+    debug_log.trazar_prompt(
+        f"Replicate · edición foto ({config.REPLICATE_EDIT_MODEL})",
+        prompt=instruccion,
+    )
 
     # Pasamos la imagen como data URI (forma fiable de mandar bytes a Replicate).
     data_uri = f"data:{mime};base64,{base64.b64encode(image_bytes).decode('utf-8')}"

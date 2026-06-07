@@ -29,6 +29,7 @@ import chromadb
 import replicate
 
 from backend import config
+from backend import debug_log
 from backend import personajes as personajes_cfg
 from backend.services import translation_service
 
@@ -124,22 +125,27 @@ def _construir_prompt(nombre: str, contexto: list[str], pregunta: str) -> tuple[
 
     - system: las reglas del juego (quién eres, cómo hablar, no inventar).
     - user:   las fichas recuperadas + la pregunta concreta del niño.
+
+    El prompt va EN INGLÉS a propósito (instrucciones + pregunta ya traducida ES→EN
+    + fichas, que ya están en inglés): Llama 3 sigue mejor las instrucciones en
+    inglés. La RESPUESTA, en cambio, se pide explícitamente EN ESPAÑOL, porque es lo
+    que leerá el niño (el modelo genera español sin problema aunque se le instruya
+    en inglés).
     """
-    fichas_texto = "\n".join(f"- {ficha}" for ficha in contexto) or "(sin datos)"
+    fichas_texto = "\n".join(f"- {ficha}" for ficha in contexto) or "(no data)"
 
     system = (
-        f"Eres {nombre} y hablas en primera persona con un niño de entre 8 y 12 "
-        "años. Responde SIEMPRE en español, de forma breve (2-4 frases), alegre y "
-        "sencilla. Usa ÚNICAMENTE la información de las fichas que te paso (las "
-        "fichas pueden estar en inglés: entiéndelas y responde en español). Si la "
-        "respuesta no está en las fichas, di con simpatía que eso no lo sabes, sin "
-        "inventarte nada. No dejes de ser el personaje en ningún momento."
+        f"You are {nombre}, speaking in the first person to a child aged 8 to 12. "
+        "ALWAYS reply in Spanish, in a short (2-4 sentences), cheerful and simple "
+        "way. Use ONLY the information in the cards I give you. If the answer is not "
+        "in the cards, kindly say that you do not know that, without making anything "
+        "up. Never break character."
     )
 
     user = (
-        f"Fichas con datos sobre mí:\n{fichas_texto}\n\n"
-        f"Pregunta del niño: {pregunta}\n\n"
-        "Tu respuesta (en primera persona, en español):"
+        f"Cards with data about me:\n{fichas_texto}\n\n"
+        f"Child's question: {pregunta}\n\n"
+        "Your answer (in the first person, in Spanish):"
     )
     return system, user
 
@@ -149,17 +155,20 @@ def _construir_prompt_general(nombre: str, pregunta: str) -> tuple[str, str]:
 
     El personaje responde con su conocimiento propio, manteniéndose en su papel y
     con lenguaje apto para niños. Si tampoco lo sabe, lo dice con simpatía.
+
+    Mismo criterio que _construir_prompt: instrucciones + pregunta EN INGLÉS (Llama 3
+    obedece mejor), pero la RESPUESTA se pide EN ESPAÑOL (es lo que lee el niño).
     """
     system = (
-        f"Eres {nombre} y hablas en primera persona con un niño de entre 8 y 12 "
-        "años. Responde SIEMPRE en español, de forma breve (2-4 frases), alegre y "
-        "sencilla, sin dejar de ser el personaje. No tienes fichas de datos para "
-        "esta pregunta: responde con tu propio conocimiento general y, si no lo "
-        "sabes, dilo con simpatía sin inventar."
+        f"You are {nombre}, speaking in the first person to a child aged 8 to 12. "
+        "ALWAYS reply in Spanish, in a short (2-4 sentences), cheerful and simple "
+        "way, never breaking character. You have no data cards for this question: "
+        "answer with your own general knowledge, and if you do not know, kindly say "
+        "so without making anything up."
     )
     user = (
-        f"Pregunta del niño: {pregunta}\n\n"
-        "Tu respuesta (en primera persona, en español):"
+        f"Child's question: {pregunta}\n\n"
+        "Your answer (in the first person, in Spanish):"
     )
     return system, user
 
@@ -169,6 +178,7 @@ def _llamar_llm(
     user: str,
     max_tokens: int | None = None,
     temperature: float = 0.6,
+    etiqueta: str = "LLM",
 ) -> str:
     """Llama al LLM en Replicate y devuelve el texto de la respuesta.
 
@@ -178,7 +188,18 @@ def _llamar_llm(
     `max_tokens` y `temperature` son configurables porque el Evaluator (juez)
     necesita una respuesta cortísima y determinista, mientras que la respuesta
     del personaje admite más longitud y algo de creatividad.
+
+    `etiqueta` identifica el uso ("RAG", "GENERAL", "Evaluator") solo para la
+    traza de prompts en modo DEBUG; no afecta a la llamada.
     """
+    # En modo DEBUG, deja a la vista en consola el prompt completo (system + user)
+    # que recibe el modelo. Es el ÚNICO sitio por el que pasan los 3 usos del LLM.
+    debug_log.trazar_prompt(
+        f"Replicate · {etiqueta} ({config.REPLICATE_LLM_MODEL})",
+        system=system,
+        user=user,
+    )
+
     salida = replicate.run(
         config.REPLICATE_LLM_MODEL,
         input={
@@ -197,10 +218,16 @@ def _evaluar_relevancia(contexto: list[str], pregunta: str) -> bool:
 
     Esta es la pieza que nos permite saber si la respuesta vendrá DEL RAG o no.
     Hacemos una primera llamada al LLM pidiéndole que actúe como juez estricto y
-    responda SOLO 'SI' o 'NO':
-      - 'SI'  → las fichas recuperadas son relevantes ⇒ respuesta fundamentada (RAG).
+    responda SOLO 'YES' o 'NO':
+      - 'YES' → las fichas recuperadas son relevantes ⇒ respuesta fundamentada (RAG).
       - 'NO'  → no son relevantes ⇒ el personaje tendrá que tirar de conocimiento
                 general (y, en el futuro, aquí se podría activar la búsqueda web).
+
+    El prompt va EN INGLÉS a propósito: este juez razona sobre material 100% en
+    inglés (las fichas vienen en inglés y la pregunta llega ya traducida ES→EN),
+    así que darle las instrucciones en el mismo idioma lo hace más consistente.
+    Nota: NO lo traducimos en runtime con DeepL (sería malgastar cuota en un texto
+    fijo); está escrito directamente en inglés aquí.
 
     Es el mismo patrón "Evaluator → Router" de las arquitecturas RAG avanzadas,
     pero implementado a mano (sin LangGraph) para que se vea cada paso.
@@ -210,19 +237,21 @@ def _evaluar_relevancia(contexto: list[str], pregunta: str) -> bool:
 
     fichas_texto = "\n".join(f"- {ficha}" for ficha in contexto)
     system = (
-        "Eres un evaluador estricto de un sistema RAG. Tu única tarea es decidir "
-        "si las fichas de contexto contienen información para responder la pregunta. "
-        "Responde EXCLUSIVAMENTE con una palabra, sin explicar nada: 'SI' si las "
-        "fichas son relevantes y suficientes, o 'NO' si no lo son."
+        "You are a strict evaluator for a RAG system. Your only task is to decide "
+        "whether the context cards contain information to answer the question. "
+        "Reply with EXACTLY one word, no explanation: 'YES' if the cards are "
+        "relevant and sufficient, or 'NO' if they are not."
     )
     user = (
-        f"Fichas de contexto:\n{fichas_texto}\n\n"
-        f"Pregunta: {pregunta}\n\n"
-        "¿Las fichas son relevantes para responder? Responde solo SI o NO:"
+        f"Context cards:\n{fichas_texto}\n\n"
+        f"Question: {pregunta}\n\n"
+        "Are the cards relevant to answer it? Reply only YES or NO:"
     )
 
     # Respuesta cortísima y temperatura baja: queremos un juez consistente.
-    veredicto = _llamar_llm(system, user, max_tokens=5, temperature=0.0)
+    veredicto = _llamar_llm(
+        system, user, max_tokens=5, temperature=0.0, etiqueta="Evaluator (juez)"
+    )
 
     # Parseo robusto: nos quedamos con la primera palabra y la comparamos.
     palabras = "".join(c for c in veredicto.lower() if c.isalpha() or c.isspace()).split()
@@ -302,10 +331,12 @@ def responder(personaje_id: str, pregunta: str) -> dict:
     nombre = personajes_cfg.NOMBRES[personaje_id]
 
     # 0) TRADUCCIÓN (OBLIGATORIA): la enciclopedia está en inglés, así que
-    #    traducimos la pregunta ES→EN para que la búsqueda sea precisa. Si DeepL
-    #    no está disponible, traducir_es_en lanza TranslationError (subclase de
-    #    ValueError) → el router responde 400 con un mensaje claro, en vez de dar
-    #    una respuesta mala. (Solo se traduce la pregunta; la respuesta va en español.)
+    #    traducimos la pregunta ES→EN. La versión en inglés (pregunta_en) se usa en
+    #    TODAS las peticiones al modelo —retrieval, Evaluator y generación—, porque
+    #    Llama 3 entiende y obedece mejor en inglés. Si DeepL no está disponible,
+    #    traducir_es_en lanza TranslationError (subclase de ValueError) → el router
+    #    responde 400 con un mensaje claro, en vez de dar una respuesta mala.
+    #    (Solo se traduce la pregunta del niño; la RESPUESTA del personaje va en español.)
     pregunta_en = translation_service.traducir_es_en(pregunta)
 
     # 1) RETRIEVAL: recuperar las fichas candidatas y sus distancias (con la
@@ -318,15 +349,18 @@ def responder(personaje_id: str, pregunta: str) -> dict:
     if es_rag:
         # --- Camino RAG: respuesta FUNDAMENTADA solo en las fichas ---
         origen = "RAG"
-        system, user = _construir_prompt(nombre, contexto, pregunta)
-        respuesta = _llamar_llm(system, user)
+        # Pasamos la pregunta YA traducida (pregunta_en): Llama 3 entiende y obedece
+        # mejor en inglés. La respuesta, eso sí, se genera en español (lo pide el prompt).
+        system, user = _construir_prompt(nombre, contexto, pregunta_en)
+        respuesta = _llamar_llm(system, user, etiqueta="RAG")
         fuentes = contexto
     else:
         # --- Camino GENERAL: las fichas no sirven; el personaje responde con su
         # conocimiento propio (aquí, en el futuro, podría enrutarse a búsqueda web).
         origen = "GENERAL"
-        system, user = _construir_prompt_general(nombre, pregunta)
-        respuesta = _llamar_llm(system, user)
+        # Igual que en RAG: la pregunta va en inglés (pregunta_en), la respuesta en español.
+        system, user = _construir_prompt_general(nombre, pregunta_en)
+        respuesta = _llamar_llm(system, user, etiqueta="GENERAL")
         fuentes = []  # no hay fichas detrás de esta respuesta
 
     # Traza de depuración (solo si DEBUG): en la consola del BACKEND, no del cliente.

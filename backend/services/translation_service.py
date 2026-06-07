@@ -22,6 +22,7 @@ Arquitectura de 1 sola traducción:
 import deepl
 
 from backend import config
+from backend import debug_log
 
 
 class TranslationError(ValueError):
@@ -73,6 +74,7 @@ def traducir_es_en(texto: str) -> str:
     fallback: si DeepL no está disponible, preferimos un error claro.
     """
     translator = _get_translator()
+    debug_log.trazar_prompt("DeepL · traducción ES→EN", prompt=texto)
     try:
         resultado = translator.translate_text(
             texto, source_lang="ES", target_lang="EN-US"
