@@ -46,14 +46,16 @@ def main(page: ft.Page):
     page.scroll = ft.ScrollMode.AUTO
 
     # Estilos de botón reutilizables (grandes y redondeados).
-    BTN_PRIMARY = ft.ButtonStyle(
-        shape=ft.RoundedRectangleBorder(radius=28),
-        padding=ft.padding.symmetric(horizontal=26, vertical=18),
-        text_style=ft.TextStyle(size=16, weight=ft.FontWeight.BOLD),
-    )
     BTN_ROUND = ft.ButtonStyle(
         shape=ft.RoundedRectangleBorder(radius=24),
         padding=ft.padding.symmetric(horizontal=18, vertical=14),
+    )
+    # Estilo para botones que van DENTRO de la cabecera morada: borde y texto
+    # blancos para que resalten sobre el degradado (igual que "Probar conexión").
+    BTN_HEADER = ft.ButtonStyle(
+        color=ft.Colors.WHITE,
+        side=ft.BorderSide(1, ft.Colors.WHITE),
+        shape=ft.RoundedRectangleBorder(radius=20),
     )
 
     # -----------------------------------------------------------------------
@@ -190,7 +192,14 @@ def main(page: ft.Page):
             ),
         )
 
-    def build_header(mostrar_pasos: bool = True) -> ft.Control:
+    def build_header(acciones: list | None = None) -> ft.Control:
+        """Cabecera común a TODAS las pantallas: título + botones de navegación.
+
+        `acciones` son los botones del paso (Atrás / Siguiente / Empezar de nuevo),
+        que van DENTRO de la cabecera —no debajo del contenido— para no robar espacio
+        vertical y quedar siempre visibles. Todas las pantallas siguen este mismo
+        patrón (cabecera con botones + contenido), sin barra de pasos.
+        """
         fila_cabecera = [
             ft.Column(
                 [
@@ -202,6 +211,8 @@ def main(page: ft.Page):
                 spacing=2,
             ),
         ]
+        if acciones:
+            fila_cabecera.extend(acciones)
         # "Probar conexión" es una herramienta de diagnóstico: solo en modo DEBUG.
         # En la versión final para el niño no aparece.
         if DEBUG:
@@ -209,14 +220,10 @@ def main(page: ft.Page):
                 ft.OutlinedButton(
                     "🔌 Probar conexión",
                     on_click=on_check_backend,
-                    style=ft.ButtonStyle(
-                        color=ft.Colors.WHITE,
-                        side=ft.BorderSide(1, ft.Colors.WHITE),
-                        shape=ft.RoundedRectangleBorder(radius=20),
-                    ),
+                    style=BTN_HEADER,
                 )
             )
-        hero = ft.Container(
+        return ft.Container(
             gradient=ft.LinearGradient(
                 begin=ft.alignment.top_left,
                 end=ft.alignment.bottom_right,
@@ -229,37 +236,6 @@ def main(page: ft.Page):
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
             ),
         )
-        # Los "pasos" (Personaje · Lugar · ¡Listo!) guían en los pasos de elección,
-        # pero en el paso final (escena + chat) estorban: ahí damos todo el foco a la
-        # imagen y al chat, así que se ocultan (mostrar_pasos=False).
-        elementos = [hero]
-        if mostrar_pasos:
-            elementos.append(build_stepper())
-        return ft.Column(elementos, spacing=16)
-
-    def build_stepper() -> ft.Control:
-        items = []
-        nombres = [("1", "Personaje"), ("2", "Lugar"), ("3", "¡Listo!")]
-        for i, (num, nom) in enumerate(nombres):
-            activo = i == state["paso"]
-            hecho = i < state["paso"]
-            color = ft.Colors.PURPLE_400 if (activo or hecho) else ft.Colors.GREY_300
-            circulo = ft.Container(
-                width=34, height=34, border_radius=17, bgcolor=color,
-                alignment=ft.alignment.center,
-                content=ft.Text("✓" if hecho else num, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
-            )
-            items.append(
-                ft.Row(
-                    [circulo, ft.Text(nom, weight=ft.FontWeight.BOLD if activo else ft.FontWeight.NORMAL,
-                                      color=ft.Colors.GREY_900 if activo else ft.Colors.GREY_500)],
-                    spacing=6,
-                )
-            )
-            if i < 2:
-                items.append(ft.Container(width=28, height=3, bgcolor=ft.Colors.GREY_300, border_radius=2))
-        return ft.Row(items, alignment=ft.MainAxisAlignment.CENTER,
-                      vertical_alignment=ft.CrossAxisAlignment.CENTER, spacing=8)
 
     # -----------------------------------------------------------------------
     # Paso 1 — Lugar
@@ -276,15 +252,6 @@ def main(page: ft.Page):
         foto_label = "✓ ¡Foto lista!" if (foto_sel and state["foto_path"]) else "Mi foto"
         tarjetas.append(tarjeta("📷", foto_label, foto_sel, lambda e: abrir_selector_foto()))
 
-        nav = ft.Row(
-            [
-                ft.OutlinedButton("←  Atrás", on_click=lambda e: ir_paso(0), style=BTN_ROUND),
-                ft.ElevatedButton("Siguiente  →", on_click=lambda e: ir_paso(2),
-                                  disabled=not state["ubicacion_id"],
-                                  bgcolor=ft.Colors.PURPLE_400, color=ft.Colors.WHITE, style=BTN_PRIMARY),
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        )
         return ft.Column(
             [
                 ft.Text("¿A dónde quieres viajar? 📍", size=22, weight=ft.FontWeight.BOLD),
@@ -292,7 +259,6 @@ def main(page: ft.Page):
                 ft.Text("📷 Si usas tu foto, ¡saca tu cuarto vacío! 😊", size=12,
                         italic=True, color=ft.Colors.GREY_600),
                 status_text,
-                nav,
             ],
             spacing=16,
         )
@@ -312,15 +278,6 @@ def main(page: ft.Page):
                 secciones.append(ft.Text(titulo, size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_700))
                 secciones.append(ft.Row(fila, wrap=True, spacing=14, run_spacing=14))
 
-        nav = ft.Row(
-            [
-                ft.ElevatedButton("Siguiente  →", on_click=lambda e: ir_paso(1),
-                                  disabled=not state["personaje_id"],
-                                  bgcolor=ft.Colors.PURPLE_400, color=ft.Colors.WHITE, style=BTN_PRIMARY),
-            ],
-            alignment=ft.MainAxisAlignment.END,
-        )
-        secciones.append(nav)
         return ft.Column(secciones, spacing=12)
 
     # -----------------------------------------------------------------------
@@ -333,16 +290,6 @@ def main(page: ft.Page):
         summary_text.value = f"{emoji}  {pj} · {nombre_lugar()}"
         if state["chat_personaje"]:
             chat_titulo.value = f"💬 Habla con {PERSONAJES[state['chat_personaje']]['label']}"
-
-        # Nav compacto ARRIBA: así Atrás / Empezar de nuevo quedan SIEMPRE visibles
-        # (antes, apilados al final, había que hacer scroll para verlos).
-        nav = ft.Row(
-            [
-                ft.OutlinedButton("←  Atrás", on_click=lambda e: ir_paso(1), style=BTN_ROUND),
-                ft.OutlinedButton("🔄 Empezar de nuevo", on_click=empezar_de_nuevo, style=BTN_ROUND),
-            ],
-            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-        )
 
         # COLUMNA IZQUIERDA — la imagen es la protagonista (o el panel de carga
         # mientras se genera). Debajo, una etiqueta compacta con personaje · lugar
@@ -370,27 +317,39 @@ def main(page: ft.Page):
         # DOS COLUMNAS: imagen (izquierda) + chat a toda la altura (derecha). La
         # escena se genera AUTOMÁTICAMENTE al llegar al paso (ver _auto_generar):
         # ya no hay botón "¡Generar!".
-        dos_columnas = ft.Row(
+        return ft.Row(
             [columna_imagen, chat_panel],
             vertical_alignment=ft.CrossAxisAlignment.START,
             spacing=18,
         )
-        return ft.Column([nav, dos_columnas], spacing=16)
 
     # -----------------------------------------------------------------------
     # Render: dibuja el paso actual
     # -----------------------------------------------------------------------
     def render():
+        # Los botones de navegación de cada paso viven EN la cabecera (mismo patrón en
+        # las tres pantallas). "Siguiente" se desactiva hasta que hay selección; como
+        # render() se vuelve a llamar al elegir, su estado se actualiza solo.
         if state["paso"] == 0:
             cuerpo = build_step_personaje()
-            header = build_header()
+            acciones = [
+                ft.OutlinedButton("Siguiente  →", on_click=lambda e: ir_paso(1),
+                                  disabled=not state["personaje_id"], style=BTN_HEADER),
+            ]
         elif state["paso"] == 1:
             cuerpo = build_step_lugar()
-            header = build_header()
+            acciones = [
+                ft.OutlinedButton("←  Atrás", on_click=lambda e: ir_paso(0), style=BTN_HEADER),
+                ft.OutlinedButton("Siguiente  →", on_click=lambda e: ir_paso(2),
+                                  disabled=not state["ubicacion_id"], style=BTN_HEADER),
+            ]
         else:
             cuerpo = build_step_generar()
-            header = build_header(mostrar_pasos=False)  # foco en imagen + chat
-        content.content = ft.Column([header, cuerpo], spacing=20)
+            acciones = [
+                ft.OutlinedButton("←  Atrás", on_click=lambda e: ir_paso(1), style=BTN_HEADER),
+                ft.OutlinedButton("🔄 Empezar de nuevo", on_click=empezar_de_nuevo, style=BTN_HEADER),
+            ]
+        content.content = ft.Column([build_header(acciones=acciones), cuerpo], spacing=20)
         page.update()
 
     def ir_paso(n: int):
@@ -500,7 +459,7 @@ def main(page: ft.Page):
             chat_panel.visible = True
             pregunta_field.disabled = False
             preguntar_button.disabled = False
-            status_text.value = "🎉 ¡Listo! Ya puedes hablar con tu personaje. 💬"
+            status_text.value = ""  # el chat ya invita a hablar; no hace falta avisar
         except api_client.BackendError as exc:
             status_text.value = f"❌ {exc}"
         finally:
