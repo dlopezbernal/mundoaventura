@@ -4,12 +4,13 @@ frontend/main.py — Interfaz de usuario (asistente por pasos)
 
 Aplicación Flet con un flujo guiado, pensado para niños de 8-12 años:
 
-  Paso 1 → Elegir un PERSONAJE.
+  Paso 1 → Elegir CON QUIÉN hablar (personaje).
   Paso 2 → Elegir un LUGAR (o subir "Mi foto").
   Paso 3 → Generar la escena y conversar con el personaje (chat RAG).
 
 Estilo "infantil y vivo": cabecera con degradado, barra de progreso de pasos,
-tarjetas grandes y redondeadas con emoji, y selección resaltada con animación.
+y la elección de personaje/lugar mediante un carrusel "coverflow" (carta central
+grande con las vecinas asomando, flechas ‹ › y puntitos de posición).
 
 Arráncala con:
     flet run frontend/main.py
@@ -22,11 +23,15 @@ import time
 import flet as ft
 
 import api_client  # al importarse, carga el .env (incluida la variable DEBUG)
-from personajes import GRUPOS, PERSONAJES, personajes_de_grupo
+from personajes import GRUPOS, PERSONAJES
 from ubicaciones import UBICACIONES
 
 # Id especial (no es una ubicación real) para el modo "Usar mi foto".
 FOTO_ID = "__foto__"
+
+# Mapa inverso categoría -> título de grupo legible (p. ej. "prehistorico" ->
+# "Prehistóricos"), para mostrar la categoría en la carta central del carrusel.
+CATEGORIA_LABEL = {cat: titulo for titulo, cats in GRUPOS.items() for cat in cats}
 
 # Modo desarrollo: si DEBUG está activo, se muestra el botón "Probar conexión".
 # El origen de cada respuesta del chat (RAG/GENERAL) lo traza el BACKEND en su
@@ -67,6 +72,8 @@ def main(page: ft.Page):
         "foto_path": None,       # ruta de la foto subida (modo FOTO_ID)
         "chat_personaje": None,  # personaje en pantalla (al que se pregunta)
         "paso": 0,               # paso actual del asistente (0, 1, 2)
+        "personaje_idx": 0,      # carta centrada en el carrusel de personajes
+        "ubicacion_idx": 0,      # carta centrada en el carrusel de lugares
         "generando": False,      # True mientras se está generando la escena
         "generado_para": None,   # (personaje, ubicacion, foto) de la última escena hecha
     }
@@ -162,35 +169,123 @@ def main(page: ft.Page):
             return UBICACIONES[state["ubicacion_id"]]["label"]
         return ""
 
-    def tarjeta(emoji: str, label: str, seleccionada: bool, on_click) -> ft.Container:
-        """Tarjeta grande y redondeada (lugar o personaje), con resalte al elegir."""
+    def carta_carrusel(emoji: str, label: str, *, foco: bool, seleccionada: bool,
+                       on_click, sub: str | None = None) -> ft.Container:
+        """Una carta del carrusel.
+
+        `foco=True` es la carta central (grande y protagonista); las vecinas van
+        más pequeñas y semitransparentes para dar el efecto "coverflow". La central
+        se resalta en ámbar cuando está seleccionada.
+        """
+        if foco:
+            w, h, e_size, l_size, opacity, border_w = 190, 186, 66, 17, 1.0, 5
+            border_col = ft.Colors.AMBER_400 if seleccionada else ft.Colors.PURPLE_200
+        else:
+            w, h, e_size, l_size, opacity, border_w = 112, 128, 40, 11, 0.5, 3
+            border_col = ft.Colors.GREY_200
+
+        col = [ft.Text(emoji, size=e_size)]
+        if foco and sub:
+            col.append(
+                ft.Container(
+                    ft.Text(sub, size=11, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_700),
+                    bgcolor=ft.Colors.PURPLE_50,
+                    border_radius=10,
+                    padding=ft.padding.symmetric(horizontal=10, vertical=2),
+                )
+            )
+        col.append(
+            ft.Text(label, size=l_size, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
+        )
+
         return ft.Container(
-            width=140,
-            height=140,
+            width=w,
+            height=h,
             padding=8,
-            bgcolor=ft.Colors.AMBER_50 if seleccionada else ft.Colors.WHITE,
-            border=ft.border.all(4, ft.Colors.AMBER_400 if seleccionada else ft.Colors.GREY_200),
+            bgcolor=ft.Colors.AMBER_50 if (foco and seleccionada) else ft.Colors.WHITE,
+            border=ft.border.all(border_w, border_col),
             border_radius=24,
             ink=True,
             on_click=on_click,
             alignment=ft.alignment.center,
-            scale=1.06 if seleccionada else 1.0,
-            animate_scale=ft.Animation(180, ft.AnimationCurve.EASE_OUT),
+            opacity=opacity,
+            animate_opacity=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
+            animate_scale=ft.Animation(200, ft.AnimationCurve.EASE_OUT),
             shadow=ft.BoxShadow(
-                blur_radius=10,
-                color=ft.Colors.with_opacity(0.15, ft.Colors.BLACK),
-                offset=ft.Offset(0, 4),
+                blur_radius=16 if foco else 6,
+                color=ft.Colors.with_opacity(0.18 if foco else 0.10, ft.Colors.BLACK),
+                offset=ft.Offset(0, 5),
             ),
             content=ft.Column(
-                [
-                    ft.Text(emoji, size=50),
-                    ft.Text(label, size=13, weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
-                ],
+                col,
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
                 alignment=ft.MainAxisAlignment.CENTER,
                 spacing=6,
             ),
         )
+
+    def flecha_carrusel(icono: str, on_click, color=ft.Colors.PURPLE_400) -> ft.Container:
+        """Botón circular (‹ / ›) para mover el carrusel; grande para dedos pequeños."""
+        return ft.Container(
+            width=58,
+            height=58,
+            border_radius=29,
+            bgcolor=color,
+            ink=True,
+            on_click=on_click,
+            alignment=ft.alignment.center,
+            shadow=ft.BoxShadow(
+                blur_radius=8,
+                color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK),
+                offset=ft.Offset(0, 3),
+            ),
+            content=ft.Text(icono, size=30, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
+        )
+
+    def carrusel(items: list[dict], idx: int, on_prev, on_next, on_center,
+                 accent=ft.Colors.PURPLE_400, accent_suave=ft.Colors.PURPLE_100) -> ft.Control:
+        """Carrusel tipo coverflow.
+
+        `items` es una lista de dicts {emoji, label, sub, seleccionada}. Muestra la
+        carta `idx` en el centro con sus vecinas (con vuelta circular) asomando a los
+        lados; flechas ‹ › y puntitos de posición debajo. Tocar una vecina la trae al
+        centro; tocar la central dispara `on_center` (p. ej. abrir el selector de foto).
+        `accent`/`accent_suave` colorean flechas y puntitos para distinguir cada paso.
+        """
+        n = len(items)
+        idx %= n
+        prev_it, cur_it, next_it = items[(idx - 1) % n], items[idx], items[(idx + 1) % n]
+
+        fila = ft.Row(
+            [
+                flecha_carrusel("‹", on_prev, color=accent),
+                carta_carrusel(prev_it["emoji"], prev_it["label"],
+                               foco=False, seleccionada=False, on_click=on_prev),
+                carta_carrusel(cur_it["emoji"], cur_it["label"], foco=True,
+                               seleccionada=cur_it["seleccionada"], on_click=on_center,
+                               sub=cur_it.get("sub")),
+                carta_carrusel(next_it["emoji"], next_it["label"],
+                               foco=False, seleccionada=False, on_click=on_next),
+                flecha_carrusel("›", on_next, color=accent),
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            spacing=14,
+            height=200,
+        )
+        puntos = ft.Row(
+            [
+                ft.Container(
+                    width=11, height=11, border_radius=6,
+                    bgcolor=accent if i == idx else accent_suave,
+                )
+                for i in range(n)
+            ],
+            alignment=ft.MainAxisAlignment.CENTER,
+            spacing=7,
+        )
+        return ft.Column([fila, puntos],
+                         horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=14)
 
     def build_header(acciones: list | None = None) -> ft.Control:
         """Cabecera común a TODAS las pantallas: título + botones de navegación.
@@ -237,48 +332,122 @@ def main(page: ft.Page):
             ),
         )
 
+    def panel_paso(titulo: str, contenido: ft.Control, *, fondo, borde, color_titulo) -> ft.Control:
+        """Envuelve un paso en un 'mundo' de color propio (fondo + borde + título),
+        para que al cambiar de pantalla se note claramente que es otra sección.
+
+        Tamaño FIJO (mismo ancho y alto en los dos pasos) para que la pantalla no
+        "salte" al cambiar, aunque un paso tenga más texto que el otro (p. ej. el
+        aviso de la foto). El contenido se ancla arriba y el hueco sobrante queda abajo.
+        """
+        return ft.Container(
+            # Sin ancho fijo: el Column contenedor lo estira al MISMO ancho que la
+            # cabecera (ver render → horizontal_alignment=STRETCH). Altura fija para
+            # que los dos pasos midan exactamente lo mismo.
+            height=360,
+            bgcolor=fondo,
+            border=ft.border.all(3, borde),
+            border_radius=28,
+            padding=ft.padding.symmetric(horizontal=20, vertical=16),
+            alignment=ft.alignment.top_center,
+            content=ft.Column(
+                [
+                    ft.Text(titulo, size=23, weight=ft.FontWeight.BOLD, color=color_titulo),
+                    contenido,
+                ],
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                spacing=12,
+            ),
+        )
+
     # -----------------------------------------------------------------------
     # Paso 1 — Lugar
     # -----------------------------------------------------------------------
     def build_step_lugar() -> ft.Control:
-        tarjetas = []
-        for uid, datos in UBICACIONES.items():
-            tarjetas.append(
-                tarjeta(datos["emoji"], datos["label"], state["ubicacion_id"] == uid,
-                        lambda e, i=uid: seleccionar_ubicacion(i))
-            )
-        # Tarjeta especial "Mi foto".
-        foto_sel = state["ubicacion_id"] == FOTO_ID
-        foto_label = "✓ ¡Foto lista!" if (foto_sel and state["foto_path"]) else "Mi foto"
-        tarjetas.append(tarjeta("📷", foto_label, foto_sel, lambda e: abrir_selector_foto()))
+        # Catálogo del carrusel: "Mi foto" SIEMPRE primero, luego las ubicaciones reales.
+        keys = [FOTO_ID] + list(UBICACIONES.keys())
+        idx = state["ubicacion_idx"] % len(keys)
+        centrada = keys[idx]
 
-        return ft.Column(
+        # La carta central queda AUTOSELECCIONADA: para una ubicación real basta con
+        # tenerla en el centro; la foto necesita además un archivo (si no, se queda sin
+        # seleccionar y el niño pulsa la carta central para abrir el selector).
+        if centrada == FOTO_ID:
+            state["ubicacion_id"] = FOTO_ID if state["foto_path"] else None
+        else:
+            state["ubicacion_id"] = centrada
+            state["foto_path"] = None  # salimos del modo foto
+
+        def item(key: str) -> dict:
+            if key == FOTO_ID:
+                sel = state["ubicacion_id"] == FOTO_ID
+                label = "✓ ¡Foto lista!" if (sel and state["foto_path"]) else "Mi foto"
+                return {"emoji": "📷", "label": label, "sub": "Tu cuarto", "seleccionada": sel}
+            d = UBICACIONES[key]
+            return {"emoji": d["emoji"], "label": d["label"], "sub": None,
+                    "seleccionada": state["ubicacion_id"] == key}
+
+        items = [item(k) for k in keys]
+
+        def on_center(_):
+            # "Mi foto" sin archivo: abre el selector. En cualquier otro caso (lugar
+            # real, o foto ya elegida) tocar la central avanza de paso, igual que
+            # "Siguiente". Si la foto aún no está, no se puede avanzar.
+            if centrada == FOTO_ID and not state["foto_path"]:
+                abrir_selector_foto()
+            elif state["ubicacion_id"]:
+                ir_paso(2)
+
+        contenido = ft.Column(
             [
-                ft.Text("¿A dónde quieres viajar? 📍", size=22, weight=ft.FontWeight.BOLD),
-                ft.Row(tarjetas, wrap=True, spacing=14, run_spacing=14),
+                carrusel(items, idx,
+                         on_prev=lambda e: mover_lugar(-1),
+                         on_next=lambda e: mover_lugar(1),
+                         on_center=on_center,
+                         accent=ft.Colors.TEAL_600, accent_suave=ft.Colors.TEAL_200),
                 ft.Text("📷 Si usas tu foto, ¡saca tu cuarto vacío! 😊", size=12,
-                        italic=True, color=ft.Colors.GREY_600),
+                        italic=True, color=ft.Colors.TEAL_900),
                 status_text,
             ],
+            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             spacing=16,
         )
+        # Paso "Lugar": mundo TURQUESA (viaje) — distinto del morado de "Personaje".
+        return panel_paso("🗺️ Selecciona un lugar", contenido,
+                          fondo="#B8F2E6", borde=ft.Colors.TEAL_400,
+                          color_titulo=ft.Colors.TEAL_900)
 
     # -----------------------------------------------------------------------
     # Paso 2 — Personaje
     # -----------------------------------------------------------------------
     def build_step_personaje() -> ft.Control:
-        secciones = [ft.Text("¿A quién quieres conocer? 🎭", size=22, weight=ft.FontWeight.BOLD)]
-        for titulo, categorias in GRUPOS.items():
-            fila = [
-                tarjeta(datos["emoji"], datos["label"], state["personaje_id"] == pid,
-                        lambda e, i=pid: seleccionar_personaje(i))
-                for pid, datos in personajes_de_grupo(categorias)
-            ]
-            if fila:
-                secciones.append(ft.Text(titulo, size=15, weight=ft.FontWeight.BOLD, color=ft.Colors.PURPLE_700))
-                secciones.append(ft.Row(fila, wrap=True, spacing=14, run_spacing=14))
+        # Un único carrusel con todos los personajes; la categoría (Prehistóricos,
+        # Históricos, Ficticios) se muestra como etiqueta en la carta central.
+        keys = list(PERSONAJES.keys())
+        idx = state["personaje_idx"] % len(keys)
+        # La carta central queda autoseleccionada (siempre hay un personaje elegido).
+        state["personaje_id"] = keys[idx]
 
-        return ft.Column(secciones, spacing=12)
+        items = [
+            {
+                "emoji": PERSONAJES[pid]["emoji"],
+                "label": PERSONAJES[pid]["label"],
+                "sub": CATEGORIA_LABEL.get(PERSONAJES[pid]["categoria"]),
+                "seleccionada": state["personaje_id"] == pid,
+            }
+            for pid in keys
+        ]
+
+        contenido = carrusel(items, idx,
+                             on_prev=lambda e: mover_personaje(-1),
+                             on_next=lambda e: mover_personaje(1),
+                             # Tocar la carta central avanza de paso (igual que "Siguiente").
+                             on_center=lambda e: ir_paso(1),
+                             accent=ft.Colors.PURPLE_500, accent_suave=ft.Colors.PURPLE_200)
+        # Paso "Personaje": mundo MORADO — distinto del turquesa de "Lugar".
+        return panel_paso("🎭 ¿Con quién quieres hablar?", contenido,
+                          fondo="#E6D2FF", borde=ft.Colors.PURPLE_400,
+                          color_titulo=ft.Colors.PURPLE_900)
 
     # -----------------------------------------------------------------------
     # Paso 3 — Generar + resultado + chat
@@ -349,7 +518,13 @@ def main(page: ft.Page):
                 ft.OutlinedButton("←  Atrás", on_click=lambda e: ir_paso(1), style=BTN_HEADER),
                 ft.OutlinedButton("🔄 Empezar de nuevo", on_click=empezar_de_nuevo, style=BTN_HEADER),
             ]
-        content.content = ft.Column([build_header(acciones=acciones), cuerpo], spacing=20)
+        # STRETCH: cabecera y panel del paso ocupan el MISMO ancho (el del contenedor),
+        # para que el panel de colores no quede más estrecho que la cabecera.
+        content.content = ft.Column(
+            [build_header(acciones=acciones), cuerpo],
+            spacing=14,
+            horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+        )
         page.update()
 
     def ir_paso(n: int):
@@ -363,13 +538,15 @@ def main(page: ft.Page):
     # -----------------------------------------------------------------------
     # Selección de lugar / personaje / foto
     # -----------------------------------------------------------------------
-    def seleccionar_ubicacion(uid: str):
-        state["ubicacion_id"] = uid
-        state["foto_path"] = None  # salimos del modo foto
+    def mover_personaje(delta: int):
+        """Gira el carrusel de personajes; la carta central se autoselecciona al renderizar."""
+        state["personaje_idx"] = (state["personaje_idx"] + delta) % len(PERSONAJES)
         render()
 
-    def seleccionar_personaje(pid: str):
-        state["personaje_id"] = pid
+    def mover_lugar(delta: int):
+        """Gira el carrusel de lugares (ubicaciones + 'Mi foto') con vuelta circular."""
+        total = len(UBICACIONES) + 1  # +1 por la carta "Mi foto"
+        state["ubicacion_idx"] = (state["ubicacion_idx"] + delta) % total
         render()
 
     def on_foto_selected(e: ft.FilePickerResultEvent):
@@ -377,6 +554,7 @@ def main(page: ft.Page):
             return  # el usuario canceló
         state["foto_path"] = e.files[0].path
         state["ubicacion_id"] = FOTO_ID
+        state["ubicacion_idx"] = 0  # "Mi foto" es la primera carta del carrusel
         render()
 
     file_picker = ft.FilePicker(on_result=on_foto_selected)
@@ -516,6 +694,7 @@ def main(page: ft.Page):
         state.update(
             {"ubicacion_id": None, "personaje_id": None, "foto_path": None,
              "chat_personaje": None, "paso": 0,
+             "personaje_idx": 0, "ubicacion_idx": 0,
              "generando": False, "generado_para": None}
         )
         loading_panel.visible = False
