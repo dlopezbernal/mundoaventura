@@ -139,7 +139,9 @@ def _construir_prompt(nombre: str, contexto: list[str], pregunta: str) -> tuple[
         "ALWAYS reply in Spanish, in a short (2-4 sentences), cheerful and simple "
         "way. Use ONLY the information in the cards I give you. If the answer is not "
         "in the cards, kindly say that you do not know that, without making anything "
-        "up. Never break character."
+        "up. Never break character. "
+        "Do NOT start your answer with a greeting or by introducing yourself "
+        "(no 'Hola', no 'Como [name]'); answer directly as if continuing a conversation."
     )
 
     user = (
@@ -164,7 +166,9 @@ def _construir_prompt_general(nombre: str, pregunta: str) -> tuple[str, str]:
         "ALWAYS reply in Spanish, in a short (2-4 sentences), cheerful and simple "
         "way, never breaking character. You have no data cards for this question: "
         "answer with your own general knowledge, and if you do not know, kindly say "
-        "so without making anything up."
+        "so without making anything up. "
+        "Do NOT start your answer with a greeting or by introducing yourself "
+        "(no 'Hola', no 'Como [name]'); answer directly as if continuing a conversation."
     )
     user = (
         f"Child's question: {pregunta}\n\n"
@@ -177,7 +181,7 @@ def _llamar_llm(
     system: str,
     user: str,
     max_tokens: int | None = None,
-    temperature: float = 0.6,
+    temperature: float = 0.3,
     etiqueta: str = "LLM",
 ) -> str:
     """Llama al LLM en Replicate y devuelve el texto de la respuesta.

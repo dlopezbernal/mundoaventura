@@ -21,6 +21,7 @@ deepl                     # Cliente de la API de DeepL: traduce la pregunta ES‚Ü
 # --- Ingesta de documentos ---
 langchain-text-splitters  # Troceado (chunking) con solape: RecursiveCharacterTextSplitter.
 pypdf                     # Lectura del texto de archivos PDF.
+wikipedia-api             # Descarga art√≠culos de Wikipedia como texto limpio (fetch_wikipedia.py).
 
 # --- Servidor web / API ---
 fastapi                   # Framework de la API REST

@@ -67,6 +67,7 @@ capston/
 │   ├── personajes.py         # Prompts + NOMBRES de cada personaje + estilo común
 │   ├── ubicaciones.py        # Prompts de cada ubicación
 │   ├── ingest.py             # Ingesta: trocea (chunking) e indexa los documentos
+│   ├── fetch_wikipedia.py    # Descarga un artículo de Wikipedia limpio a documentos/
 │   ├── documentos/           # 📚 Base de conocimiento: una carpeta por personaje
 │   │   ├── triceratops/      #   · documentos (.pdf/.txt/.md, en inglés) del personaje
 │   │   ├── t-rex/
@@ -166,6 +167,25 @@ paso 3 se regenera; si no cambias nada, se conserva la escena y el chat.
 
 El conocimiento del chat **ya no está en el código**: viene de documentos que tú aportas. La
 fase de preparación (cargar → trocear → indexar) la hace `backend/ingest.py` con **LangChain**.
+
+### Paso 0 (opcional) — Descarga contenido de Wikipedia
+
+El script `backend/fetch_wikipedia.py` descarga un artículo de Wikipedia como
+texto limpio y lo deja en `backend/documentos/<personaje_id>/` listo para indexar.
+Filtra las secciones irrelevantes para el RAG (References, External links, Bibliography…).
+
+```powershell
+# Inglés estándar
+python -m backend.fetch_wikipedia t-rex https://en.wikipedia.org/wiki/Tyrannosaurus
+
+# Simple English Wikipedia (vocabulario de niños — recomendado si el artículo existe)
+python -m backend.fetch_wikipedia t-rex https://simple.wikipedia.org/wiki/Tyrannosaurus_rex
+```
+
+El idioma y el título se extraen automáticamente de la URL: pega la URL que quieras
+y el script la descarga en el idioma correcto.
+
+> Tras descargar, ejecuta `python -m backend.ingest` para reconstruir el índice.
 
 ### Paso 1 — Deja los documentos en su carpeta
 

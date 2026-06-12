@@ -15,9 +15,14 @@ Flujo (es la "fase de preparación" del RAG):
                 (sacado del nombre de la carpeta), para que en el chat cada
                 personaje solo "vea" sus propios documentos.
 
-Nota: para leer los archivos NO usamos los cargadores de `langchain-community`
-(está en proceso de retirada). Leemos el texto a mano y dejamos a LangChain solo
-lo que de verdad aporta aquí: el troceado con solape.
+Nota: para leer los archivos usamos Python puro en lugar de los cargadores de
+`langchain-community` (TextLoader, UnstructuredMarkdownLoader, PyPDFLoader…).
+El motivo no es que langchain-community sea malo, sino que aquí no aporta nada
+que no tengamos ya: leer un .txt/.md es un `file.read_text()` directo, y para
+PDF ya tenemos `pypdf` como dependencia mínima. Meter langchain-community solo
+añadiría ~200 MB de paquetes transitivos para hacer lo mismo. Dejamos a
+LangChain lo que SÍ aporta y no está resuelto de otra forma: el troceado con
+solape (RecursiveCharacterTextSplitter).
 
 Cómo ejecutarlo (desde la raíz del proyecto, con el venv activado):
 
