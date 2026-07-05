@@ -79,7 +79,10 @@ def sintetizar(texto: str, voz_id: str) -> bytes:
             text=texto,
             output_format=config.TTS_OUTPUT_FORMAT,
         )
-        # convert() devuelve un iterador de trozos de bytes: los unimos.
+        # convert() devuelve un iterador de trozos de bytes; algunos SDK devuelven
+        # los bytes ya unidos. Cubrimos ambos casos.
+        if isinstance(stream, (bytes, bytearray)):
+            return bytes(stream)
         return b"".join(stream)
     except Exception as exc:
         raise VoiceError(f"Error al sintetizar con ElevenLabs: {exc}")

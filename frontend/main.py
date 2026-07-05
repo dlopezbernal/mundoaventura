@@ -896,7 +896,7 @@ def main(page: ft.Page):
         try:
             texto = api_client.transcribe(audio_path).strip()
             if not texto:
-                # No se entendió nada: reactivar y salir sin preguntar.
+                _add_burbuja("🤔 No te oí bien. Prueba otra vez. 🎤", es_nino=False)
                 return
             # La pregunta hablada entra al MISMO flujo que una escrita.
             _add_burbuja(f"🧒 {texto}", es_nino=True)
@@ -905,7 +905,8 @@ def main(page: ft.Page):
             page.update()
             _run_ask(pid, texto, pensando)  # reutiliza el flujo de respuesta+voz
         except api_client.BackendError as exc:
-            _add_burbuja(f"❌ {exc}", es_nino=False)
+            print(f"[Frontend] Error al transcribir la voz: {exc}")
+            _add_burbuja("❌ No pude escucharte bien. Inténtalo otra vez. 🎤", es_nino=False)
         finally:
             mic_button.disabled = False
             pregunta_field.disabled = False
