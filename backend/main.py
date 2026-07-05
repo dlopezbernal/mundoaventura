@@ -13,12 +13,24 @@ Este archivo crea la aplicación FastAPI y la pone en marcha. Para arrancarla:
 Luego abre la documentación interactiva en:  http://127.0.0.1:8000/docs
 """
 
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend import config
 from backend.routers import conversacion, generation
 from backend.services import translation_service
+
+# En Windows la consola puede usar cp1252 y romper al imprimir emojis (✅, ⚠️...),
+# lo que llegaría a tumbar el arranque (el hook de startup imprime "DeepL conectado ✅").
+# Forzamos UTF-8 en la salida para que ningún print falle según el terminal.
+# (Mismo apaño que backend/ingest.py.)
+for _flujo in (sys.stdout, sys.stderr):
+    try:
+        _flujo.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 # ---------------------------------------------------------------------------
 # 1) Crear la aplicación

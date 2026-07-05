@@ -38,6 +38,11 @@ CATEGORIA_LABEL = {cat: titulo for titulo, cats in GRUPOS.items() for cat in cat
 # propia consola (ver backend/services/rag_service.py), no el frontend.
 DEBUG = os.getenv("DEBUG", "false").strip().lower() in ("1", "true", "yes", "on")
 
+# Ancho (px) por debajo del cual tratamos la pantalla como "móvil": el contenido pasa
+# a ocupar todo el ancho, el carrusel oculta las cartas vecinas, el paso final apila
+# imagen y chat, etc. Por encima de este valor se mantiene el diseño de escritorio.
+MOVIL_MAX = 760
+
 
 def main(page: ft.Page):
     # -----------------------------------------------------------------------
@@ -63,6 +68,11 @@ def main(page: ft.Page):
         shape=ft.RoundedRectangleBorder(radius=20),
     )
 
+    def es_movil() -> bool:
+        """True si la pantalla es estrecha (móvil). Único punto de decisión del
+        layout responsive: lo consultan render() y los helpers de presentación."""
+        return (page.width or 1200) < MOVIL_MAX
+
     # -----------------------------------------------------------------------
     # Estado de la app
     # -----------------------------------------------------------------------
@@ -76,6 +86,7 @@ def main(page: ft.Page):
         "ubicacion_idx": 0,      # carta centrada en el carrusel de lugares
         "generando": False,      # True mientras se está generando la escena
         "generado_para": None,   # (personaje, ubicacion, foto) de la última escena hecha
+        "_ancho": None,          # último ancho de página visto (para re-render en resize)
     }
 
     # -----------------------------------------------------------------------
@@ -99,6 +110,13 @@ def main(page: ft.Page):
         "Creando tu escena", size=18, weight=ft.FontWeight.BOLD,
         color=ft.Colors.WHITE, text_align=ft.TextAlign.CENTER,
     )
+    # Barra de progreso del panel de carga (su ancho se ajusta en render() según pantalla).
+    loading_bar = ft.ProgressBar(
+        width=240,
+        color=ft.Colors.WHITE,
+        bgcolor=ft.Colors.with_opacity(0.3, ft.Colors.WHITE),
+    )
+    # width/height se reasignan en render() para adaptarse al ancho disponible (móvil).
     loading_panel = ft.Container(
         visible=False,
         width=560,
@@ -111,20 +129,13 @@ def main(page: ft.Page):
         ),
         alignment=ft.alignment.center,
         content=ft.Column(
-            [
-                loading_emoji,
-                loading_text,
-                ft.ProgressBar(
-                    width=240,
-                    color=ft.Colors.WHITE,
-                    bgcolor=ft.Colors.with_opacity(0.3, ft.Colors.WHITE),
-                ),
-            ],
+            [loading_emoji, loading_text, loading_bar],
             horizontal_alignment=ft.CrossAxisAlignment.CENTER,
             alignment=ft.MainAxisAlignment.CENTER,
             spacing=16,
         ),
     )
+    # width se reasigna en render() (fluido en móvil); fit=CONTAIN evita recortes.
     result_image = ft.Image(width=560, fit=ft.ImageFit.CONTAIN, visible=False)
 
     # Chat (RAG)
@@ -155,9 +166,10 @@ def main(page: ft.Page):
         ),
     )
 
-    # Contenedor donde se dibuja el paso actual. Más ancho para que en el paso final
-    # quepan las dos columnas (imagen grande + chat) sin agobiar.
-    content = ft.Container(padding=24, width=1100)
+    # Contenedor donde se dibuja el paso actual. Su ancho/padding se fijan en render():
+    # ~1100 centrado en escritorio (para que quepan las dos columnas del paso final) y
+    # el ancho completo de la pantalla en móvil.
+    content = ft.Container(padding=24)
 
     # -----------------------------------------------------------------------
     # Helpers de presentación
@@ -178,7 +190,10 @@ def main(page: ft.Page):
         se resalta en ámbar cuando está seleccionada.
         """
         if foco:
-            w, h, e_size, l_size, opacity, border_w = 190, 186, 66, 17, 1.0, 5
+            if es_movil():
+                w, h, e_size, l_size, opacity, border_w = 150, 150, 56, 16, 1.0, 5
+            else:
+                w, h, e_size, l_size, opacity, border_w = 190, 186, 66, 17, 1.0, 5
             border_col = ft.Colors.AMBER_400 if seleccionada else ft.Colors.PURPLE_200
         else:
             w, h, e_size, l_size, opacity, border_w = 112, 128, 40, 11, 0.5, 3
@@ -226,10 +241,11 @@ def main(page: ft.Page):
 
     def flecha_carrusel(icono: str, on_click, color=ft.Colors.PURPLE_400) -> ft.Container:
         """Botón circular (‹ / ›) para mover el carrusel; grande para dedos pequeños."""
+        lado = 48 if es_movil() else 58
         return ft.Container(
-            width=58,
-            height=58,
-            border_radius=29,
+            width=lado,
+            height=lado,
+            border_radius=lado / 2,
             bgcolor=color,
             ink=True,
             on_click=on_click,
@@ -239,7 +255,8 @@ def main(page: ft.Page):
                 color=ft.Colors.with_opacity(0.25, ft.Colors.BLACK),
                 offset=ft.Offset(0, 3),
             ),
-            content=ft.Text(icono, size=30, color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
+            content=ft.Text(icono, size=26 if es_movil() else 30,
+                            color=ft.Colors.WHITE, weight=ft.FontWeight.BOLD),
         )
 
     def carrusel(items: list[dict], idx: int, on_prev, on_next, on_center,
@@ -256,22 +273,34 @@ def main(page: ft.Page):
         idx %= n
         prev_it, cur_it, next_it = items[(idx - 1) % n], items[idx], items[(idx + 1) % n]
 
-        fila = ft.Row(
-            [
+        carta_central = carta_carrusel(
+            cur_it["emoji"], cur_it["label"], foco=True,
+            seleccionada=cur_it["seleccionada"], on_click=on_center, sub=cur_it.get("sub"),
+        )
+        if es_movil():
+            # En móvil no caben las cartas vecinas: solo flecha + carta central + flecha.
+            cartas = [
+                flecha_carrusel("‹", on_prev, color=accent),
+                carta_central,
+                flecha_carrusel("›", on_next, color=accent),
+            ]
+        else:
+            cartas = [
                 flecha_carrusel("‹", on_prev, color=accent),
                 carta_carrusel(prev_it["emoji"], prev_it["label"],
                                foco=False, seleccionada=False, on_click=on_prev),
-                carta_carrusel(cur_it["emoji"], cur_it["label"], foco=True,
-                               seleccionada=cur_it["seleccionada"], on_click=on_center,
-                               sub=cur_it.get("sub")),
+                carta_central,
                 carta_carrusel(next_it["emoji"], next_it["label"],
                                foco=False, seleccionada=False, on_click=on_next),
                 flecha_carrusel("›", on_next, color=accent),
-            ],
+            ]
+
+        fila = ft.Row(
+            cartas,
             alignment=ft.MainAxisAlignment.CENTER,
             vertical_alignment=ft.CrossAxisAlignment.CENTER,
-            spacing=14,
-            height=200,
+            spacing=10 if es_movil() else 14,
+            height=170 if es_movil() else 200,
         )
         puntos = ft.Row(
             [
@@ -295,14 +324,17 @@ def main(page: ft.Page):
         vertical y quedar siempre visibles. Todas las pantallas siguen este mismo
         patrón (cabecera con botones + contenido), sin barra de pasos.
         """
+        movil = es_movil()
         fila_cabecera = [
             ft.Column(
                 [
-                    ft.Text("🕰️ Máquina del Tiempo", size=26,
+                    ft.Text("🕰️ Máquina del Tiempo", size=20 if movil else 26,
                             weight=ft.FontWeight.BOLD, color=ft.Colors.WHITE),
-                    ft.Text("¡Viaja sin salir de tu cuarto!", size=14, color=ft.Colors.WHITE),
+                    ft.Text("¡Viaja sin salir de tu cuarto!", size=12 if movil else 14,
+                            color=ft.Colors.WHITE),
                 ],
-                expand=True,
+                # En móvil no usamos expand para que los botones puedan envolver debajo.
+                expand=not movil,
                 spacing=2,
             ),
         ]
@@ -325,10 +357,14 @@ def main(page: ft.Page):
                 colors=[ft.Colors.PURPLE_400, ft.Colors.PINK_300],
             ),
             border_radius=24,
-            padding=24,
+            padding=16 if movil else 24,
+            # wrap=True: en móvil los botones de acción bajan a otra línea en vez de salirse.
             content=ft.Row(
                 fila_cabecera,
                 vertical_alignment=ft.CrossAxisAlignment.CENTER,
+                wrap=movil,
+                spacing=10,
+                run_spacing=8,
             ),
         )
 
@@ -340,19 +376,23 @@ def main(page: ft.Page):
         "salte" al cambiar, aunque un paso tenga más texto que el otro (p. ej. el
         aviso de la foto). El contenido se ancla arriba y el hueco sobrante queda abajo.
         """
+        movil = es_movil()
         return ft.Container(
             # Sin ancho fijo: el Column contenedor lo estira al MISMO ancho que la
-            # cabecera (ver render → horizontal_alignment=STRETCH). Altura fija para
-            # que los dos pasos midan exactamente lo mismo.
-            height=360,
+            # cabecera (ver render → horizontal_alignment=STRETCH). En escritorio, altura
+            # fija para que los dos pasos midan igual; en móvil crece con el contenido
+            # (el scroll de página lo absorbe) para que nada se corte.
+            height=None if movil else 360,
             bgcolor=fondo,
             border=ft.border.all(3, borde),
             border_radius=28,
-            padding=ft.padding.symmetric(horizontal=20, vertical=16),
+            padding=ft.padding.symmetric(horizontal=12 if movil else 20, vertical=16),
             alignment=ft.alignment.top_center,
             content=ft.Column(
                 [
-                    ft.Text(titulo, size=23, weight=ft.FontWeight.BOLD, color=color_titulo),
+                    ft.Text(titulo, size=19 if movil else 23,
+                            weight=ft.FontWeight.BOLD, color=color_titulo,
+                            text_align=ft.TextAlign.CENTER),
                     contenido,
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
@@ -469,8 +509,11 @@ def main(page: ft.Page):
             bgcolor=ft.Colors.PURPLE_50,
             border_radius=12,
         )
+        movil = es_movil()
         columna_imagen = ft.Container(
-            width=580,
+            # Escritorio: ancho fijo (la imagen es la protagonista a la izquierda).
+            # Móvil: ocupa el ancho del contenedor padre.
+            width=None if movil else 580,
             content=ft.Column(
                 [
                     ft.Container(loading_panel, alignment=ft.alignment.center),
@@ -483,9 +526,15 @@ def main(page: ft.Page):
             ),
         )
 
-        # DOS COLUMNAS: imagen (izquierda) + chat a toda la altura (derecha). La
-        # escena se genera AUTOMÁTICAMENTE al llegar al paso (ver _auto_generar):
-        # ya no hay botón "¡Generar!".
+        # Escritorio: imagen (izquierda) + chat a toda la altura (derecha), en DOS
+        # COLUMNAS. Móvil: se APILAN (imagen arriba, chat debajo). La escena se genera
+        # AUTOMÁTICAMENTE al llegar al paso (ver _auto_generar): no hay botón "¡Generar!".
+        if movil:
+            return ft.Column(
+                [columna_imagen, chat_panel],
+                horizontal_alignment=ft.CrossAxisAlignment.STRETCH,
+                spacing=14,
+            )
         return ft.Row(
             [columna_imagen, chat_panel],
             vertical_alignment=ft.CrossAxisAlignment.START,
@@ -496,6 +545,29 @@ def main(page: ft.Page):
     # Render: dibuja el paso actual
     # -----------------------------------------------------------------------
     def render():
+        # -- Tamaños adaptativos (responsive) -------------------------------------
+        # Se calculan aquí, en el único punto que se re-ejecuta en cada navegación y
+        # cambio de tamaño (ver on_resized), porque los controles persistentes
+        # (content, loading_panel, result_image, chat_column) se crean una sola vez.
+        movil = es_movil()
+        if movil:
+            content.width = page.width          # ocupa todo el ancho de la pantalla
+            content.padding = 12
+            ancho_img = min(560, (page.width or 560) - 2 * content.padding)
+            loading_panel.width = ancho_img
+            loading_panel.height = 240
+            loading_bar.width = min(240, ancho_img - 40)
+            result_image.width = ancho_img
+            chat_column.height = 260
+        else:
+            content.width = min(1100, (page.width or 1100))  # centrado, máx. 1100
+            content.padding = 24
+            loading_panel.width = 560
+            loading_panel.height = 320
+            loading_bar.width = 240
+            result_image.width = 560
+            chat_column.height = 320
+
         # Los botones de navegación de cada paso viven EN la cabecera (mismo patrón en
         # las tres pantallas). "Siguiente" se desactiva hasta que hay selección; como
         # render() se vuelve a llamar al elegir, su estado se actualiza solo.
@@ -726,6 +798,16 @@ def main(page: ft.Page):
     # -----------------------------------------------------------------------
     preguntar_button.on_click = preguntar
     pregunta_field.on_submit = preguntar
+
+    def on_resized(e):
+        # Re-dibuja al cambiar el ancho (cruce de breakpoint móvil/escritorio o cambio
+        # notable, p. ej. al rotar) para recalcular los anchos fluidos. El umbral de
+        # 20 px evita reconstruir el árbol en cada píxel del arrastre.
+        if state["_ancho"] is None or abs((page.width or 0) - state["_ancho"]) > 20:
+            state["_ancho"] = page.width
+            render()
+
+    page.on_resized = on_resized
 
     page.add(ft.Row([content], alignment=ft.MainAxisAlignment.CENTER))
     render()
