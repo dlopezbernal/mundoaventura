@@ -151,36 +151,43 @@ def main(page: ft.Page):
     chat_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=320, auto_scroll=True)
 
     # Reproductor de la voz del personaje. just_playback usa miniaudio (mp3) y
-    # reproduce en su propio hilo: NO bloquea la UI. Reutilizamos UNA sola
-    # instancia (si se recolectara, se cortaría el sonido).
-    reproductor = Playback()
-    # Ruta del último mp3 reproducido, para borrarlo al llegar el siguiente y que
-    # no se acumulen temporales en %TEMP% a lo largo de la sesión.
-    ultimo_mp3 = {"ruta": None}
+    # reproduce en su propio hilo: NO bloquea la UI. Usamos un reproductor NUEVO
+    # por respuesta (guardando la referencia para que el GC no corte el sonido):
+    # reutilizar una sola instancia heredaba la posición de la respuesta anterior
+    # y se saltaba el principio de la frase. Guardamos también la ruta del mp3
+    # anterior para borrarlo y no acumular temporales en %TEMP%.
+    voz = {"pb": None, "ruta": None}
 
     def _reproducir_respuesta(audio_b64: str) -> None:
         """Decodifica el mp3 (base64) a un temporal y lo reproduce sin bloquear.
 
         Un fallo de reproducción NUNCA rompe la UI: el texto ya está visible. Se
         usa un nombre único por respuesta para no chocar con un mp3 aún bloqueado.
-        Como se reutiliza un único reproductor, si llega una respuesta nueva
-        mientras suena la anterior, la anterior se corta (comportamiento aceptado
-        para un chat infantil).
+        Si llega una respuesta nueva mientras suena la anterior, la anterior se
+        detiene (comportamiento aceptado para un chat infantil).
         """
         try:
             mp3 = base64.b64decode(audio_b64)
-            # Borra (best-effort) el mp3 anterior: ya terminó de sonar.
-            if ultimo_mp3["ruta"]:
+            # Detiene y borra la reproducción/fichero anteriores.
+            if voz["pb"] is not None:
                 try:
-                    os.remove(ultimo_mp3["ruta"])
+                    voz["pb"].stop()
+                except Exception:
+                    pass
+            if voz["ruta"]:
+                try:
+                    os.remove(voz["ruta"])
                 except OSError:
                     pass
             ruta = os.path.join(tempfile.gettempdir(), f"respuesta_{int(time.time() * 1000)}.mp3")
             with open(ruta, "wb") as f:
                 f.write(mp3)
-            ultimo_mp3["ruta"] = ruta
-            reproductor.load_file(ruta)
-            reproductor.play()
+            # Reproductor NUEVO: empieza siempre desde el principio (posición 0).
+            pb = Playback()
+            pb.load_file(ruta)
+            pb.play()
+            voz["pb"] = pb
+            voz["ruta"] = ruta
         except Exception as exc:
             print(f"[Frontend] No se pudo reproducir la voz: {exc}")
 
