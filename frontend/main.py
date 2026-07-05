@@ -22,6 +22,11 @@ import time
 
 import flet as ft
 
+import base64
+import tempfile
+
+from just_playback import Playback
+
 import api_client  # al importarse, carga el .env (incluida la variable DEBUG)
 from personajes import GRUPOS, PERSONAJES
 from ubicaciones import UBICACIONES
@@ -143,6 +148,28 @@ def main(page: ft.Page):
     # auto_scroll=True: al añadir una burbuja (pregunta o respuesta) el chat baja solo
     # hasta el final, para no tener que arrastrar a mano y ver siempre lo último.
     chat_column = ft.Column(spacing=8, scroll=ft.ScrollMode.AUTO, height=320, auto_scroll=True)
+
+    # Reproductor de la voz del personaje. just_playback usa miniaudio (mp3) y
+    # reproduce en su propio hilo: NO bloquea la UI. Reutilizamos UNA sola
+    # instancia (si se recolectara, se cortaría el sonido).
+    reproductor = Playback()
+
+    def _reproducir_respuesta(audio_b64: str) -> None:
+        """Decodifica el mp3 (base64) a un temporal y lo reproduce sin bloquear.
+
+        Un fallo de reproducción NUNCA rompe la UI: el texto ya está visible. Se
+        usa un nombre único por respuesta para no chocar con un mp3 aún bloqueado.
+        """
+        try:
+            mp3 = base64.b64decode(audio_b64)
+            ruta = os.path.join(tempfile.gettempdir(), f"respuesta_{int(time.time() * 1000)}.mp3")
+            with open(ruta, "wb") as f:
+                f.write(mp3)
+            reproductor.load_file(ruta)
+            reproductor.play()
+        except Exception as exc:
+            print(f"[Frontend] No se pudo reproducir la voz: {exc}")
+
     pregunta_field = ft.TextField(
         hint_text="Escribe tu pregunta... (ej. ¿Qué comes?)",
         expand=True,
@@ -752,6 +779,12 @@ def main(page: ft.Page):
             chat_column.controls.remove(pensando)
             # El origen (RAG/GENERAL) lo traza el backend en su consola, no el cliente.
             _add_burbuja(f"{PERSONAJES[pid]['emoji']} {respuesta}", es_nino=False)
+            # Auto-reproducción de la respuesta (si vino audio), a la vez que
+            # aparece la burbuja. Si audio_base64 es None (voz off o TTS falló),
+            # simplemente no suena: el texto sigue visible.
+            audio_b64 = result.get("audio_base64")
+            if audio_b64:
+                _reproducir_respuesta(audio_b64)
         except api_client.BackendError as exc:
             pensando.value = f"❌ {exc}"
         finally:
