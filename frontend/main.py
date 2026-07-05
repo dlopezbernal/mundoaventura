@@ -27,6 +27,10 @@ import tempfile
 
 from just_playback import Playback
 
+import numpy as np
+import sounddevice as sd
+import soundfile as sf
+
 import api_client  # al importarse, carga el .env (incluida la variable DEBUG)
 from personajes import GRUPOS, PERSONAJES
 from ubicaciones import UBICACIONES
@@ -170,6 +174,50 @@ def main(page: ft.Page):
         except Exception as exc:
             print(f"[Frontend] No se pudo reproducir la voz: {exc}")
 
+    # Grabación del micrófono con sounddevice → wav. El dispositivo de entrada por
+    # defecto puede ser -1 (ninguno): elegimos uno válido explícitamente.
+    FS_GRAB = 16000
+    grabacion = {"stream": None, "frames": []}
+
+    def _micro_device():
+        """Índice de un dispositivo de entrada válido, o None si no hay micro."""
+        try:
+            d = sd.default.device[0]
+            if isinstance(d, int) and d >= 0 and sd.query_devices(d)["max_input_channels"] > 0:
+                return d
+        except Exception:
+            pass
+        for i, dev in enumerate(sd.query_devices()):
+            if dev["max_input_channels"] > 0:
+                return i
+        return None
+
+    def _iniciar_grabacion():
+        """Abre el stream del micro y empieza a acumular frames PCM."""
+        grabacion["frames"] = []
+
+        def _cb(indata, frames, time_info, status):
+            grabacion["frames"].append(indata.copy())
+
+        grabacion["stream"] = sd.InputStream(
+            samplerate=FS_GRAB, channels=1, device=_micro_device(), callback=_cb
+        )
+        grabacion["stream"].start()
+
+    def _detener_grabacion():
+        """Cierra el stream, escribe los frames a un .wav y devuelve su ruta (o None)."""
+        st = grabacion["stream"]
+        grabacion["stream"] = None
+        if st is not None:
+            st.stop()
+            st.close()
+        if not grabacion["frames"]:
+            return None
+        audio = np.concatenate(grabacion["frames"], axis=0)
+        ruta = os.path.join(tempfile.gettempdir(), f"pregunta_{int(time.time())}.wav")
+        sf.write(ruta, audio, FS_GRAB)
+        return ruta
+
     pregunta_field = ft.TextField(
         hint_text="Escribe tu pregunta... (ej. ¿Qué comes?)",
         expand=True,
@@ -180,6 +228,12 @@ def main(page: ft.Page):
         "Preguntar", disabled=True, bgcolor=ft.Colors.PURPLE_400, color=ft.Colors.WHITE,
         style=BTN_ROUND,
     )
+    mic_button = ft.IconButton(
+        icon=ft.Icons.MIC,
+        tooltip="Toca para hablar; toca otra vez para enviar",
+        disabled=True,
+        icon_color=ft.Colors.PURPLE_400,
+    )
     chat_panel = ft.Container(
         visible=False,
         expand=True,  # en el paso 3 ocupa el ancho que sobra a la derecha de la imagen
@@ -188,7 +242,7 @@ def main(page: ft.Page):
         border=ft.border.all(1, ft.Colors.GREY_200),
         border_radius=18,
         content=ft.Column(
-            [chat_titulo, chat_column, ft.Row([pregunta_field, preguntar_button])],
+            [chat_titulo, chat_column, ft.Row([pregunta_field, mic_button, preguntar_button])],
             spacing=10,
         ),
     )
@@ -736,6 +790,7 @@ def main(page: ft.Page):
             chat_panel.visible = True
             pregunta_field.disabled = False
             preguntar_button.disabled = False
+            mic_button.disabled = False
             status_text.value = ""  # el chat ya invita a hablar; no hace falta avisar
         except api_client.BackendError as exc:
             status_text.value = f"❌ {exc}"
@@ -792,6 +847,61 @@ def main(page: ft.Page):
             preguntar_button.disabled = False
             page.update()
 
+    def _toggle_micro(_):
+        pid = state["chat_personaje"]
+        if not pid:
+            return
+        if grabacion["stream"] is None:
+            # Empezar a grabar.
+            try:
+                _iniciar_grabacion()
+            except Exception as exc:
+                _add_burbuja(f"❌ No se pudo abrir el micrófono: {exc}", es_nino=False)
+                page.update()
+                return
+            mic_button.icon = ft.Icons.STOP_CIRCLE
+            mic_button.icon_color = ft.Colors.RED_400
+            mic_button.tooltip = "Grabando... toca para enviar"
+            page.update()
+        else:
+            # Parar, escribir el wav y transcribir.
+            ruta = _detener_grabacion()
+            mic_button.icon = ft.Icons.MIC
+            mic_button.icon_color = ft.Colors.PURPLE_400
+            mic_button.tooltip = "Toca para hablar; toca otra vez para enviar"
+            mic_button.disabled = True
+            pregunta_field.disabled = True
+            preguntar_button.disabled = True
+            page.update()
+            if not ruta:
+                # No se capturó nada: reactivar y salir.
+                mic_button.disabled = False
+                pregunta_field.disabled = False
+                preguntar_button.disabled = False
+                page.update()
+                return
+            threading.Thread(target=_run_transcribe, args=(pid, ruta), daemon=True).start()
+
+    def _run_transcribe(pid: str, audio_path: str):
+        try:
+            texto = api_client.transcribe(audio_path).strip()
+            if not texto:
+                # No se entendió nada: reactivar y salir sin preguntar.
+                return
+            # La pregunta hablada entra al MISMO flujo que una escrita.
+            _add_burbuja(f"🧒 {texto}", es_nino=True)
+            pensando = ft.Text("🤔 Pensando...", size=13, italic=True)
+            chat_column.controls.append(pensando)
+            page.update()
+            _run_ask(pid, texto, pensando)  # reutiliza el flujo de respuesta+voz
+        except api_client.BackendError as exc:
+            _add_burbuja(f"❌ {exc}", es_nino=False)
+        finally:
+            mic_button.disabled = False
+            pregunta_field.disabled = False
+            preguntar_button.disabled = False
+            page.update()
+
     # -----------------------------------------------------------------------
     # Empezar de nuevo / comprobar backend
     # -----------------------------------------------------------------------
@@ -810,6 +920,7 @@ def main(page: ft.Page):
         pregunta_field.value = ""
         pregunta_field.disabled = True
         preguntar_button.disabled = True
+        mic_button.disabled = True
         status_text.value = ""
         render()
 
@@ -831,6 +942,7 @@ def main(page: ft.Page):
     # -----------------------------------------------------------------------
     preguntar_button.on_click = preguntar
     pregunta_field.on_submit = preguntar
+    mic_button.on_click = _toggle_micro
 
     def on_resized(e):
         # Re-dibuja al cambiar el ancho (cruce de breakpoint móvil/escritorio o cambio

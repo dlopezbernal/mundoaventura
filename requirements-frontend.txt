@@ -21,3 +21,4 @@ python-dotenv             # Lee BACKEND_URL desde el archivo .env
 sounddevice               # Grabar el micrófono (captura PCM del dispositivo de entrada; trae PortAudio)
 soundfile                 # Escribir el audio grabado a .wav (trae libsndfile)
 just-playback             # Reproducir el mp3 de la respuesta sin bloquear el hilo de la UI (trae miniaudio)
+numpy                     # Buffer PCM que devuelve sounddevice (modo array) para escribir el wav
