@@ -137,6 +137,28 @@ CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "120"))
 CHROMA_COLLECTION: str = os.getenv("CHROMA_COLLECTION", "documentos_en")
 
 
+# ---------------------------------------------------------------------------
+# 3b) Voz (ElevenLabs): transcripción (Scribe/STT) + síntesis (Flash/TTS)
+# ---------------------------------------------------------------------------
+# ElevenLabs es el TERCER proveedor (junto a Replicate y DeepL). Una sola clave
+# cubre las dos mitades: transcribir la pregunta hablada del niño (Scribe) y dar
+# voz a la respuesta del personaje (Flash). Modalidad pago por uso.
+# Sin esta clave, la voz queda desactivada pero el chat de TEXTO sigue funcionando.
+ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "").strip()
+
+# Modelo de transcripción (voz → texto). Scribe entiende bien el español.
+ELEVENLABS_STT_MODEL: str = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v1").strip()
+
+# Modelo de síntesis (texto → voz). Flash: baja latencia y barato (~0,05 $/1K chars).
+ELEVENLABS_TTS_MODEL: str = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_flash_v2_5").strip()
+
+# Formato del audio devuelto por el TTS (mp3, reproducible por Flet en base64).
+TTS_OUTPUT_FORMAT: str = os.getenv("TTS_OUTPUT_FORMAT", "mp3_44100_128").strip()
+
+# Idioma de la transcripción (la pregunta del niño se dice en español).
+STT_LANG: str = os.getenv("STT_LANG", "es").strip()
+
+
 def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
     """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""
     return os.getenv(nombre, por_defecto).strip().lower() in ("1", "true", "yes", "on")

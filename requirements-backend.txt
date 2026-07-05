@@ -17,6 +17,7 @@ chromadb                  # Base de datos vectorial local (CPU). Guarda e indexa
                           # Trae su propio modelo de embeddings (onnx, CPU): no necesita torch ni claves.
 deepl                     # Cliente de la API de DeepL: traduce la pregunta ES→EN para mejorar la
                           # recuperación (los embeddings funcionan mejor sobre texto en inglés).
+elevenlabs                # Cliente de ElevenLabs: transcripción (Scribe/STT) y síntesis de voz (Flash/TTS)
 
 # --- Ingesta de documentos ---
 langchain-text-splitters  # Troceado (chunking) con solape: RecursiveCharacterTextSplitter.
