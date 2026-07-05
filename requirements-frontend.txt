@@ -10,6 +10,7 @@
 # =====================================================================
 
 flet==0.28.3              # Framework de interfaz gráfica (API pre-0.80; el código usa ft.app, ImageFit, FilePicker por callback)
+flet-audio                # Controles de audio de Flet: Audio (reproducir) y AudioRecorder (grabar micro)
 requests                  # Cliente HTTP para llamar a la API del backend
 pillow                    # Manejo de imágenes en el cliente (tamaños, etc.)
 python-dotenv             # Lee BACKEND_URL desde el archivo .env
