@@ -193,16 +193,26 @@ def main(page: ft.Page):
         return None
 
     def _iniciar_grabacion():
-        """Abre el stream del micro y empieza a acumular frames PCM."""
+        """Abre el stream del micro y empieza a acumular frames PCM.
+
+        Solo asignamos grabacion["stream"] si start() tuvo éxito: así, si falla al
+        arrancar (device ocupado, permiso revocado), el estado queda en reposo
+        (stream=None) y el siguiente toque reintenta grabar en vez de romperse.
+        """
         grabacion["frames"] = []
 
         def _cb(indata, frames, time_info, status):
             grabacion["frames"].append(indata.copy())
 
-        grabacion["stream"] = sd.InputStream(
+        stream = sd.InputStream(
             samplerate=FS_GRAB, channels=1, device=_micro_device(), callback=_cb
         )
-        grabacion["stream"].start()
+        try:
+            stream.start()
+        except Exception:
+            stream.close()
+            raise
+        grabacion["stream"] = stream
 
     def _detener_grabacion():
         """Cierra el stream, escribe los frames a un .wav y devuelve su ruta (o None)."""
