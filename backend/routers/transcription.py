@@ -1,0 +1,33 @@
+"""
+routers/transcription.py — Endpoint de transcripción de voz (STT)
+=================================================================
+
+Una puerta de entrada (la lógica vive en services/voice_service.py):
+
+  POST /api/transcribe → el niño sube el audio de su pregunta (multipart) y
+                         recibe el texto transcrito en español (ElevenLabs
+                         Scribe), listo para enviarse a /api/ask.
+"""
+
+from fastapi import APIRouter, File, HTTPException, UploadFile
+
+from backend.services import voice_service
+
+router = APIRouter(prefix="/api", tags=["Transcripción (voz)"])
+
+
+@router.post("/transcribe")
+async def transcribe(audio: UploadFile = File(...)):
+    """Transcribe el audio de la pregunta del niño a texto en español."""
+    try:
+        audio_bytes = await audio.read()
+        texto = voice_service.transcribir(audio_bytes, audio.filename or "audio.mp3")
+    except ValueError as exc:
+        # Falta la clave o el audio no se pudo transcribir -> 400.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500, detail=f"Error al transcribir: {exc}"
+        ) from exc
+
+    return {"texto": texto}

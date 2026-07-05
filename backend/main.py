@@ -19,8 +19,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend import config
-from backend.routers import conversacion, generation
-from backend.services import translation_service
+from backend.routers import conversacion, generation, transcription
+from backend.services import translation_service, voice_service
 
 # En Windows la consola puede usar cp1252 y romper al imprimir emojis (✅, ⚠️...),
 # lo que llegaría a tumbar el arranque (el hook de startup imprime "DeepL conectado ✅").
@@ -65,6 +65,8 @@ app.include_router(generation.router)
 # Conversación con el personaje (RAG: ChromaDB + LLM en Replicate).
 # (La entrada por voz con Whisper se añadirá en el siguiente paso.)
 app.include_router(conversacion.router)
+# Transcripción de voz (STT): la pregunta hablada del niño → texto (ElevenLabs Scribe).
+app.include_router(transcription.router)
 
 
 # ---------------------------------------------------------------------------
@@ -97,6 +99,13 @@ def _verificar_dependencias():
         print("[Arranque] ⚠️  DeepL NO disponible (OBLIGATORIO para el chat):")
         print(f"[Arranque]     {est['deepl_mensaje']}")
 
+    est_voz = voice_service.estado()
+    if est_voz["elevenlabs_ok"]:
+        print("[Arranque] ElevenLabs (voz) configurado. ✅")
+    else:
+        print("[Arranque] ⚠️  ElevenLabs NO configurado (voz desactivada):")
+        print(f"[Arranque]     {est_voz['elevenlabs_mensaje']}")
+
 
 @app.get("/health", tags=["Info"])
 def health():
@@ -105,4 +114,9 @@ def health():
     Devuelve la configuración actual. Muy útil para verificar de un vistazo que
     todo lo necesario (Replicate y DeepL) está bien configurado.
     """
-    return {"status": "ok", **config.describe(), **translation_service.estado()}
+    return {
+        "status": "ok",
+        **config.describe(),
+        **translation_service.estado(),
+        **voice_service.estado(),
+    }
