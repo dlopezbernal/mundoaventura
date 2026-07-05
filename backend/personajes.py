@@ -82,3 +82,17 @@ NOMBRES = {
     "sherlock_holmes": "Sherlock Holmes",
     "peter_pan": "Peter Pan",
 }
+
+# voz_id de ElevenLabs con la que habla cada personaje en el chat (TTS Flash).
+# Es el 5º sitio del invariante personaje_id: la clave debe coincidir con PROMPTS,
+# NOMBRES, la carta del frontend y la carpeta backend/documentos/<personaje_id>/.
+# Un personaje SIN entrada aquí responde solo en texto (no rompe).
+# Los IDs de abajo son voces "premade" de ElevenLabs (funcionan out-of-the-box);
+# sustitúyelos por voces en español con más carácter desde tu biblioteca de ElevenLabs.
+VOCES = {
+    "sherlock_holmes":   "onwK4e9ZLuTAKqWW03F9",  # grave y pausada (Daniel)
+    "leonardo_da_vinci": "pNInz6obpgDQGcFmaJgB",  # cálida y sabia (Adam)
+    "t-rex":             "IKne3meq5aSn9XLyUdCD",  # juguetona (Charlie)
+    "triceratops":       "ErXwobaYiN019PkySvjV",  # amable (Antoni)
+    "peter_pan":         "TxGEqnHWrfWFTfGW9XjX",  # aventurera y joven (Josh)
+}

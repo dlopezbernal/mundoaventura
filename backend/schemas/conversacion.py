@@ -57,3 +57,8 @@ class AskResponse(BaseModel):
         description="Fragmentos (chunks) de los documentos usados para fundamentar "
         "la respuesta.",
     )
+    audio_base64: str | None = Field(
+        default=None,
+        description="Respuesta del personaje sintetizada a voz (mp3 en base64), o "
+        "null si el personaje no tiene voz o si el TTS falló (el texto no se rompe).",
+    )

@@ -25,6 +25,8 @@ Decisiones para mantenerlo simple y sin GPU local:
     cada personaje solo "vea" sus propios documentos.
 """
 
+import base64
+
 import chromadb
 import replicate
 
@@ -32,6 +34,7 @@ from backend import config
 from backend import debug_log
 from backend import personajes as personajes_cfg
 from backend.services import translation_service
+from backend.services import voice_service
 
 # Cliente y colección de ChromaDB, cargados una sola vez (singleton perezoso).
 _client: chromadb.ClientAPI | None = None
@@ -318,6 +321,27 @@ def _decidir_origen(
     return _evaluar_relevancia(contexto, pregunta), "llm", mejor
 
 
+def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
+    """Devuelve la respuesta como mp3 en base64, o None.
+
+    Degradación elegante: si el personaje no tiene voz_id, si falta la clave de
+    ElevenLabs, o si el TTS falla, devuelve None. El texto de la respuesta NUNCA
+    se rompe por un fallo de voz.
+    """
+    voz_id = personajes_cfg.VOCES.get(personaje_id)
+    if not voz_id or not config.ELEVENLABS_API_KEY:
+        return None
+    try:
+        audio_bytes = voice_service.sintetizar(respuesta, voz_id)
+    except Exception as exc:
+        if config.DEBUG:
+            print(f"[VOZ] ⚠️ TTS falló: {exc} (respuesta va solo en texto)")
+        return None
+    if config.DEBUG:
+        print(f"[VOZ] 🔊 TTS · voz={voz_id} · {len(respuesta)} chars · {personaje_id}")
+    return base64.b64encode(audio_bytes).decode("ascii")
+
+
 def responder(personaje_id: str, pregunta: str) -> dict:
     """Función principal: dado un personaje y una pregunta, devuelve la respuesta.
 
@@ -370,6 +394,10 @@ def responder(personaje_id: str, pregunta: str) -> dict:
     # Traza de depuración (solo si DEBUG): en la consola del BACKEND, no del cliente.
     _trazar_origen(origen, metodo, distancia, pregunta_en)
 
+    # Síntesis de voz de la respuesta (si el personaje tiene voz_id y hay clave).
+    # Si falla, audio_base64 queda None y la respuesta sigue viva en texto.
+    audio_base64 = _sintetizar_respuesta(personaje_id, respuesta)
+
     return {
         "success": True,
         "personaje_id": personaje_id,
@@ -384,4 +412,5 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         "pregunta_traducida": pregunta_en,
         # Fichas usadas (vacío si la respuesta no vino del RAG).
         "fuentes": fuentes,
+        "audio_base64": audio_base64,
     }
