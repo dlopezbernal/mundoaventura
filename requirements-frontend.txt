@@ -10,7 +10,14 @@
 # =====================================================================
 
 flet==0.28.3              # Framework de interfaz gráfica (API pre-0.80; el código usa ft.app, ImageFit, FilePicker por callback)
-flet-audio                # Controles de audio de Flet: Audio (reproducir) y AudioRecorder (grabar micro)
 requests                  # Cliente HTTP para llamar a la API del backend
 pillow                    # Manejo de imágenes en el cliente (tamaños, etc.)
 python-dotenv             # Lee BACKEND_URL desde el archivo .env
+
+# --- Voz (independiente de Flet) ---
+# NOTA: flet-audio NO graba micrófono (solo reproduce) y sin pinnear arrastra
+# una actualización de Flet a 1.x que rompe este frontend (API pre-0.80). Por eso
+# la voz NO usa los controles de audio de Flet: usamos librerías autocontenidas.
+sounddevice               # Grabar el micrófono (captura PCM del dispositivo de entrada; trae PortAudio)
+soundfile                 # Escribir el audio grabado a .wav (trae libsndfile)
+just-playback             # Reproducir el mp3 de la respuesta sin bloquear el hilo de la UI (trae miniaudio)
