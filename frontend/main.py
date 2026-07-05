@@ -185,44 +185,79 @@ def main(page: ft.Page):
             print(f"[Frontend] No se pudo reproducir la voz: {exc}")
 
     # Grabación del micrófono con sounddevice → wav. El dispositivo de entrada por
-    # defecto puede ser -1 (ninguno): elegimos uno válido explícitamente.
+    # defecto puede ser -1 (ninguno) y Windows enumera muchos micros "fantasma"
+    # (auriculares Bluetooth desconectados) que dan 'Invalid device' al abrir: por
+    # eso probamos varios candidatos hasta que uno abre de verdad.
     FS_GRAB = 16000
-    grabacion = {"stream": None, "frames": []}
+    grabacion = {"stream": None, "frames": [], "fs": FS_GRAB}
 
-    def _micro_device():
-        """Índice de un dispositivo de entrada válido, o None si no hay micro."""
+    def _dispositivos_entrada():
+        """Índices de micrófonos candidatos, ordenados por probabilidad de acierto.
+
+        Orden: (1) el default si es válido; (2) los que se llaman "micrófono/mic"
+        y NO son Bluetooth (el micro real); (3) otras entradas no-BT (mezcla
+        estéreo, línea de entrada... se evitan salvo que no haya micro, para no
+        grabar el audio del sistema); (4) por último los Bluetooth 'Hands-Free'
+        (suelen estar desconectados y fallar al abrir).
+        """
+        candidatos = []
         try:
             d = sd.default.device[0]
             if isinstance(d, int) and d >= 0 and sd.query_devices(d)["max_input_channels"] > 0:
-                return d
+                candidatos.append(d)
         except Exception:
             pass
+        mics, otros, bt = [], [], []
         for i, dev in enumerate(sd.query_devices()):
-            if dev["max_input_channels"] > 0:
-                return i
-        return None
+            if dev["max_input_channels"] <= 0 or i in candidatos:
+                continue
+            nombre = dev["name"].lower()
+            if "hands-free" in nombre or "bthhfenum" in nombre:
+                bt.append(i)
+            elif "mic" in nombre:  # "micrófono", "mic input", "microphone"...
+                mics.append(i)
+            else:
+                otros.append(i)
+        return candidatos + mics + otros + bt
 
     def _iniciar_grabacion():
-        """Abre el stream del micro y empieza a acumular frames PCM.
+        """Abre el micrófono y empieza a acumular frames PCM.
 
-        Solo asignamos grabacion["stream"] si start() tuvo éxito: así, si falla al
-        arrancar (device ocupado, permiso revocado), el estado queda en reposo
-        (stream=None) y el siguiente toque reintenta grabar en vez de romperse.
+        Prueba los dispositivos de entrada candidatos en orden y se queda con el
+        PRIMERO que abre de verdad (saltando los micros fantasma/BT que dan
+        'Invalid device'). Para cada uno prueba 16 kHz y, si no lo admite, su
+        frecuencia por defecto. Solo asigna grabacion["stream"] tras un start()
+        con éxito; si ninguno abre, lanza una excepción con el último error.
         """
         grabacion["frames"] = []
 
         def _cb(indata, frames, time_info, status):
             grabacion["frames"].append(indata.copy())
 
-        stream = sd.InputStream(
-            samplerate=FS_GRAB, channels=1, device=_micro_device(), callback=_cb
-        )
-        try:
-            stream.start()
-        except Exception:
-            stream.close()
-            raise
-        grabacion["stream"] = stream
+        ultimo_error = None
+        for dev in _dispositivos_entrada():
+            info = sd.query_devices(dev)
+            for fs in dict.fromkeys((FS_GRAB, int(info.get("default_samplerate") or 44100))):
+                stream = None
+                try:
+                    stream = sd.InputStream(
+                        samplerate=fs, channels=1, device=dev, callback=_cb
+                    )
+                    stream.start()
+                except Exception as exc:
+                    ultimo_error = exc
+                    if stream is not None:
+                        try:
+                            stream.close()
+                        except Exception:
+                            pass
+                    continue
+                grabacion["stream"] = stream
+                grabacion["fs"] = fs
+                if DEBUG:
+                    print(f"[Frontend] 🎙️ Grabando device {dev} ({info['name']}) @ {fs} Hz")
+                return
+        raise RuntimeError(f"ningún micrófono disponible se pudo abrir ({ultimo_error})")
 
     def _detener_grabacion():
         """Cierra el stream, escribe los frames a un .wav y devuelve su ruta (o None)."""
@@ -235,7 +270,7 @@ def main(page: ft.Page):
             return None
         audio = np.concatenate(grabacion["frames"], axis=0)
         ruta = os.path.join(tempfile.gettempdir(), f"pregunta_{int(time.time())}.wav")
-        sf.write(ruta, audio, FS_GRAB)
+        sf.write(ruta, audio, grabacion["fs"])
         return ruta
 
     pregunta_field = ft.TextField(
