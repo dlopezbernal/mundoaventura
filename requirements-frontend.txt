@@ -18,7 +18,6 @@ python-dotenv             # Lee BACKEND_URL desde el archivo .env
 # NOTA: flet-audio NO graba micrófono (solo reproduce) y sin pinnear arrastra
 # una actualización de Flet a 1.x que rompe este frontend (API pre-0.80). Por eso
 # la voz NO usa los controles de audio de Flet: usamos librerías autocontenidas.
-sounddevice>=0.5          # Grabar el micrófono (captura PCM del dispositivo de entrada; trae PortAudio)
-soundfile>=0.13           # Escribir el audio grabado a .wav (trae libsndfile)
-just-playback>=0.1.8      # Reproducir el mp3 de la respuesta sin bloquear el hilo de la UI (trae miniaudio)
-numpy>=1.24               # Buffer PCM que devuelve sounddevice (modo array) para escribir el wav
+sounddevice>=0.5          # Grabar el micrófono y reproducir la voz de la respuesta (PortAudio)
+soundfile>=0.13           # Escribir el wav grabado y decodificar el mp3 de la respuesta (libsndfile con mp3)
+numpy>=1.24               # Buffer PCM que devuelve sounddevice (modo array)
