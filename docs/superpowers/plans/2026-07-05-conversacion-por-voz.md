@@ -685,33 +685,54 @@ git commit -m "feat(voz): api_client.transcribe (POST /api/transcribe)"
 
 ---
 
-### Task 7: Frontend — reproducir la respuesta en voz (auto-play)
+### Task 7: Frontend — reproducir la respuesta en voz (auto-play, just_playback)
+
+> **Enfoque BYPASS (decidido en Task 5):** NO se usa flet-audio (no graba y su instalación sin pin sube Flet a 1.x, rompiendo el frontend pre-0.80). La reproducción usa `just_playback` (miniaudio), independiente de Flet, en su propio hilo (no bloquea la UI).
 
 **Files:**
-- Modify: `frontend/main.py` (import ~23; creación de controles dentro de `main` ~140-167; `_run_ask` ~748-760)
+- Modify: `frontend/main.py` (imports ~19-27; helper + estado dentro de `main`; `_run_ask` ~748-760)
 
 **Interfaces:**
 - Consumes: `result["audio_base64"]` de `api_client.ask` (Task 4).
-- Produces: control `respuesta_audio` que reproduce el mp3 base64 al llegar la respuesta.
+- Produces: helper `_reproducir_respuesta(audio_b64: str) -> None` que reproduce el mp3 sin bloquear, reutilizando un único `Playback`.
 
-- [ ] **Step 1: Importar flet_audio**
+- [ ] **Step 1: Imports**
 
 En `frontend/main.py`, tras `import flet as ft` (línea 23), añade:
 
 ```python
-import flet_audio as fta
+import base64
+import tempfile
+
+from just_playback import Playback
 ```
+(`os`, `threading`, `time` ya están importados arriba.)
 
-- [ ] **Step 2: Crear el control Audio en el overlay**
+- [ ] **Step 2: Crear el reproductor reutilizable y el helper (dentro de `main`)**
 
-Dentro de `main(page)`, junto a la creación de los controles del chat (tras `chat_column = ...`, línea ~145), añade:
+Junto a la creación de los controles del chat (tras `chat_column = ...`, línea ~145), añade:
 
 ```python
-    # Reproductor de la voz del personaje. Vive en el overlay (no ocupa layout) y
-    # se dispara al llegar cada respuesta. La reproducción de Flet es asíncrona:
-    # no bloquea el hilo principal de la UI.
-    respuesta_audio = fta.Audio(autoplay=False)
-    page.overlay.append(respuesta_audio)
+    # Reproductor de la voz del personaje. just_playback usa miniaudio (mp3) y
+    # reproduce en su propio hilo: NO bloquea la UI. Reutilizamos UNA sola
+    # instancia (si se recolectara, se cortaría el sonido).
+    reproductor = Playback()
+
+    def _reproducir_respuesta(audio_b64: str) -> None:
+        """Decodifica el mp3 (base64) a un temporal y lo reproduce sin bloquear.
+
+        Un fallo de reproducción NUNCA rompe la UI: el texto ya está visible. Se
+        usa un nombre único por respuesta para no chocar con un mp3 aún bloqueado.
+        """
+        try:
+            mp3 = base64.b64decode(audio_b64)
+            ruta = os.path.join(tempfile.gettempdir(), f"respuesta_{int(time.time() * 1000)}.mp3")
+            with open(ruta, "wb") as f:
+                f.write(mp3)
+            reproductor.load_file(ruta)
+            reproductor.play()
+        except Exception as exc:
+            print(f"[Frontend] No se pudo reproducir la voz: {exc}")
 ```
 
 - [ ] **Step 3: Reproducir el audio en `_run_ask`**
@@ -719,61 +740,113 @@ Dentro de `main(page)`, junto a la creación de los controles del chat (tras `ch
 En `_run_ask` (línea 748), tras `_add_burbuja(f"{PERSONAJES[pid]['emoji']} {respuesta}", es_nino=False)` (línea 754), añade:
 
 ```python
-            # Auto-reproducción de la respuesta (si vino audio). Suena a la vez que
-            # aparece la burbuja de texto. Si audio_base64 es None (voz desactivada
-            # o TTS falló), simplemente no suena: el texto sigue visible.
+            # Auto-reproducción de la respuesta (si vino audio), a la vez que
+            # aparece la burbuja. Si audio_base64 es None (voz off o TTS falló),
+            # simplemente no suena: el texto sigue visible.
             audio_b64 = result.get("audio_base64")
             if audio_b64:
-                respuesta_audio.src_base64 = audio_b64
-                respuesta_audio.play()
+                _reproducir_respuesta(audio_b64)
 ```
 
-- [ ] **Step 4: Verificar por la UI (pregunta escrita → suena)**
+- [ ] **Step 4: Verificar (compilación headless; audio en vivo diferido)**
 
-Arranca backend y frontend (`flet run frontend/main.py`). Elige un personaje con voz (p. ej. Sherlock), llega al paso 3, **escribe** una pregunta y pulsa Preguntar.
-Expected: aparece la burbuja de respuesta **y se escucha** la voz del personaje leyéndola. En consola del backend: la traza `[VOZ] 🔊 TTS · ...`.
+El test audible completo (escribir una pregunta y oír la voz) necesita la clave de ElevenLabs y la GUI, así que se DIFIERE a una sesión interactiva del usuario. Lo verificable ahora, sin clave ni GUI, es que el fichero compila sin errores de sintaxis:
+```powershell
+python -m py_compile frontend/main.py
+```
+Expected: sin salida (éxito). Anota que el test audible queda diferido.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
 git add frontend/main.py
-git commit -m "feat(voz): auto-reproduccion de la respuesta del personaje (Audio)"
+git commit -m "feat(voz): auto-reproduccion de la respuesta con just_playback"
 ```
 
 ---
 
-### Task 8: Frontend — grabar la pregunta por voz (micrófono)
+### Task 8: Frontend — grabar la pregunta por voz (micrófono, sounddevice)
 
-> Si el spike (Task 5) fue **NO-GO**, sustituye `AudioRecorder` por el fallback `sounddevice` acordado, manteniendo el resto del flujo (transcribir → burbuja niño → ask) idéntico.
+> **Enfoque BYPASS (decidido en Task 5):** la grabación usa `sounddevice` (captura PCM del micro) + `soundfile` (escribe .wav), NO flet-audio. El dispositivo de entrada por defecto puede ser **-1** (ninguno): hay que elegir uno válido explícitamente. ElevenLabs Scribe acepta .wav.
 
 **Files:**
-- Modify: `frontend/main.py` (imports ~19-23; controles del chat ~146-167; zona de handlers del chat ~734-760)
+- Modify: `requirements-frontend.txt` (añadir `numpy`), `frontend/main.py` (imports; controles del chat ~146-167; handlers del chat ~734-760)
 
 **Interfaces:**
-- Consumes: `api_client.transcribe` (Task 6), `fta.AudioRecorder`, el flujo `_run_ask` (Task 7).
-- Produces: botón de micro con estado grabando/reposo y el flujo voz→texto→respuesta.
+- Consumes: `api_client.transcribe` (Task 6), los imports/estado de la Task 7, el flujo `_run_ask` (Task 7).
+- Produces: botón de micro con estado grabando/reposo, helpers `_iniciar_grabacion()`/`_detener_grabacion() -> str | None`, y el flujo voz→texto→respuesta.
 
-- [ ] **Step 1: Imports para ficheros temporales**
+- [ ] **Step 1: Declarar e instalar numpy**
 
-En `frontend/main.py`, confirma que `import os`, `import threading`, `import time` ya están (líneas 19-21). Añade tras ellos:
-
-```python
-import tempfile
+En `requirements-frontend.txt`, bajo el bloque de voz (tras `just-playback`), añade:
+```
+numpy                     # Buffer PCM que devuelve sounddevice (modo array) para escribir el wav
+```
+Instala:
+```powershell
+.\.venv\Scripts\Activate.ps1
+pip install numpy
 ```
 
-- [ ] **Step 2: Crear el AudioRecorder y el estado de grabación**
+- [ ] **Step 2: Imports en `frontend/main.py`**
 
-Dentro de `main(page)`, junto al `respuesta_audio` de la Task 7 (tras añadirlo al overlay), añade:
+Tras los imports de la Task 7, añade:
 
 ```python
-    # Grabadora del micrófono para la pregunta hablada. También en el overlay.
-    grabadora = fta.AudioRecorder()
-    page.overlay.append(grabadora)
-    # Estado de la grabación (mutable, compartido con los handlers).
-    grabacion = {"activa": False, "path": None}
+import numpy as np
+import sounddevice as sd
+import soundfile as sf
 ```
 
-- [ ] **Step 3: Crear el botón de micrófono**
+- [ ] **Step 3: Estado de grabación + helpers (dentro de `main`, junto al `reproductor` de la Task 7)**
+
+```python
+    # Grabación del micrófono con sounddevice → wav. El dispositivo de entrada por
+    # defecto puede ser -1 (ninguno): elegimos uno válido explícitamente.
+    FS_GRAB = 16000
+    grabacion = {"stream": None, "frames": []}
+
+    def _micro_device():
+        """Índice de un dispositivo de entrada válido, o None si no hay micro."""
+        try:
+            d = sd.default.device[0]
+            if isinstance(d, int) and d >= 0 and sd.query_devices(d)["max_input_channels"] > 0:
+                return d
+        except Exception:
+            pass
+        for i, dev in enumerate(sd.query_devices()):
+            if dev["max_input_channels"] > 0:
+                return i
+        return None
+
+    def _iniciar_grabacion():
+        """Abre el stream del micro y empieza a acumular frames PCM."""
+        grabacion["frames"] = []
+
+        def _cb(indata, frames, time_info, status):
+            grabacion["frames"].append(indata.copy())
+
+        grabacion["stream"] = sd.InputStream(
+            samplerate=FS_GRAB, channels=1, device=_micro_device(), callback=_cb
+        )
+        grabacion["stream"].start()
+
+    def _detener_grabacion():
+        """Cierra el stream, escribe los frames a un .wav y devuelve su ruta (o None)."""
+        st = grabacion["stream"]
+        grabacion["stream"] = None
+        if st is not None:
+            st.stop()
+            st.close()
+        if not grabacion["frames"]:
+            return None
+        audio = np.concatenate(grabacion["frames"], axis=0)
+        ruta = os.path.join(tempfile.gettempdir(), f"pregunta_{int(time.time())}.wav")
+        sf.write(ruta, audio, FS_GRAB)
+        return ruta
+```
+
+- [ ] **Step 4: Crear el botón de micrófono**
 
 Tras `preguntar_button = ...` (línea 155), añade:
 
@@ -792,14 +865,12 @@ Y en el `ft.Row` del `chat_panel` (línea 164), añade `mic_button` entre el cam
             [chat_titulo, chat_column, ft.Row([pregunta_field, mic_button, preguntar_button])],
 ```
 
-- [ ] **Step 4: Habilitar/deshabilitar el micro junto al campo de texto**
+- [ ] **Step 5: Habilitar/deshabilitar el micro junto al campo de texto**
 
-El micro debe seguir el mismo estado `disabled` que `pregunta_field`/`preguntar_button`. Busca las asignaciones existentes y añade la del micro junto a ellas:
-
-En el bloque donde se activa el chat para un personaje (tras `preguntar_button.disabled = False`, si existe; si no, donde `pregunta_field.disabled = False`, en el flujo de generación ~línea 706-712 y en `_run_ask` finally ~758-759), añade en cada punto:
+El micro sigue el mismo estado `disabled` que `pregunta_field`/`preguntar_button`. En el bloque donde se activa el chat para un personaje (donde `pregunta_field.disabled = False`, flujo de generación ~línea 706-712), añade:
 
 ```python
-            mic_button.disabled = pregunta_field.disabled
+            mic_button.disabled = False
 ```
 
 En `empezar_de_nuevo` (línea 778-779, donde se deshabilitan campo y botón), añade:
@@ -808,7 +879,7 @@ En `empezar_de_nuevo` (línea 778-779, donde se deshabilitan campo y botón), a�
         mic_button.disabled = True
 ```
 
-- [ ] **Step 5: Handler de grabar/parar (toggle)**
+- [ ] **Step 6: Handler de grabar/parar (toggle) + transcripción**
 
 En la zona de handlers del chat, tras la función `preguntar` (línea 746), añade:
 
@@ -817,30 +888,36 @@ En la zona de handlers del chat, tras la función `preguntar` (línea 746), aña
         pid = state["chat_personaje"]
         if not pid:
             return
-        if not grabacion["activa"]:
+        if grabacion["stream"] is None:
             # Empezar a grabar.
-            grabacion["path"] = os.path.join(
-                tempfile.gettempdir(), f"pregunta_{int(time.time())}.m4a"
-            )
-            grabadora.start_recording(grabacion["path"])
-            grabacion["activa"] = True
+            try:
+                _iniciar_grabacion()
+            except Exception as exc:
+                _add_burbuja(f"❌ No se pudo abrir el micrófono: {exc}", es_nino=False)
+                page.update()
+                return
             mic_button.icon = ft.Icons.STOP_CIRCLE
             mic_button.icon_color = ft.Colors.RED_400
             mic_button.tooltip = "Grabando... toca para enviar"
             page.update()
         else:
-            # Parar y transcribir.
-            grabadora.stop_recording()
-            grabacion["activa"] = False
+            # Parar, escribir el wav y transcribir.
+            ruta = _detener_grabacion()
             mic_button.icon = ft.Icons.MIC
             mic_button.icon_color = ft.Colors.PURPLE_400
+            mic_button.tooltip = "Toca para hablar; toca otra vez para enviar"
             mic_button.disabled = True
             pregunta_field.disabled = True
             preguntar_button.disabled = True
             page.update()
-            threading.Thread(
-                target=_run_transcribe, args=(pid, grabacion["path"]), daemon=True
-            ).start()
+            if not ruta:
+                # No se capturó nada: reactivar y salir.
+                mic_button.disabled = False
+                pregunta_field.disabled = False
+                preguntar_button.disabled = False
+                page.update()
+                return
+            threading.Thread(target=_run_transcribe, args=(pid, ruta), daemon=True).start()
 
     def _run_transcribe(pid: str, audio_path: str):
         try:
@@ -863,30 +940,29 @@ En la zona de handlers del chat, tras la función `preguntar` (línea 746), aña
             page.update()
 ```
 
-- [ ] **Step 6: Conectar el handler al botón**
+- [ ] **Step 7: Conectar el handler al botón**
 
-`_toggle_micro` se define después de crear `mic_button`, así que asigna el `on_click` donde se conectan el resto de handlers del chat (junto a `preguntar_button.on_click = preguntar`, busca esa línea):
+Junto a `preguntar_button.on_click = preguntar` (búscala), añade:
 
 ```python
     mic_button.on_click = _toggle_micro
 ```
 
-> Nota: `_run_ask` (Task 7) ya hace su propio `finally` que reactiva `pregunta_field`/`preguntar_button`; el `finally` de `_run_transcribe` reactiva además `mic_button`. No hay doble perjuicio: ambos dejan la UI utilizable.
+> Nota: la grabación se distingue por `grabacion["stream"] is None` (None = en reposo). `_run_ask` (Task 7) ya reactiva `pregunta_field`/`preguntar_button` en su `finally`; `_run_transcribe` reactiva además `mic_button`.
 
-- [ ] **Step 7: Verificar el flujo de voz completo por la UI**
+- [ ] **Step 8: Verificar (compilación headless; micro en vivo diferido)**
 
-Arranca backend y frontend. Paso 3 con un personaje con voz:
-1. Toca 🎤 (se pone rojo ⏹), di "¿Qué comes?", toca otra vez.
-2. Aparece la burbuja 🧒 con el texto transcrito.
-3. Aparece la respuesta del personaje **y se escucha** su voz.
+La captura real de micro necesita la sesión de escritorio del usuario (con permiso de micro); en este contexto no hay acceso al micro. Lo verificable ahora es que compila:
+```powershell
+python -m py_compile frontend/main.py
+```
+Expected: sin salida (éxito). Anota que la prueba de grabación real, transcripción y voz end-to-end queda **diferida** a la sesión interactiva del usuario (que también necesita la `ELEVENLABS_API_KEY`).
 
-Expected: las tres cosas ocurren; en consola del backend se ven `[VOZ] 🎙️ STT ...` y `[VOZ] 🔊 TTS ...`.
-
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```powershell
-git add frontend/main.py
-git commit -m "feat(voz): grabar la pregunta por microfono (tap start/stop) + flujo voz"
+git add requirements-frontend.txt frontend/main.py
+git commit -m "feat(voz): grabar la pregunta por microfono con sounddevice (tap start/stop)"
 ```
 
 ---
