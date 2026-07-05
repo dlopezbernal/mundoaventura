@@ -83,16 +83,17 @@ NOMBRES = {
     "peter_pan": "Peter Pan",
 }
 
-# voz_id de ElevenLabs con la que habla cada personaje en el chat (TTS Flash).
+# voz_id de ElevenLabs con la que habla cada personaje en el chat (TTS).
 # Es el 5º sitio del invariante personaje_id: la clave debe coincidir con PROMPTS,
 # NOMBRES, la carta del frontend y la carpeta backend/documentos/<personaje_id>/.
 # Un personaje SIN entrada aquí responde solo en texto (no rompe).
-# Los IDs de abajo son voces "premade" de ElevenLabs (funcionan out-of-the-box);
-# sustitúyelos por voces en español con más carácter desde tu biblioteca de ElevenLabs.
+# Son voces "premade" de ElevenLabs (funcionan out-of-the-box). Suenan naturales
+# en español con el modelo multilingüe eleven_turbo_v2_5 (ver ELEVENLABS_TTS_MODEL
+# en .env). Cámbialas por voces de tu biblioteca desde https://elevenlabs.io/voices.
 VOCES = {
-    "sherlock_holmes":   "onwK4e9ZLuTAKqWW03F9",  # grave y pausada (Daniel)
-    "leonardo_da_vinci": "pNInz6obpgDQGcFmaJgB",  # cálida y sabia (Adam)
+    "sherlock_holmes":   "nPczCjzI2devNBz1zQrb",  # grave y madura (Brian)
+    "leonardo_da_vinci": "JBFqnCBsd6RMkjVDRZzb",  # cálida y sabia (George)
     "t-rex":             "IKne3meq5aSn9XLyUdCD",  # juguetona (Charlie)
-    "triceratops":       "ErXwobaYiN019PkySvjV",  # amable (Antoni)
-    "peter_pan":         "TxGEqnHWrfWFTfGW9XjX",  # aventurera y joven (Josh)
+    "triceratops":       "bIHbv24MWmeRgasZH58o",  # amable (Will)
+    "peter_pan":         "TX3LPaxmHKxFdv7VOQHJ",  # aventurera y joven (Liam)
 }
