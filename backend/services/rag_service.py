@@ -333,13 +333,14 @@ def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
         return None
     try:
         audio_bytes = voice_service.sintetizar(respuesta, voz_id)
+        audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
     except Exception as exc:
         if config.DEBUG:
             print(f"[VOZ] ⚠️ TTS falló: {exc} (respuesta va solo en texto)")
         return None
     if config.DEBUG:
         print(f"[VOZ] 🔊 TTS · voz={voz_id} · {len(respuesta)} chars · {personaje_id}")
-    return base64.b64encode(audio_bytes).decode("ascii")
+    return audio_b64
 
 
 def responder(personaje_id: str, pregunta: str) -> dict:
