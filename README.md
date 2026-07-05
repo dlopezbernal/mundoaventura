@@ -1,12 +1,13 @@
 # 🕰️ Máquina del Tiempo en tu Habitación
 
 Herramienta educativa (para niños de 8 a 12 años) que **genera escenas divertidas combinando
-un lugar y un personaje histórico o prehistórico** (¡un T-Rex en un laboratorio!) y, más
-adelante, te dejará **conversar con ellos por voz**. Combina varias tecnologías de
+un lugar y un personaje histórico o prehistórico** (¡un T-Rex en un laboratorio!) y te deja
+**conversar con ellos por texto o por voz**. Combina varias tecnologías de
 Inteligencia Artificial en un pipeline por fases.
 
-> Este repositorio se construye **paso a paso**. Ahora mismo está implementada la
-> **generación de la escena** (ubicación + personaje) usando **Replicate.com**.
+> Este repositorio se construye **paso a paso**. Ahora mismo están implementadas la
+> **generación de la escena** (ubicación + personaje) con **Replicate.com**, el **chat con RAG**
+> y la **voz** (ElevenLabs).
 
 ---
 
@@ -17,7 +18,8 @@ Inteligencia Artificial en un pipeline por fases.
 | **Elegir lugar y personaje** | Eliges una **ubicación** (laboratorio, bosque del jurásico, renacimiento, época victoriana...) y un **personaje** (T-Rex, Leonardo da Vinci, Sherlock Holmes...). Cualquier combinación vale. | **Flet** (interfaz, sin IA) | ✅ **Implementado** |
 | **Generación de la escena** | Combina lugar + personaje + estilo en un prompt y pide la imagen a la nube. Devuelve una escena completa. | **Replicate.com** (FLUX schnell, txt2img) | ✅ **Implementado** |
 | **Conversación por texto (RAG)** | Escribes una pregunta y el personaje responde **en primera persona**, fundamentado en documentos (enciclopedias) troceados. | **LangChain** (chunking) + **ChromaDB** + **DeepL** + **LLM** (Replicate) | ✅ **Implementado** |
-| Entrada por voz | Graba la pregunta con el micro y la transcribe a texto. | Whisper (Replicate) | ⏳ Pendiente |
+| **Entrada por voz** | Graba la pregunta con el micro (toca para empezar / toca para parar) y la transcribe a texto en español. | **ElevenLabs Scribe** (STT) | ✅ **Implementado** |
+| **Respuesta por voz** | La respuesta del personaje se sintetiza con una voz expresiva propia y se reproduce sola. | **ElevenLabs Flash** (TTS) | ✅ **Implementado** |
 
 > **¿Por qué Replicate y no Stable Diffusion en local?** Generar con Stable Diffusion +
 > IP-Adapter en una GPU modesta (p. ej. una GTX 1660 de 6 GB) es lento e inestable. Con
@@ -42,12 +44,15 @@ Arquitectura **Cliente-Servidor desacoplada**:
 │                          │  ◄───────────────────────── │   - Devuelve la imagen       │
 │                          │     escena (PNG base64)     │                              │
 │                          │                             │                              │
-│   - Chatear con el       │   POST /api/ask             │   [Conversación / RAG]       │
-│     personaje            │   { personaje_id,           │   - ChromaDB recupera fichas │
+│   - Chatear con el       │   POST /api/transcribe      │   [Voz → texto (STT)]        │
+│     personaje (texto     │   (audio del micro)         │   - ElevenLabs Scribe        │
+│     o voz)               │  ─────────────────────────► │   - Devuelve el texto        │
+│                          │   POST /api/ask             │   [Conversación / RAG]       │
+│                          │   { personaje_id,           │   - ChromaDB recupera fichas │
 │                          │     pregunta }              │   - LLM (Replicate) responde │
-│                          │  ─────────────────────────► │     en primera persona       │
-│                          │  ◄───────────────────────── │   - Devuelve el texto        │
-└─────────────────────────┘     respuesta (texto)       └──────────────────────────────┘
+│                          │  ─────────────────────────► │   - TTS (ElevenLabs Flash)   │
+│                          │  ◄───────────────────────── │   - Devuelve texto + audio   │
+└─────────────────────────┘  respuesta (texto + audio)  └──────────────────────────────┘
         tu PC (ligero)                                    tu PC (ligero)  →  Replicate (GPU)
 ```
 
@@ -64,7 +69,7 @@ capston/
 │   ├── main.py               # Arranque de la app y rutas globales
 │   ├── config.py             # Configuración (Replicate, LLM, ChromaDB) desde .env
 │   ├── debug_log.py          # Traza en consola de los prompts enviados (solo con DEBUG)
-│   ├── personajes.py         # Prompts + NOMBRES de cada personaje + estilo común
+│   ├── personajes.py         # Prompts + NOMBRES + VOCES (voz_id ElevenLabs) de cada personaje
 │   ├── ubicaciones.py        # Prompts de cada ubicación
 │   ├── ingest.py             # Ingesta: trocea (chunking) e indexa los documentos
 │   ├── fetch_wikipedia.py    # Descarga un artículo de Wikipedia limpio a documentos/
@@ -78,10 +83,12 @@ capston/
 │   ├── services/             # Lógica de IA
 │   │   ├── generation_service.py   #   · generación de imagen → Replicate
 │   │   ├── rag_service.py          #   · conversación → ChromaDB + Evaluator + LLM
-│   │   └── translation_service.py  #   · traducción ES→EN de la pregunta (DeepL)
+│   │   ├── translation_service.py  #   · traducción ES→EN de la pregunta (DeepL)
+│   │   └── voice_service.py        #   · voz → texto (Scribe) y texto → voz (Flash): ElevenLabs
 │   ├── routers/              # Endpoints HTTP
 │   │   ├── generation.py     #   · POST /api/generate, /api/generate-on-photo
-│   │   └── conversacion.py   #   · POST /api/ask
+│   │   ├── conversacion.py   #   · POST /api/ask
+│   │   └── transcription.py  #   · POST /api/transcribe (voz → texto, ElevenLabs Scribe)
 │   └── chroma_db/            # Índice vectorial de ChromaDB (lo crea ingest.py; no se versiona)
 ├── frontend/                 # Interfaz de usuario (Flet)
 │   ├── main.py               # La ventana de la app (catálogos + resultado + chat)
@@ -128,6 +135,11 @@ para traducir la pregunta ES→EN antes de buscar; **sin ella la recuperación f
 fichas equivocadas) y el chat responde con un error claro. Clave gratis (500.000 chars/mes) en
 [deepl.com/pro-api](https://www.deepl.com/pro-api).
 
+**Obligatorio para la voz:** pega también tu clave de **ElevenLabs** en `ELEVENLABS_API_KEY`
+(modalidad pago por uso). Se usa para transcribir la pregunta hablada del niño (Scribe) y dar
+voz a la respuesta del personaje (Flash). Sin ella, la voz queda desactivada pero el chat de
+**texto sigue funcionando**. Consigue una clave en [elevenlabs.io](https://elevenlabs.io).
+
 ### 4. Arrancar el backend (una terminal)
 
 ```powershell
@@ -135,7 +147,7 @@ uvicorn backend.main:app --reload
 ```
 
 Comprueba que abre en http://127.0.0.1:8000/docs. En `GET /health` debe aparecer
-`"token_configurado": true` y el modelo de Replicate.
+`"token_configurado": true`, el modelo de Replicate y `"elevenlabs_ok": true`.
 
 ### 5. Arrancar el frontend (otra terminal, con el venv activado)
 
@@ -346,6 +358,8 @@ trazan:
 | **Replicate — escena** | generación texto→imagen (`/api/generate`) | `PROMPT` |
 | **Replicate — edición foto** | modo «usar mi foto» (`/api/generate-on-photo`) | `PROMPT` |
 | **DeepL** | traducción ES→EN de la pregunta antes del retrieval | `PROMPT` (texto a traducir) |
+| **ElevenLabs — STT** | transcripción de la pregunta hablada (`/api/transcribe`) | `[VOZ] 🎙️ STT · <bytes> → "<texto>"` |
+| **ElevenLabs — TTS** | síntesis de la respuesta del personaje (`/api/ask`) | `[VOZ] 🔊 TTS · voz=<voz_id> · <chars> · <personaje_id>` |
 
 **Tipos de prompt (roles).** En las llamadas al **LLM** hay dos partes, y la traza las separa:
 
@@ -462,12 +476,41 @@ quedar fuera de CLIP pero **T5 lo sigue leyendo**, así que apenas afecta al res
 genera igual**. La longitud se estima al alza contando palabras y signos (no usamos el tokenizador
 exacto de CLIP), suficiente para decidir cuándo avisar.
 
+### 6. Voz con ElevenLabs (Scribe STT + Flash TTS), pago por uso
+
+**Decisión:** usar **ElevenLabs** para las dos mitades de la voz —transcribir la pregunta
+hablada (**Scribe**) y dar voz a la respuesta (**Flash**)— con una **voz propia por personaje**
+(`VOCES` en `backend/personajes.py`), en modalidad **pago por uso**.
+
+**Por qué:**
+- **Voz expresiva en español:** dar carácter a cada personaje (Sherlock grave, Da Vinci cálido)
+  pide voces netamente mejores que las de un TTS genérico. El placeholder original preveía solo
+  Whisper (Replicate) para STT; ElevenLabs cubre STT **y** TTS con una sola clave y SDK.
+- **Latencia:** el modelo Flash responde rápido, importante para que un niño no espere.
+- **Coherencia:** encaja con "todo lo pesado en la nube"; el backend solo hace una llamada HTTP más.
+
+**Degradación:** un fallo de voz (o falta de clave) nunca rompe el chat: la respuesta de texto
+se sirve igual y `audio_base64` viaja como `null`.
+
+**Arquitectura:** STT es un endpoint aislado (`/api/transcribe`); el TTS viaja **acoplado** a la
+respuesta de `/api/ask` (`audio_base64`), porque *toda* respuesta se habla (escrita o hablada).
+
+**Grabación y reproducción en el frontend, sin `flet-audio`:** un spike (prueba técnica) demostró
+que `flet-audio` **no graba** micrófono (solo reproduce) y que, instalado sin pinnear versión,
+arrastra una actualización de Flet de 0.28.3 a 1.x que **rompe** este frontend (usa la API
+pre-0.80: `ft.app`, `ImageFit`, `FilePicker` por callback). Por eso la voz del lado cliente
+**no usa los controles de audio de Flet**: usa librerías autocontenidas e independientes de
+Flet — `sounddevice` (captura del micrófono) + `soundfile` (escribe el `.wav` grabado) para
+grabar, y `just-playback` (reproducción de mp3 sin bloquear la UI) para reproducir la respuesta,
+con `numpy` de apoyo para el buffer PCM. Ver `requirements-frontend.txt`.
+
 ---
 
 ## 💡 Personalizar
 
-- **Añadir personajes:** edita `backend/personajes.py` (el prompt) y `frontend/personajes.py`
-  (la tarjeta), usando el **mismo `id`** en ambos.
+- **Añadir personajes:** edita `backend/personajes.py` (`PROMPTS`, `NOMBRES` y, si quieres que
+  hable, `VOCES` con su `voz_id` de ElevenLabs) y `frontend/personajes.py` (la tarjeta), usando
+  el **mismo `id`** en todos. Un personaje sin `voz_id` responde solo en texto.
 - **Añadir ubicaciones:** igual, en `backend/ubicaciones.py` y `frontend/ubicaciones.py`.
 - **Cambiar el modelo o el estilo:** `REPLICATE_MODEL` en el `.env` y el `STYLE_SUFFIX` en
   `backend/personajes.py`.
