@@ -199,21 +199,34 @@ def main(page: ft.Page):
     grabacion = {"stream": None, "frames": [], "fs": FS_GRAB}
 
     def _dispositivos_entrada():
-        """Índices de micrófonos candidatos, ordenados por probabilidad de acierto.
+        """Índices de micrófonos candidatos, ordenados por fiabilidad de apertura.
 
-        Orden: (1) el default si es válido; (2) los que se llaman "micrófono/mic"
-        y NO son Bluetooth (el micro real); (3) otras entradas no-BT (mezcla
-        estéreo, línea de entrada... se evitan salvo que no haya micro, para no
-        grabar el audio del sistema); (4) por último los Bluetooth 'Hands-Free'
-        (suelen estar desconectados y fallar al abrir).
+        En Windows los endpoints directos de hardware (WASAPI/WDM-KS) a menudo dan
+        'Unanticipated host error' (-9999); en cambio los MAPEADORES por defecto de
+        cada host API (MME 'Asignador de sonido', DirectSound 'Controlador
+        primario') abren de forma fiable y siguen al micro predeterminado de
+        Windows. Orden: (1) el default de sounddevice si es válido; (2) el input
+        por defecto de cada host API (los mapeadores fiables); (3) micros con
+        nombre "micrófono/mic" no-BT; (4) otras entradas no-BT (mezcla estéreo,
+        línea... se evitan salvo que no haya micro); (5) Bluetooth 'Hands-Free'.
         """
         candidatos = []
+
+        def _añadir(idx):
+            if isinstance(idx, int) and idx >= 0 and idx not in candidatos:
+                try:
+                    if sd.query_devices(idx)["max_input_channels"] > 0:
+                        candidatos.append(idx)
+                except Exception:
+                    pass
+
         try:
-            d = sd.default.device[0]
-            if isinstance(d, int) and d >= 0 and sd.query_devices(d)["max_input_channels"] > 0:
-                candidatos.append(d)
+            _añadir(sd.default.device[0])
         except Exception:
             pass
+        for host in sd.query_hostapis():
+            _añadir(host.get("default_input_device", -1))
+
         mics, otros, bt = [], [], []
         for i, dev in enumerate(sd.query_devices()):
             if dev["max_input_channels"] <= 0 or i in candidatos:
