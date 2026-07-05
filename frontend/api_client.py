@@ -96,6 +96,34 @@ def ask(personaje_id: str, pregunta: str) -> dict:
         raise BackendError(f"Fallo de conexión con el backend: {exc}")
 
 
+def transcribe(audio_path: str) -> str:
+    """Sube el audio grabado (multipart) a /api/transcribe y devuelve el texto.
+
+    Se usa cuando el niño pregunta por voz: graba → transcribe → el texto entra
+    al mismo flujo que una pregunta escrita.
+    """
+    url = f"{BACKEND_URL}/api/transcribe"
+
+    try:
+        with open(audio_path, "rb") as f:
+            files = {"audio": (Path(audio_path).name, f, "application/octet-stream")}
+            # timeout holgado: Scribe puede tardar unos segundos en clips largos.
+            response = requests.post(url, files=files, timeout=60)
+
+        response.raise_for_status()
+        return response.json().get("texto", "")
+
+    except requests.HTTPError as exc:
+        detail = ""
+        try:
+            detail = exc.response.json().get("detail", "")
+        except Exception:
+            detail = exc.response.text if exc.response is not None else ""
+        raise BackendError(f"El backend devolvió un error: {detail or exc}")
+    except requests.RequestException as exc:
+        raise BackendError(f"Fallo de conexión con el backend: {exc}")
+
+
 def generate_on_photo(image_path: str, personaje_id: str) -> dict:
     """Pide al backend estilizar la foto del niño y añadir el personaje.
 
