@@ -45,10 +45,11 @@ def _get_client() -> ElevenLabs:
     return _client
 
 
-def transcribir(audio_bytes: bytes, filename: str = "audio.mp3") -> str:
+def transcribir(audio_bytes: bytes) -> str:
     """Transcribe audio (bytes) a texto en español con ElevenLabs Scribe.
 
-    Lanza VoiceError si falta la clave o falla la transcripción.
+    Scribe deduce el formato de los propios bytes, así que no necesitamos el
+    nombre del fichero. Lanza VoiceError si falta la clave o falla la transcripción.
     """
     client = _get_client()
     try:

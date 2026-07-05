@@ -16,20 +16,17 @@ Arráncala con:
     flet run frontend/main.py
 """
 
+import base64
 import os
+import tempfile
 import threading
 import time
 
 import flet as ft
-
-import base64
-import tempfile
-
-from just_playback import Playback
-
 import numpy as np
 import sounddevice as sd
 import soundfile as sf
+from just_playback import Playback
 
 import api_client  # al importarse, carga el .env (incluida la variable DEBUG)
 from personajes import GRUPOS, PERSONAJES
@@ -157,18 +154,31 @@ def main(page: ft.Page):
     # reproduce en su propio hilo: NO bloquea la UI. Reutilizamos UNA sola
     # instancia (si se recolectara, se cortaría el sonido).
     reproductor = Playback()
+    # Ruta del último mp3 reproducido, para borrarlo al llegar el siguiente y que
+    # no se acumulen temporales en %TEMP% a lo largo de la sesión.
+    ultimo_mp3 = {"ruta": None}
 
     def _reproducir_respuesta(audio_b64: str) -> None:
         """Decodifica el mp3 (base64) a un temporal y lo reproduce sin bloquear.
 
         Un fallo de reproducción NUNCA rompe la UI: el texto ya está visible. Se
         usa un nombre único por respuesta para no chocar con un mp3 aún bloqueado.
+        Como se reutiliza un único reproductor, si llega una respuesta nueva
+        mientras suena la anterior, la anterior se corta (comportamiento aceptado
+        para un chat infantil).
         """
         try:
             mp3 = base64.b64decode(audio_b64)
+            # Borra (best-effort) el mp3 anterior: ya terminó de sonar.
+            if ultimo_mp3["ruta"]:
+                try:
+                    os.remove(ultimo_mp3["ruta"])
+                except OSError:
+                    pass
             ruta = os.path.join(tempfile.gettempdir(), f"respuesta_{int(time.time() * 1000)}.mp3")
             with open(ruta, "wb") as f:
                 f.write(mp3)
+            ultimo_mp3["ruta"] = ruta
             reproductor.load_file(ruta)
             reproductor.play()
         except Exception as exc:
@@ -830,8 +840,11 @@ def main(page: ft.Page):
             return
         _add_burbuja(f"🧒 {texto}", es_nino=True)
         pregunta_field.value = ""
+        # Mientras se responde, bloqueamos también el micro para no solapar una
+        # pregunta escrita con una hablada.
         pregunta_field.disabled = True
         preguntar_button.disabled = True
+        mic_button.disabled = True
         pensando = ft.Text("🤔 Pensando...", size=13, italic=True)
         chat_column.controls.append(pensando)
         page.update()
@@ -855,6 +868,7 @@ def main(page: ft.Page):
         finally:
             pregunta_field.disabled = False
             preguntar_button.disabled = False
+            mic_button.disabled = False
             page.update()
 
     def _toggle_micro(_):
@@ -872,6 +886,9 @@ def main(page: ft.Page):
             mic_button.icon = ft.Icons.STOP_CIRCLE
             mic_button.icon_color = ft.Colors.RED_400
             mic_button.tooltip = "Grabando... toca para enviar"
+            # Mientras se graba, no se puede escribir/enviar (evita solapar).
+            pregunta_field.disabled = True
+            preguntar_button.disabled = True
             page.update()
         else:
             # Parar, escribir el wav y transcribir.
@@ -908,6 +925,11 @@ def main(page: ft.Page):
             print(f"[Frontend] Error al transcribir la voz: {exc}")
             _add_burbuja("❌ No pude escucharte bien. Inténtalo otra vez. 🎤", es_nino=False)
         finally:
+            # El wav ya se transcribió: lo borramos para no acumular temporales.
+            try:
+                os.remove(audio_path)
+            except OSError:
+                pass
             mic_button.disabled = False
             pregunta_field.disabled = False
             preguntar_button.disabled = False

@@ -21,7 +21,7 @@ async def transcribe(audio: UploadFile = File(...)):
     """Transcribe el audio de la pregunta del niño a texto en español."""
     try:
         audio_bytes = await audio.read()
-        texto = voice_service.transcribir(audio_bytes, audio.filename or "audio.mp3")
+        texto = voice_service.transcribir(audio_bytes)
     except ValueError as exc:
         # Falta la clave o el audio no se pudo transcribir -> 400.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
