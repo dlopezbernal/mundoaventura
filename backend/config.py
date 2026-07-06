@@ -149,10 +149,11 @@ ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "").strip()
 # Modelo de transcripción (voz → texto). Scribe entiende bien el español.
 ELEVENLABS_STT_MODEL: str = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v1").strip()
 
-# Modelo de síntesis (texto → voz). Turbo v2.5: multilingüe, natural en español y
-# de baja latencia (mejor que Flash para un chat infantil). Alternativas: Flash
-# (más barato/rápido pero menos natural) o Multilingual v2 (aún más natural, más lento).
-ELEVENLABS_TTS_MODEL: str = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_turbo_v2_5").strip()
+# Modelo de síntesis (texto → voz). Multilingual v2: la voz más nítida y natural en
+# español (turbo/flash suenan "embarrados" — verificado en A/B). La latencia extra
+# es despreciable para respuestas cortas de chat, y la claridad importa más con niños.
+# Alternativas (menos claras): eleven_turbo_v2_5 o eleven_flash_v2_5 (más rápidas/baratas).
+ELEVENLABS_TTS_MODEL: str = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_multilingual_v2").strip()
 
 # Formato del audio devuelto por el TTS (mp3, reproducible por Flet en base64).
 TTS_OUTPUT_FORMAT: str = os.getenv("TTS_OUTPUT_FORMAT", "mp3_44100_128").strip()
