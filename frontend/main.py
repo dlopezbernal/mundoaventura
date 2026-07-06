@@ -158,12 +158,19 @@ def main(page: ft.Page):
         just_playback, que cortaba la reproducción a mitad aunque el mp3 estuviera
         completo. `sd.stop()` corta la respuesta anterior si aún sonaba. No deja
         ficheros temporales. Un fallo NUNCA rompe la UI: el texto ya está visible.
+
+        `latency="high"` + `blocksize` grande: `sd.play` alimenta el audio con un
+        callback en Python (bajo el GIL); mientras suena, el hilo principal está
+        ocupado (burbuja + page.update por websocket + auto-scroll). Un buffer
+        holgado le da colchón para no llegar tarde al callback (underrun) si hay
+        contención. Defensivo: no era la causa de los cortes que vimos (ese audio
+        ya venía "embarrado" del modelo turbo; se cambió a multilingual_v2).
         """
         try:
             mp3 = base64.b64decode(audio_b64)
             data, sr = sf.read(io.BytesIO(mp3), dtype="float32")
             sd.stop()
-            sd.play(data, sr)
+            sd.play(data, sr, blocksize=2048, latency="high")
         except Exception as exc:
             print(f"[Frontend] No se pudo reproducir la voz: {exc}")
 
@@ -256,17 +263,31 @@ def main(page: ft.Page):
         raise RuntimeError(f"ningún micrófono disponible se pudo abrir ({ultimo_error})")
 
     def _detener_grabacion():
-        """Cierra el stream, escribe los frames a un .wav y devuelve su ruta (o None)."""
+        """Cierra el stream, escribe los frames a un .wav y devuelve su ruta (o None).
+
+        En Windows, `stream.stop()/close()` de PortAudio (WASAPI/MME) puede lanzar
+        una PaError al cerrar/reabrir; si eso reventara aquí perderíamos el wav ya
+        grabado Y dejaríamos la UI colgada en "grabando". Por eso el cierre va en
+        try/except: pase lo que pase, seguimos escribiendo los frames capturados.
+        """
         st = grabacion["stream"]
         grabacion["stream"] = None
         if st is not None:
-            st.stop()
-            st.close()
+            try:
+                st.stop()
+                st.close()
+            except Exception as exc:  # PaError al cerrar: no debe abortar el guardado
+                if DEBUG:
+                    print(f"[Frontend] ⚠️ Error al cerrar el micro (se ignora): {exc}")
         if not grabacion["frames"]:
+            if DEBUG:
+                print("[Frontend] 🎙️ Parado: 0 frames capturados (no se transcribe)")
             return None
         audio = np.concatenate(grabacion["frames"], axis=0)
         ruta = os.path.join(tempfile.gettempdir(), f"pregunta_{int(time.time())}.wav")
         sf.write(ruta, audio, grabacion["fs"])
+        if DEBUG:
+            print(f"[Frontend] 🎙️ Parado: {len(grabacion['frames'])} frames -> {ruta}")
         return ruta
 
     pregunta_field = ft.TextField(
@@ -902,6 +923,19 @@ def main(page: ft.Page):
             mic_button.disabled = False
             page.update()
 
+    def _ui_micro_reposo(mic_disabled: bool = False):
+        """Deja el botón en 🎙️ reposo y reactiva escritura/enviar.
+
+        Único sitio que devuelve la UI al estado "no grabando": así, pase lo que
+        pase en la ruta de parar, el botón NUNCA se queda colgado en "grabando".
+        """
+        mic_button.icon = ft.Icons.MIC
+        mic_button.icon_color = ft.Colors.PURPLE_400
+        mic_button.tooltip = "Toca para hablar; toca otra vez para enviar"
+        mic_button.disabled = mic_disabled
+        pregunta_field.disabled = False
+        preguntar_button.disabled = False
+
     def _toggle_micro(_):
         pid = state["chat_personaje"]
         if not pid:
@@ -911,7 +945,10 @@ def main(page: ft.Page):
             try:
                 _iniciar_grabacion()
             except Exception as exc:
+                if DEBUG:
+                    print(f"[Frontend] ⚠️ No se pudo abrir el micrófono: {exc}")
                 _add_burbuja(f"❌ No se pudo abrir el micrófono: {exc}", es_nino=False)
+                _ui_micro_reposo()  # asegura estado consistente si falló al abrir
                 page.update()
                 return
             mic_button.icon = ft.Icons.STOP_CIRCLE
@@ -922,22 +959,25 @@ def main(page: ft.Page):
             preguntar_button.disabled = True
             page.update()
         else:
-            # Parar, escribir el wav y transcribir.
-            ruta = _detener_grabacion()
-            mic_button.icon = ft.Icons.MIC
-            mic_button.icon_color = ft.Colors.PURPLE_400
-            mic_button.tooltip = "Toca para hablar; toca otra vez para enviar"
-            mic_button.disabled = True
+            # Parar, escribir el wav y transcribir. Cualquier fallo aquí debe dejar
+            # el botón en reposo (no colgado en "grabando"): por eso va en try/except.
+            ruta = None
+            try:
+                ruta = _detener_grabacion()
+            except Exception as exc:
+                if DEBUG:
+                    print(f"[Frontend] ⚠️ Error al detener la grabación: {exc}")
+                grabacion["stream"] = None  # garantiza que el próximo toque reabre
+            if not ruta:
+                # No se capturó nada (o falló al parar): volver a reposo y salir.
+                _ui_micro_reposo()
+                page.update()
+                return
+            # Hay wav: botón en reposo pero bloqueado mientras se transcribe.
+            _ui_micro_reposo(mic_disabled=True)
             pregunta_field.disabled = True
             preguntar_button.disabled = True
             page.update()
-            if not ruta:
-                # No se capturó nada: reactivar y salir.
-                mic_button.disabled = False
-                pregunta_field.disabled = False
-                preguntar_button.disabled = False
-                page.update()
-                return
             threading.Thread(target=_run_transcribe, args=(pid, ruta), daemon=True).start()
 
     def _run_transcribe(pid: str, audio_path: str):
