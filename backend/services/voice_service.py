@@ -63,7 +63,11 @@ def transcribir(audio_bytes: bytes) -> str:
         raise VoiceError(f"Error al transcribir con ElevenLabs: {exc}")
 
     if config.DEBUG:
-        print(f'[VOZ] 🎙️ STT · {len(audio_bytes)} bytes → "{texto}"')
+        print(
+            f"[VOZ] 🎙️ STT OK · {len(audio_bytes)} bytes de audio recibidos del "
+            f'frontend → texto transcrito: "{texto}" '
+            f"(ElevenLabs modelo={config.ELEVENLABS_STT_MODEL}, idioma={config.STT_LANG})"
+        )
     return texto
 
 

@@ -172,7 +172,12 @@ def main(page: ft.Page):
             sd.stop()
             sd.play(data, sr, blocksize=2048, latency="high")
         except Exception as exc:
-            print(f"[Frontend] No se pudo reproducir la voz: {exc}")
+            # La reproducción ocurre en el frontend (sounddevice/soundfile); el backend
+            # solo mandó el mp3. Si falla, el niño pierde el audio pero NO el texto.
+            print(
+                f"[Frontend · voz] 🔇 No se pudo REPRODUCIR la respuesta hablada: {exc}. "
+                "El texto ya está visible en el chat; solo se pierde el audio."
+            )
 
     # Grabación del micrófono con sounddevice → wav. El dispositivo de entrada por
     # defecto puede ser -1 (ninguno) y Windows enumera muchos micros "fantasma"
@@ -258,7 +263,11 @@ def main(page: ft.Page):
                 grabacion["stream"] = stream
                 grabacion["fs"] = fs
                 if DEBUG:
-                    print(f"[Frontend] 🎙️ Grabando device {dev} ({info['name']}) @ {fs} Hz")
+                    print(
+                        f"[Frontend · voz] 🎙️ Micrófono ABIERTO: dispositivo #{dev} "
+                        f"'{info['name']}' a {fs} Hz. Captura local con sounddevice "
+                        "(el backend no ve el micro; recibirá el .wav ya grabado)."
+                    )
                 return
         raise RuntimeError(f"ningún micrófono disponible se pudo abrir ({ultimo_error})")
 
@@ -278,16 +287,28 @@ def main(page: ft.Page):
                 st.close()
             except Exception as exc:  # PaError al cerrar: no debe abortar el guardado
                 if DEBUG:
-                    print(f"[Frontend] ⚠️ Error al cerrar el micro (se ignora): {exc}")
+                    print(
+                        f"[Frontend · voz] ⚠️ PortAudio dio error al CERRAR el "
+                        f"micrófono: {exc}. Se ignora a propósito para no perder el "
+                        "audio ya capturado; seguimos escribiendo el .wav."
+                    )
         if not grabacion["frames"]:
             if DEBUG:
-                print("[Frontend] 🎙️ Parado: 0 frames capturados (no se transcribe)")
+                print(
+                    "[Frontend · voz] 🎙️ Grabación DETENIDA: 0 bloques capturados "
+                    "(no llegó audio del micro). No se genera .wav ni se llama a "
+                    "transcribir."
+                )
             return None
         audio = np.concatenate(grabacion["frames"], axis=0)
         ruta = os.path.join(tempfile.gettempdir(), f"pregunta_{int(time.time())}.wav")
         sf.write(ruta, audio, grabacion["fs"])
         if DEBUG:
-            print(f"[Frontend] 🎙️ Parado: {len(grabacion['frames'])} frames -> {ruta}")
+            print(
+                f"[Frontend · voz] 🎙️ Grabación DETENIDA: "
+                f"{len(grabacion['frames'])} bloques PCM a {grabacion['fs']} Hz "
+                f"guardados en {ruta}. Se enviará al backend (POST /api/transcribe)."
+            )
         return ruta
 
     pregunta_field = ft.TextField(
@@ -946,7 +967,11 @@ def main(page: ft.Page):
                 _iniciar_grabacion()
             except Exception as exc:
                 if DEBUG:
-                    print(f"[Frontend] ⚠️ No se pudo abrir el micrófono: {exc}")
+                    print(
+                        f"[Frontend · voz] ⚠️ No se pudo ABRIR ningún micrófono: {exc}. "
+                        "Revisa los permisos de micro de Windows y el dispositivo de "
+                        "entrada por defecto (se probaron todos los candidatos)."
+                    )
                 _add_burbuja(f"❌ No se pudo abrir el micrófono: {exc}", es_nino=False)
                 _ui_micro_reposo()  # asegura estado consistente si falló al abrir
                 page.update()
@@ -966,7 +991,11 @@ def main(page: ft.Page):
                 ruta = _detener_grabacion()
             except Exception as exc:
                 if DEBUG:
-                    print(f"[Frontend] ⚠️ Error al detener la grabación: {exc}")
+                    print(
+                        f"[Frontend · voz] ⚠️ Error al DETENER la grabación: {exc}. "
+                        "Se descarta esta toma y se libera el micro para que el "
+                        "próximo toque vuelva a abrirlo desde cero."
+                    )
                 grabacion["stream"] = None  # garantiza que el próximo toque reabre
             if not ruta:
                 # No se capturó nada (o falló al parar): volver a reposo y salir.
@@ -993,7 +1022,11 @@ def main(page: ft.Page):
             page.update()
             _run_ask(pid, texto, pensando)  # reutiliza el flujo de respuesta+voz
         except api_client.BackendError as exc:
-            print(f"[Frontend] Error al transcribir la voz: {exc}")
+            # El backend (ElevenLabs Scribe) rechazó o no pudo transcribir el .wav.
+            print(
+                f"[Frontend · voz] ❌ El backend no pudo transcribir el audio: {exc}. "
+                "Se avisa al niño y se descarta la toma."
+            )
             _add_burbuja("❌ No pude escucharte bien. Inténtalo otra vez. 🎤", es_nino=False)
         finally:
             # El wav ya se transcribió: lo borramos para no acumular temporales.

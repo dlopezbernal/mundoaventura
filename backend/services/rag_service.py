@@ -56,11 +56,26 @@ def _trazar_origen(
     if not config.DEBUG:
         return
     icono = _ICONO_ORIGEN.get(origen, "⚪")
-    partes = [origen, metodo]
+    # Qué significa el origen elegido (de dónde sale la respuesta del personaje).
+    explica_origen = {
+        "RAG": "respuesta FUNDAMENTADA en las fichas recuperadas de este personaje",
+        "GENERAL": "las fichas no servían → responde con el conocimiento propio del LLM",
+    }.get(origen, "origen desconocido")
+    # Cómo se tomó la decisión RAG vs GENERAL (ver EVALUATOR_MODE).
+    explica_metodo = {
+        "umbral": "decidido GRATIS por la distancia coseno (sin llamar al LLM-juez)",
+        "llm": "desempatado por el LLM-juez (la distancia caía en la zona dudosa)",
+    }.get(metodo, metodo)
+
+    print(f"[CHAT] {icono} Evaluator → origen={origen}: {explica_origen}")
+    print(f"[CHAT]        método: {explica_metodo}")
     if distancia is not None:
-        partes.append(f"d={distancia:.2f}")
-    partes.append(f'"{pregunta_en}"')
-    print(f"[CHAT] {icono} [{' · '.join(partes)}]")
+        print(
+            f"[CHAT]        mejor distancia d={distancia:.2f}  "
+            f"(umbrales coseno: BAJO={config.EVALUATOR_UMBRAL_BAJO}→RAG, "
+            f"ALTO={config.EVALUATOR_UMBRAL_ALTO}→GENERAL; entre ambos=dudoso)"
+        )
+    print(f'[CHAT]        pregunta traducida (EN) que se buscó: "{pregunta_en}"')
 
 
 def _get_collection():
@@ -91,8 +106,10 @@ def _get_collection():
     # Si está vacía, avisamos: hay que ejecutar la ingesta primero.
     if _collection.count() == 0:
         print(
-            "[RAG] ⚠️  La colección de documentos está vacía. Añade documentos en "
-            "backend/documentos/<personaje>/ y ejecuta:  python -m backend.ingest"
+            "[RAG] ⚠️  La colección de ChromaDB está VACÍA: no hay ninguna ficha "
+            "indexada, así que el chat responderá sin contexto (respuestas pobres o "
+            "siempre 'no lo sé'). Añade documentos en backend/documentos/<personaje>/ "
+            "y reconstruye el índice con:  python -m backend.ingest"
         )
 
     return _collection
@@ -336,10 +353,18 @@ def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
         audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
     except Exception as exc:
         if config.DEBUG:
-            print(f"[VOZ] ⚠️ TTS falló: {exc} (respuesta va solo en texto)")
+            print(
+                f"[VOZ] ⚠️ TTS (síntesis de voz) FALLÓ para el personaje "
+                f"'{personaje_id}' (voz_id={voz_id}): {exc}. Degradación elegante: la "
+                "respuesta se entrega SOLO en texto (audio_base64=null); el chat sigue."
+            )
         return None
     if config.DEBUG:
-        print(f"[VOZ] 🔊 TTS · voz={voz_id} · {len(respuesta)} chars · {personaje_id}")
+        print(
+            f"[VOZ] 🔊 TTS OK · personaje={personaje_id} · voz_id={voz_id} · "
+            f"{len(respuesta)} caracteres → mp3 base64 "
+            f"(ElevenLabs modelo={config.ELEVENLABS_TTS_MODEL})"
+        )
     return audio_b64
 
 
