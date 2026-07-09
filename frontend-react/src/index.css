@@ -1,0 +1,12 @@
+/* Base global mínima. Los estilos de cada componente van en su propio .css. */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, "Segoe UI", Roboto, sans-serif;
+  background: #fbf7ff; /* mismo fondo que la app Flet */
+  color: #1d1b20;
+}
