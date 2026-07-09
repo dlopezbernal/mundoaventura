@@ -79,8 +79,20 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
     micSoportado() ? "reposo" : "no-disponible",
   );
   const historialRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const grabacionRef = useRef<Grabacion | null>(null);
+
+  // Mientras se responde, se graba o se transcribe, no se puede escribir/enviar
+  // (evita solapar una pregunta escrita con una hablada, como en Flet).
+  const ocupado =
+    pensando || micEstado === "grabando" || micEstado === "transcribiendo";
+
+  // Foco correcto: al quedar libre el input (respuesta recibida, grabación
+  // cancelada...), el cursor vuelve solo para seguir preguntando.
+  useEffect(() => {
+    if (!ocupado) inputRef.current?.focus();
+  }, [ocupado]);
 
   // Auto-scroll: al añadir una burbuja, el historial baja solo hasta el final.
   useEffect(() => {
@@ -234,11 +246,6 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
     else if (micEstado === "grabando") pararGrabacion(false);
   }
 
-  // Mientras se responde, se graba o se transcribe, no se puede escribir/enviar
-  // (evita solapar una pregunta escrita con una hablada, como en Flet).
-  const ocupado =
-    pensando || micEstado === "grabando" || micEstado === "transcribiendo";
-
   const micTitulo = {
     "no-disponible":
       "El micrófono necesita una página segura (https o localhost) y un navegador compatible",
@@ -306,6 +313,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
 
       <form className="chat-form" onSubmit={onSubmit}>
         <input
+          ref={inputRef}
           type="text"
           className="chat-input"
           placeholder={

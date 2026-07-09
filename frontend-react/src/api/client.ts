@@ -61,10 +61,12 @@ async function fetchBackend(
   } catch (exc) {
     if (exc instanceof DOMException && exc.name === "AbortError") {
       throw new BackendError(
-        "El backend ha tardado demasiado en responder. Inténtalo de nuevo.",
+        "La máquina del tiempo está tardando mucho. Espera un poquito y vuelve a intentarlo.",
       );
     }
-    throw new BackendError(`Fallo de conexión con el backend: ${exc}`);
+    throw new BackendError(
+      "No pude conectar con la máquina del tiempo. Pide a un adulto que compruebe que está encendida.",
+    );
   } finally {
     clearTimeout(timer);
   }
@@ -83,7 +85,7 @@ async function fetchBackend(
       }
     }
     throw new BackendError(
-      `El backend devolvió un error: ${detail || `HTTP ${response.status}`}`,
+      `Algo ha salido mal: ${detail || `error ${response.status}`}`,
     );
   }
 

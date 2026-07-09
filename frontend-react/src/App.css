@@ -156,20 +156,6 @@
   min-width: 0;
 }
 
-.grupo {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.grupo-titulo {
-  margin: 4px 0 0;
-  color: #6a1b9a;
-  font-size: 1rem;
-}
-
 .pista {
   margin: 0;
   color: #004d40;
