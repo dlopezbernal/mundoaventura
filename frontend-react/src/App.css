@@ -138,6 +138,24 @@
   border: 3px solid #eeeeee;
 }
 
+/* Escritorio: escena (izquierda) + chat (derecha) en dos columnas. */
+.escena-y-chat {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  width: 100%;
+}
+
+.escena-y-chat .scene {
+  flex: 1 1 55%;
+  min-width: 0;
+}
+
+.escena-y-chat .chat {
+  flex: 1 1 45%;
+  min-width: 0;
+}
+
 .grupo {
   display: flex;
   flex-direction: column;
@@ -288,5 +306,11 @@
 
   .cabecera-titulo h1 {
     font-size: 1.25rem;
+  }
+
+  /* En móvil, imagen y chat se apilan (el responsive fino es del Hito 5). */
+  .escena-y-chat {
+    flex-direction: column;
+    align-items: stretch;
   }
 }

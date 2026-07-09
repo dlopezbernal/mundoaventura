@@ -1,0 +1,162 @@
+/* Chat — panel de conversación con el personaje. */
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: #ffffff;
+  border: 1px solid #eeeeee;
+  border-radius: 18px;
+}
+
+.chat-titulo {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.chat-historial {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.chat-vacio {
+  margin: auto;
+  color: #757575;
+  font-size: 0.9rem;
+  font-style: italic;
+  text-align: center;
+}
+
+/* -- Burbujas ---------------------------------------------------------------- */
+
+.burbuja {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+
+.burbuja-autor {
+  font-size: 0.7rem;
+  font-weight: 700;
+  opacity: 0.7;
+}
+
+.burbuja-texto {
+  margin: 0;
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+/* El niño a la derecha (azul), el personaje a la izquierda (verde). */
+.burbuja-nino {
+  align-self: flex-end;
+  background: #e3f2fd;
+}
+
+.burbuja-personaje {
+  align-self: flex-start;
+  background: #e8f5e9;
+}
+
+.burbuja-error {
+  align-self: flex-start;
+  background: #fff3f0;
+  border: 1px solid #ffc7ba;
+  color: #b3261e;
+}
+
+.burbuja-pensando .burbuja-texto {
+  font-style: italic;
+}
+
+/* -- Extras de la burbuja del personaje --------------------------------------- */
+
+.burbuja-audio {
+  align-self: flex-start;
+  padding: 4px 10px;
+  background: #ffffff;
+  border: 1px solid #a5d6a7;
+  border-radius: 12px;
+  color: #1b5e20;
+  font-family: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.burbuja-audio:hover {
+  background: #f1f8e9;
+}
+
+.burbuja-fuentes {
+  font-size: 0.75rem;
+}
+
+.burbuja-fuentes summary {
+  color: #1b5e20;
+  cursor: pointer;
+}
+
+.burbuja-fuentes ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+.burbuja-fuentes li {
+  margin-bottom: 4px;
+  color: #424242;
+}
+
+/* -- Input + enviar ------------------------------------------------------------ */
+
+.chat-form {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid #cccccc;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+.chat-input:focus {
+  border-color: #ab47bc;
+  outline: 2px solid #e1bee7;
+}
+
+.chat-input:disabled {
+  background: #fafafa;
+}
+
+.chat-enviar {
+  padding: 12px 18px;
+  background: #ab47bc;
+  border: none;
+  border-radius: 24px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chat-enviar:hover:not(:disabled) {
+  background: #9c27b0;
+}
+
+.chat-enviar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

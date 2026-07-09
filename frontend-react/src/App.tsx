@@ -17,6 +17,7 @@ import { BackendError, checkHealth, generate, generateOnPhoto } from "./api/clie
 import { GRUPOS, PERSONAJES, personajesDeGrupo } from "./data/personajes";
 import { UBICACIONES } from "./data/ubicaciones";
 import CardCarousel, { type Carta } from "./components/CardCarousel";
+import Chat from "./components/Chat";
 import SceneView from "./components/SceneView";
 import StepBar from "./components/StepBar";
 import "./App.css";
@@ -340,15 +341,28 @@ function App() {
             </div>
           )}
 
-          {!estado.cargando && !estado.error && estado.escenaBase64 && personaje && (
-            <SceneView
-              escenaBase64={estado.escenaBase64}
-              alt={`Escena de ${personaje.label} en ${nombreLugar()}`}
-              caption={`${personaje.emoji}  ${personaje.label} · ${nombreLugar()}`}
-              onEmpezarDeNuevo={() => dispatch({ type: "REINICIAR" })}
-              onCambiarLugar={() => dispatch({ type: "IR_PASO", paso: 2 })}
-            />
-          )}
+          {!estado.cargando &&
+            !estado.error &&
+            estado.escenaBase64 &&
+            personajeId &&
+            personaje && (
+              <div className="escena-y-chat">
+                <SceneView
+                  escenaBase64={estado.escenaBase64}
+                  alt={`Escena de ${personaje.label} en ${nombreLugar()}`}
+                  caption={`${personaje.emoji}  ${personaje.label} · ${nombreLugar()}`}
+                  onEmpezarDeNuevo={() => dispatch({ type: "REINICIAR" })}
+                  onCambiarLugar={() => dispatch({ type: "IR_PASO", paso: 2 })}
+                />
+                {/* key: al generar una escena nueva, el chat empieza de cero. */}
+                <Chat
+                  key={estado.generadoPara ?? personajeId}
+                  personajeId={personajeId}
+                  nombre={personaje.label}
+                  emoji={personaje.emoji}
+                />
+              </div>
+            )}
         </section>
       )}
     </main>
