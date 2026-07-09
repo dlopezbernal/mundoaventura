@@ -13,6 +13,7 @@ Este archivo crea la aplicación FastAPI y la pone en marcha. Para arrancarla:
 Luego abre la documentación interactiva en:  http://127.0.0.1:8000/docs
 """
 
+import os
 import sys
 
 from fastapi import FastAPI
@@ -45,14 +46,23 @@ app = FastAPI(
 # 2) CORS — permitir que el frontend se conecte
 # ---------------------------------------------------------------------------
 # CORS es una regla de seguridad de los navegadores: por defecto, una web solo
-# puede llamar a su propio dominio. Como el frontend (Flet) y el backend pueden
-# estar en orígenes distintos (sobre todo con el túnel de Colab), abrimos el
-# acceso ("*"). Esto es una práctiva para el proyecto Capston del curso IA. 
-# No hacer esto en Proyecto!!
+# puede llamar a su propio dominio. Como el frontend (la SPA React) y el backend
+# pueden estar en orígenes distintos (sobre todo con el túnel de Colab), los
+# orígenes permitidos se leen de CORS_ORIGINS (lista separada por comas, ver
+# .env.example). Sin definirla se permite cualquier origen ("*"): cómodo en
+# desarrollo; restríngela si expones el backend a internet.
+#
+# allow_credentials=False a propósito: la app no usa cookies ni sesiones, y los
+# navegadores RECHAZAN la combinación allow_origins=["*"] + credenciales.
+_cors_origins = [
+    origen.strip()
+    for origen in os.getenv("CORS_ORIGINS", "").split(",")
+    if origen.strip()
+] or ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],      # cualquier origen puede llamar a la API
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],      # GET, POST, etc.
     allow_headers=["*"],
 )

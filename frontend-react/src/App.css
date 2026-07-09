@@ -1,0 +1,302 @@
+/* App — layout general del asistente, cabecera con degradado y paneles de paso.
+   Colores tomados de la app Flet (semilla PURPLE, fondo #FBF7FF). */
+
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+/* -- Cabecera (degradado morado → rosa, como la app Flet) ------------------- */
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 24px;
+  background: linear-gradient(135deg, #ab47bc, #f06292);
+  border-radius: 24px;
+  color: #ffffff;
+}
+
+.cabecera-titulo {
+  flex: 1 1 auto;
+}
+
+.cabecera-titulo h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.cabecera-titulo p {
+  margin: 2px 0 0;
+  font-size: 0.9rem;
+}
+
+.cabecera-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* Botones dentro de la cabecera: borde y texto blancos sobre el degradado. */
+.btn-header {
+  padding: 10px 18px;
+  background: transparent;
+  border: 1px solid #ffffff;
+  border-radius: 20px;
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.btn-header:hover:not(:disabled) {
+  background: rgb(255 255 255 / 15%);
+}
+
+.btn-header:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* -- Botones grandes y redondeados (fuera de la cabecera) ------------------- */
+
+.btn {
+  padding: 14px 18px;
+  border-radius: 24px;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-primario {
+  background: #ab47bc;
+  border: none;
+  color: #ffffff;
+}
+
+.btn-primario:hover {
+  background: #9c27b0;
+}
+
+.btn-secundario {
+  background: #ffffff;
+  border: 2px solid #ab47bc;
+  color: #6a1b9a;
+}
+
+.btn-secundario:hover {
+  background: #f3e5f5;
+}
+
+/* -- Panel de cada paso: un "mundo" de color propio -------------------------- */
+
+.panel-paso {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px 24px;
+  border-radius: 28px;
+}
+
+.panel-paso h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  text-align: center;
+}
+
+/* Paso "Personaje": mundo MORADO. */
+.panel-personaje {
+  background: #e6d2ff;
+  border: 3px solid #ab47bc;
+}
+
+.panel-personaje h2 {
+  color: #4a148c;
+}
+
+/* Paso "Lugar": mundo TURQUESA (viaje). */
+.panel-lugar {
+  background: #b8f2e6;
+  border: 3px solid #26a69a;
+}
+
+.panel-lugar h2 {
+  color: #004d40;
+}
+
+/* Paso final: fondo neutro, la imagen es la protagonista. */
+.panel-escena {
+  background: #ffffff;
+  border: 3px solid #eeeeee;
+}
+
+/* Escritorio: escena (izquierda) + chat (derecha) en dos columnas. */
+.escena-y-chat {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  width: 100%;
+}
+
+.escena-y-chat .scene {
+  flex: 1 1 55%;
+  min-width: 0;
+}
+
+.escena-y-chat .chat {
+  flex: 1 1 45%;
+  min-width: 0;
+}
+
+.pista {
+  margin: 0;
+  color: #004d40;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* -- Panel de carga ("Creando tu escena...") --------------------------------- */
+
+.loading-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 560px;
+  min-height: 320px;
+  background: linear-gradient(135deg, #ba68c8, #f48fb1);
+  border-radius: 18px;
+  color: #ffffff;
+}
+
+.loading-emoji {
+  font-size: 4.5rem;
+  animation: latir 0.9s ease-in-out infinite;
+}
+
+@keyframes latir {
+  0%,
+  100% {
+    transform: scale(1) rotate(-5deg);
+  }
+
+  50% {
+    transform: scale(1.2) rotate(5deg);
+  }
+}
+
+.loading-text {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+/* Puntos suspensivos animados: "Creando tu escena." → ".." → "..." */
+.loading-text::after {
+  content: "";
+  animation: puntos 1.4s steps(1) infinite;
+}
+
+@keyframes puntos {
+  0% {
+    content: "";
+  }
+
+  25% {
+    content: ".";
+  }
+
+  50% {
+    content: "..";
+  }
+
+  75% {
+    content: "...";
+  }
+}
+
+/* Barra de progreso indeterminada (un brillo que va y viene). */
+.loading-bar {
+  position: relative;
+  width: 240px;
+  height: 6px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 30%);
+  border-radius: 3px;
+}
+
+.loading-bar::before {
+  content: "";
+  position: absolute;
+  width: 40%;
+  height: 100%;
+  background: #ffffff;
+  border-radius: 3px;
+  animation: barrer 1.2s ease-in-out infinite;
+}
+
+@keyframes barrer {
+  0% {
+    left: -40%;
+  }
+
+  100% {
+    left: 100%;
+  }
+}
+
+/* -- Aviso de error amable ----------------------------------------------------- */
+
+.error-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 560px;
+  padding: 20px;
+  background: #fff3f0;
+  border: 2px solid #ffc7ba;
+  border-radius: 18px;
+}
+
+.error-panel p {
+  margin: 0;
+  color: #b3261e;
+  text-align: center;
+}
+
+.error-botones {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* -- Ajustes móviles básicos (el responsive fino es del Hito 5) ---------------- */
+
+@media (max-width: 760px) {
+  .app {
+    padding: 12px;
+  }
+
+  .cabecera-titulo h1 {
+    font-size: 1.25rem;
+  }
+
+  /* En móvil, imagen y chat se apilan (el responsive fino es del Hito 5). */
+  .escena-y-chat {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

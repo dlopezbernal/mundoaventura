@@ -1,0 +1,193 @@
+/* CardCarousel — coverflow: central grande, vecinas asomando, flechas y puntos.
+   Los colores de acento (flechas/puntitos) los fija la variante del paso. */
+
+.carrusel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  border-radius: 12px;
+}
+
+/* Acentos por paso, como en Flet (morado personajes, turquesa lugares). */
+.carrusel-morado {
+  --accent: #9c27b0;
+  --accent-suave: #ce93d8;
+}
+
+.carrusel-turquesa {
+  --accent: #00897b;
+  --accent-suave: #80cbc4;
+}
+
+.carrusel:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 4px;
+}
+
+.carrusel-fila {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 200px;
+}
+
+/* -- Flechas ‹ › : botones circulares, grandes para dedos pequeños ----------- */
+
+.carrusel-flecha {
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  background: var(--accent);
+  border: none;
+  border-radius: 50%;
+  box-shadow: 0 3px 8px rgb(0 0 0 / 25%);
+  color: #ffffff;
+  font-family: inherit;
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease-out;
+}
+
+.carrusel-flecha:hover {
+  transform: scale(1.08);
+}
+
+/* -- Cartas -------------------------------------------------------------------- */
+
+.carta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  background: #ffffff;
+  border-radius: 24px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.2s ease-out, opacity 0.2s ease-out,
+    border-color 0.2s ease-out;
+}
+
+/* La central: grande y protagonista; "brota" al girar el carrusel. */
+.carta-central {
+  width: 190px;
+  min-height: 186px;
+  border: 5px solid #ce93d8;
+  box-shadow: 0 5px 16px rgb(0 0 0 / 18%);
+  animation: brotar 0.2s ease-out;
+}
+
+.carta-central.seleccionada {
+  background: #fff8e1;
+  border-color: #ffca28;
+}
+
+@keyframes brotar {
+  from {
+    opacity: 0.5;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Las vecinas: reducidas y semitransparentes, asomando a los lados. */
+.carta-vecina {
+  width: 112px;
+  min-height: 128px;
+  border: 3px solid #eeeeee;
+  box-shadow: 0 5px 6px rgb(0 0 0 / 10%);
+  opacity: 0.5;
+  transform: scale(0.92);
+}
+
+.carta-vecina:hover {
+  opacity: 0.85;
+  transform: scale(0.97);
+}
+
+.carta-emoji {
+  font-size: 4rem;
+  line-height: 1.1;
+}
+
+.carta-vecina .carta-emoji {
+  font-size: 2.5rem;
+}
+
+.carta-sub {
+  padding: 2px 10px;
+  background: #f3e5f5;
+  border-radius: 10px;
+  color: #6a1b9a;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.carta-label {
+  color: #1d1b20;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.carta-vecina .carta-label {
+  font-size: 0.7rem;
+}
+
+/* -- Puntitos de posición -------------------------------------------------------- */
+
+.carrusel-puntos {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+}
+
+.punto {
+  width: 11px;
+  height: 11px;
+  background: var(--accent-suave);
+  border-radius: 50%;
+  transition: background 0.2s ease-out;
+}
+
+.punto.activo {
+  background: var(--accent);
+}
+
+/* -- Móvil (<760px): sin vecinas, flechas y central algo menores ----------------- */
+
+@media (max-width: 760px) {
+  .carta-vecina {
+    display: none;
+  }
+
+  .carrusel-fila {
+    gap: 10px;
+    min-height: 170px;
+  }
+
+  .carrusel-flecha {
+    width: 48px;
+    height: 48px;
+    font-size: 1.6rem;
+  }
+
+  .carta-central {
+    width: 150px;
+    min-height: 150px;
+  }
+
+  .carta-emoji {
+    font-size: 3.4rem;
+  }
+}
