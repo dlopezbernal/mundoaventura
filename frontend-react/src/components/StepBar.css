@@ -1,0 +1,70 @@
+/* StepBar — barra de progreso de 3 pasos. */
+
+.stepbar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.stepbar-paso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: #ffffff;
+  border: 2px solid #eeeeee;
+  color: #757575;
+  font-size: 0.9rem;
+}
+
+/* Conector entre pasos. */
+.stepbar-paso + .stepbar-paso::before {
+  content: "";
+  display: none; /* el hueco (gap) ya separa; se mantiene simple */
+}
+
+.stepbar-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #eeeeee;
+  color: #757575;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.stepbar-paso.activo {
+  border-color: #ab47bc;
+  background: #f3e5f5;
+  color: #4a148c;
+  font-weight: 700;
+}
+
+.stepbar-paso.activo .stepbar-num {
+  background: #ab47bc;
+  color: #ffffff;
+}
+
+.stepbar-paso.hecho {
+  border-color: #ce93d8;
+  color: #6a1b9a;
+}
+
+.stepbar-paso.hecho .stepbar-num {
+  background: #ce93d8;
+  color: #ffffff;
+}
+
+@media (max-width: 480px) {
+  .stepbar-nombre {
+    display: none; /* en pantallas muy estrechas, solo los números */
+  }
+
+  .stepbar-paso.activo .stepbar-nombre {
+    display: inline; /* ...salvo el nombre del paso activo */
+  }
+}
