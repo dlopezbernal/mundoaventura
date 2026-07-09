@@ -15,7 +15,7 @@ Inteligencia Artificial en un pipeline por fases.
 
 | Paso | Qué hace | Tecnología | Estado |
 |------|----------|------------|--------|
-| **Elegir lugar y personaje** | Eliges una **ubicación** (laboratorio, bosque del jurásico, renacimiento, época victoriana...) y un **personaje** (T-Rex, Leonardo da Vinci, Sherlock Holmes...). Cualquier combinación vale. | **Flet** (interfaz, sin IA) | ✅ **Implementado** |
+| **Elegir lugar y personaje** | Eliges una **ubicación** (laboratorio, bosque del jurásico, renacimiento, época victoriana...) y un **personaje** (T-Rex, Leonardo da Vinci, Sherlock Holmes...). Cualquier combinación vale. | **SPA React** (Vite + TypeScript; interfaz, sin IA) | ✅ **Implementado** |
 | **Generación de la escena** | Combina lugar + personaje + estilo en un prompt y pide la imagen a la nube. Devuelve una escena completa. | **Replicate.com** (FLUX schnell, txt2img) | ✅ **Implementado** |
 | **Conversación por texto (RAG)** | Escribes una pregunta y el personaje responde **en primera persona**, fundamentado en documentos (enciclopedias) troceados. | **LangChain** (chunking) + **ChromaDB** + **DeepL** + **LLM** (Replicate) | ✅ **Implementado** |
 | **Entrada por voz** | Graba la pregunta con el micro (toca para empezar / toca para parar) y la transcribe a texto en español. | **ElevenLabs Scribe** (STT) | ✅ **Implementado** |
@@ -36,7 +36,7 @@ Arquitectura **Cliente-Servidor desacoplada**:
 
 ```
 ┌─────────────────────────┐         HTTP / REST         ┌──────────────────────────────┐
-│   FRONTEND (Flet)        │                             │   BACKEND (FastAPI)          │
+│  FRONTEND (SPA React)    │                             │   BACKEND (FastAPI)          │
 │                          │   POST /api/generate        │                              │
 │   - Elegir lugar         │   { personaje_id,           │   [Imagen]                   │
 │   - Elegir personaje     │     ubicacion_id }          │   - Construye el prompt      │
@@ -53,7 +53,7 @@ Arquitectura **Cliente-Servidor desacoplada**:
 │                          │  ─────────────────────────► │   - TTS (ElevenLabs Flash)   │
 │                          │  ◄───────────────────────── │   - Devuelve texto + audio   │
 └─────────────────────────┘  respuesta (texto + audio)  └──────────────────────────────┘
-        tu PC (ligero)                                    tu PC (ligero)  →  Replicate (GPU)
+     navegador (ligero)                                   tu PC (ligero)  →  Replicate (GPU)
 ```
 
 El backend ya no necesita GPU: la generación de imagen y el LLM corren en Replicate
@@ -90,14 +90,19 @@ capston/
 │   │   ├── conversacion.py   #   · POST /api/ask
 │   │   └── transcription.py  #   · POST /api/transcribe (voz → texto, ElevenLabs Scribe)
 │   └── chroma_db/            # Índice vectorial de ChromaDB (lo crea ingest.py; no se versiona)
-├── frontend/                 # Interfaz de usuario (Flet)
-│   ├── main.py               # La ventana de la app (catálogos + resultado + chat)
-│   ├── personajes.py         # Catálogo visual de personajes (label, emoji)
-│   ├── ubicaciones.py        # Catálogo visual de ubicaciones (label, emoji)
-│   └── api_client.py         # Llamadas HTTP al backend
+├── frontend-react/           # Interfaz de usuario (SPA: Vite + React 18 + TypeScript)
+│   ├── src/
+│   │   ├── App.tsx           # El asistente por pasos (estado con useReducer)
+│   │   ├── api/              # Contrato tipado (types.ts) + cliente fetch (client.ts)
+│   │   ├── data/             # Catálogos visuales: personajes.ts, ubicaciones.ts
+│   │   └── components/       # StepBar, CardCarousel, SceneView, Chat (+ su .css)
+│   ├── vite.config.ts        # Proxy /api y /health → backend local (dev y preview)
+│   └── .env.example          # VITE_BACKEND_URL (URL del backend para la SPA)
+├── legacy/                   # Frontend original en Flet (referencia; ver legacy/README.md)
+│   ├── frontend-flet/
+│   └── requirements-frontend.txt
 ├── requirements-backend.txt
-├── requirements-frontend.txt
-└── .env.example              # Plantilla de configuración
+└── .env.example              # Plantilla de configuración (backend)
 ```
 
 ---
@@ -115,8 +120,13 @@ python -m venv .venv
 ### 2. Instalar las dependencias
 
 ```powershell
+# Backend (Python)
 pip install -r requirements-backend.txt
-pip install -r requirements-frontend.txt
+
+# Frontend (Node 20+; una sola vez)
+cd frontend-react
+npm install
+cd ..
 ```
 
 > El backend es ligero: no instala torch ni diffusers.
@@ -149,29 +159,60 @@ uvicorn backend.main:app --reload
 Comprueba que abre en http://127.0.0.1:8000/docs. En `GET /health` debe aparecer
 `"token_configurado": true`, el modelo de Replicate y `"elevenlabs_ok": true`.
 
-### 5. Arrancar el frontend (otra terminal, con el venv activado)
+### 5. Arrancar el frontend (otra terminal)
 
 ```powershell
-flet run frontend/main.py
+cd frontend-react
+npm run dev
 ```
 
-La interfaz es un **asistente por pasos**: **1)** elige un personaje, **2)** elige un lugar (o sube
-tu foto) y pulsa «Siguiente». Al llegar al **paso 3 («¡Listo!») la escena se genera sola** (sin
+Abre la URL que imprime Vite (por defecto http://localhost:5173). En desarrollo **no hace
+falta configurar nada más**: el proxy de `vite.config.ts` reenvía `/api` y `/health` al
+backend local (mismo origen, sin CORS). Si el backend está en otra máquina (p. ej. el túnel
+https de Colab), copia `frontend-react/.env.example` a `frontend-react/.env` y pon su URL en
+`VITE_BACKEND_URL`.
+
+La interfaz es un **asistente por pasos**: **1)** elige un personaje (carrusel), **2)** elige un
+lugar (o sube tu foto) y pulsa «Siguiente». Al llegar al **paso 3 la escena se genera sola** (sin
 botón intermedio), mostrando mientras tanto una **animación «Creando…»** para amenizar la espera;
-al terminar aparece la escena y, debajo, un **chat**: escríbele una pregunta al personaje (ej. "¿Qué
-comes?") y te responderá en primera persona. Si vuelves atrás y cambias la elección, al volver al
-paso 3 se regenera; si no cambias nada, se conserva la escena y el chat.
+al terminar aparece la escena y, a su lado, un **chat**: escríbele una pregunta al personaje (ej.
+"¿Qué comes?") — o díctala con el **botón del micrófono** — y te responderá en primera persona,
+con su propia voz. Si vuelves atrás y cambias la elección, al volver al paso 3 se regenera; si no
+cambias nada, se conserva la escena y el chat.
+
+### 6. Build de producción (opcional)
+
+```powershell
+cd frontend-react
+npm run build      # genera dist/ (estático)
+npm run preview    # sirve dist/ en local para probarla (proxy al backend incluido)
+```
+
+`dist/` se puede servir desde cualquier hosting estático. Si el frontend y el backend quedan
+en **orígenes distintos**, limita los orígenes permitidos con la variable `CORS_ORIGINS` del
+`.env` del backend (lista separada por comas; sin definir se permite cualquier origen) y
+compila la SPA con `VITE_BACKEND_URL` apuntando al backend.
+
+### Frontend legacy (Flet)
+
+El frontend original de escritorio (Flet 0.28.3) se conserva como referencia en
+[`legacy/`](legacy/README.md). Se arranca con:
+
+```powershell
+pip install -r legacy/requirements-frontend.txt
+flet run legacy/frontend-flet/main.py
+```
 
 > Antes de usar el chat hay que **indexar los documentos una vez** (ver
 > [§ Preparar la base de conocimiento](#-preparar-la-base-de-conocimiento-documentos--chunking)).
 > La **primera** pregunta tarda un poco más (ChromaDB descarga su modelo de embeddings, en CPU).
 
-> **Modo desarrollo (`DEBUG=true`):** activa herramientas de diagnóstico que **no** ve el niño:
-> el botón **🔌 Probar conexión** en la cabecera del frontend (consulta `/health`), la traza del
-> **origen de cada respuesta** del chat (ver *«Origen de la respuesta»*) y la **traza de todos los
-> prompts** que el backend envía al LLM, a la generación de imagen y a DeepL (ver *«Traza de
-> prompts»*), todo en la **consola del backend**. Con `DEBUG=false` no se imprime nada y la
-> interfaz queda limpia.
+> **Modo desarrollo (`DEBUG=true` en el `.env` del backend):** activa la traza del **origen de
+> cada respuesta** del chat (ver *«Origen de la respuesta»*) y la **traza de todos los prompts**
+> que el backend envía al LLM, a la generación de imagen y a DeepL (ver *«Traza de prompts»*),
+> todo en la **consola del backend**. En la SPA, el botón **🔌 Probar conexión** de la cabecera
+> (consulta `/health`) se activa aparte con `VITE_DEBUG=true` en `frontend-react/.env`. Con
+> todo en `false` no se imprime nada y la interfaz queda limpia.
 
 ---
 
@@ -495,22 +536,26 @@ se sirve igual y `audio_base64` viaja como `null`.
 **Arquitectura:** STT es un endpoint aislado (`/api/transcribe`); el TTS viaja **acoplado** a la
 respuesta de `/api/ask` (`audio_base64`), porque *toda* respuesta se habla (escrita o hablada).
 
-**Grabación y reproducción en el frontend, sin `flet-audio`:** un spike (prueba técnica) demostró
-que `flet-audio` **no graba** micrófono (solo reproduce) y que, instalado sin pinnear versión,
-arrastra una actualización de Flet de 0.28.3 a 1.x que **rompe** este frontend (usa la API
-pre-0.80: `ft.app`, `ImageFit`, `FilePicker` por callback). Por eso la voz del lado cliente
-**no usa los controles de audio de Flet**: usa librerías autocontenidas e independientes de
-Flet — `sounddevice` (captura del micrófono) + `soundfile` (escribe el `.wav` grabado) para
-grabar, y `just-playback` (reproducción de mp3 sin bloquear la UI) para reproducir la respuesta,
-con `numpy` de apoyo para el buffer PCM. Ver `requirements-frontend.txt`.
+**Grabación y reproducción en el frontend (SPA):** el navegador ya trae todo lo necesario, sin
+librerías: la pregunta se graba con **`MediaRecorder`** (`getUserMedia`), que produce
+webm/opus en Chrome y ogg/opus en Firefox —ambos formatos verificados contra Scribe, que deduce
+el formato de los propios bytes—, y la respuesta se reproduce con el **`Audio`** estándar del
+navegador (`data:audio/mpeg;base64,...`). `getUserMedia` solo existe en contextos seguros
+(https o localhost); si no está disponible o el niño deniega el permiso, el micro se
+deshabilita con un aviso claro y el chat de texto sigue intacto.
+
+> *Nota histórica (frontend legacy de Flet):* un spike demostró que `flet-audio` no graba
+> micrófono y que, sin pinnear versión, arrastraba Flet de 0.28.3 a 1.x rompiendo la interfaz.
+> Por eso el frontend Flet usaba `sounddevice` + `soundfile` (grabar) y reproducción con
+> `sounddevice` (ver `legacy/`).
 
 ---
 
 ## 💡 Personalizar
 
 - **Añadir personajes:** edita `backend/personajes.py` (`PROMPTS`, `NOMBRES` y, si quieres que
-  hable, `VOCES` con su `voz_id` de ElevenLabs) y `frontend/personajes.py` (la tarjeta), usando
-  el **mismo `id`** en todos. Un personaje sin `voz_id` responde solo en texto.
-- **Añadir ubicaciones:** igual, en `backend/ubicaciones.py` y `frontend/ubicaciones.py`.
+  hable, `VOCES` con su `voz_id` de ElevenLabs) y `frontend-react/src/data/personajes.ts` (la
+  tarjeta), usando el **mismo `id`** en todos. Un personaje sin `voz_id` responde solo en texto.
+- **Añadir ubicaciones:** igual, en `backend/ubicaciones.py` y `frontend-react/src/data/ubicaciones.ts`.
 - **Cambiar el modelo o el estilo:** `REPLICATE_MODEL` en el `.env` y el `STYLE_SUFFIX` en
   `backend/personajes.py`.

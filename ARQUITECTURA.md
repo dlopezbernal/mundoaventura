@@ -8,7 +8,9 @@ memoria final del capstone.
 
 App educativa (niños 8–12) cliente-servidor desacoplada:
 
-- **Frontend (Flet):** asistente por pasos; catálogos, escena y chat (texto + voz).
+- **Frontend (SPA React):** Vite + React 18 + TypeScript, en el navegador; asistente por
+  pasos: catálogos (carrusel), escena y chat (texto + voz). El frontend original de Flet
+  se conserva como referencia en `legacy/`.
 - **Backend (FastAPI):** routers finos → services → config. Sin GPU local.
 - **Nube:** Replicate (imagen + LLM), DeepL (traducción), ElevenLabs (voz).
 
@@ -23,8 +25,9 @@ App educativa (niños 8–12) cliente-servidor desacoplada:
 ## Flujo de una pregunta por voz (secuencia)
 
 ```
-Niño (Flet)        Backend (FastAPI)         Nube
-   │  audio (mic)        │                     │
+Niño (SPA React)   Backend (FastAPI)         Nube
+   │  MediaRecorder      │                     │
+   │  (webm/ogg opus)    │                     │
    │───/api/transcribe──►│──Scribe (STT)──────►│  ElevenLabs
    │◄──── texto ES ──────│◄────────────────────│
    │                     │                     │
@@ -34,21 +37,25 @@ Niño (Flet)        Backend (FastAPI)         Nube
    │                     │──LLM respuesta ES──►│  Replicate
    │                     │──Flash (TTS)───────►│  ElevenLabs
    │◄── texto + audio ───│◄────────────────────│
-   │  (burbuja + auto-play)                    │
+   │  (burbuja + auto-play con Audio())        │
 ```
 
 Una pregunta **escrita** salta `/api/transcribe`: va directa a `/api/ask` y la
 respuesta vuelve igualmente con `audio_base64` (toda respuesta se habla).
 
-En el frontend, la grabación del micro y la reproducción de la respuesta **no
-pasan por los controles de audio de Flet** (`flet-audio`): un spike (Task 5)
-comprobó que esa librería no graba y que, sin pinnear versión, arrastra una
-actualización de Flet 0.28.3 → 1.x que rompe la interfaz (API pre-0.80 usada por
-este proyecto: `ft.app`, `ImageFit`, `FilePicker` por callback). Por eso se usan
-librerías autocontenidas e independientes de Flet: `sounddevice` + `soundfile`
-para grabar el `.wav` del micrófono, y `just-playback` para reproducir el mp3 de
-la respuesta sin bloquear la UI (con `numpy` de apoyo para el buffer PCM). Ver
-`requirements-frontend.txt`.
+En el frontend, la voz usa las **APIs estándar del navegador**, sin librerías:
+la pregunta se graba con **`MediaRecorder`** (`getUserMedia`), que produce
+webm/opus en Chrome y ogg/opus en Firefox — ambos aceptados por Scribe, que
+deduce el formato de los propios bytes —, y la respuesta se reproduce con
+**`Audio()`** (`data:audio/mpeg;base64,...`). `getUserMedia` solo existe en
+contextos seguros (https o localhost): fuera de ellos, o si se deniega el
+permiso, el micro se deshabilita con un aviso claro y el chat de texto sigue
+funcionando.
+
+> *Nota histórica:* el frontend legacy de Flet no podía usar `flet-audio` (un
+> spike comprobó que no graba y que arrastraba una actualización de Flet que
+> rompía la interfaz), así que grababa con `sounddevice` + `soundfile` y
+> reproducía con `sounddevice`. Ver `legacy/`.
 
 ## Invariante `personaje_id`
 
@@ -57,19 +64,19 @@ personaje; el quinto solo si habla):
 
 1. `backend/personajes.py` → `PROMPTS`
 2. `backend/personajes.py` → `NOMBRES`
-3. `frontend/personajes.py` → tarjeta visual
+3. `frontend-react/src/data/personajes.ts` → tarjeta visual
 4. `backend/documentos/<personaje_id>/` → base de conocimiento
 5. `backend/personajes.py` → `VOCES` (`voz_id` de ElevenLabs) — solo si el personaje habla
 
 Las ubicaciones siguen el mismo patrón (sin voz) entre `backend/ubicaciones.py` y
-`frontend/ubicaciones.py`.
+`frontend-react/src/data/ubicaciones.ts`.
 
 ## Degradación y modo DEBUG
 
 - **Degradación:** sin ElevenLabs (o si el TTS falla), `audio_base64` es `null` y el
   chat de texto sigue vivo. Sin DeepL, el chat responde con un error claro (la
-  traducción es obligatoria para el RAG). En el frontend, si `sounddevice`/`soundfile`
-  o `just-playback` no están instalados o fallan, el chat de texto sigue disponible
-  igualmente (la voz es un añadido, no un requisito del flujo).
+  traducción es obligatoria para el RAG). En el frontend, si no hay `getUserMedia`
+  (contexto no seguro), micrófono o permiso, el micro se deshabilita y el chat de
+  texto sigue disponible igualmente (la voz es un añadido, no un requisito del flujo).
 - **DEBUG (`config.DEBUG`):** trazas en la consola del backend: prompts al LLM/DeepL,
   origen RAG/GENERAL (`[CHAT] ...`) y voz (`[VOZ] 🎙️ STT ...`, `[VOZ] 🔊 TTS ...`).
