@@ -1,0 +1,102 @@
+/**
+ * SceneChat — Layout del paso 3 (escena + chat) y estados de carga/error holo.
+ * (El estilado fino de Scene/Chat llega en la segunda tanda; aquí queda el
+ * armazón para que el flujo funcione de principio a fin.)
+ */
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 14px;
+  align-items: start;
+}
+
+/* --- Carga --- */
+.loading {
+  margin-top: 20px;
+  text-align: center;
+  padding: 40px 20px;
+}
+.loadingEmoji {
+  font-size: 56px;
+  display: block;
+  filter: drop-shadow(0 0 16px rgba(62, 242, 255, 0.6));
+}
+.loadingText {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  margin: 12px 0;
+  color: #fff;
+  text-shadow: 0 0 12px rgba(62, 242, 255, 0.6);
+}
+.bar {
+  height: 8px;
+  max-width: 420px;
+  margin: 0 auto;
+  border-radius: 99px;
+  border: 1px solid var(--edge);
+  background: #0a2333;
+  overflow: hidden;
+}
+.bar::after {
+  content: "";
+  display: block;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(90deg, var(--holo), var(--lime));
+  box-shadow: 0 0 10px var(--holo);
+  animation: slide 1.2s ease-in-out infinite;
+}
+@keyframes slide {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+/* --- Error --- */
+.error {
+  margin-top: 20px;
+  text-align: center;
+  padding: 32px 20px;
+}
+.errorBotones {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.btn {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  border-radius: 12px;
+  padding: 12px 22px;
+  border: 1px solid var(--edge);
+}
+.btnPrimario {
+  color: #04121f;
+  background: linear-gradient(90deg, var(--holo), var(--lime));
+  border: none;
+}
+.btnSecundario {
+  color: var(--holo);
+  background: rgba(4, 8, 28, 0.6);
+}
+
+@media (max-width: 760px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar::after {
+    animation: none;
+    width: 100%;
+  }
+}

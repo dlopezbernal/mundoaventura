@@ -1,0 +1,35 @@
+/**
+ * tokens.css — Tokens de diseño "Arcade Holo"
+ * ============================================
+ *
+ * Variables extraídas TAL CUAL del mockup de referencia
+ * (propuesta-final-arcade-holo.html). Son la fuente de verdad del color, las
+ * tipografías y las medidas del carrusel coverflow. Cualquier componente
+ * (via CSS Modules) lee de aquí; no se repiten literales de color por ahí.
+ *
+ * Tema SIEMPRE oscuro (no aplica prefers-color-scheme).
+ */
+
+:root {
+  /* --- Paleta (idéntica a la referencia) --- */
+  --void: #040a1c;
+  --void2: #0a1440;
+  --grid: rgba(79, 242, 255, 0.14);
+  --holo: #3ef2ff;
+  --pink: #ff2e97;
+  --lime: #8dffcf;
+  --amber: #ffcf6b;
+  --purple: #a94dff;
+  --edge: rgba(79, 242, 255, 0.32);
+  --line: #243a7a;
+  --txt: #e8f4ff;
+
+  /* --- Tipografías (Google Fonts, cargadas en index.html) --- */
+  --font-disp: "Orbitron", sans-serif; /* títulos / display */
+  --font-pixel: "Press Start 2P", monospace; /* acentos pixel: HUD, tags, pasos */
+  --font-body: "Chakra Petch", sans-serif; /* texto normal */
+
+  /* --- Medidas del coverflow (escritorio, del mockup) --- */
+  --card-w: 212px;
+  --card-h: 284px;
+}

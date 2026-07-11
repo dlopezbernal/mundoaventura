@@ -1,0 +1,62 @@
+/**
+ * Steps — Línea temporal de 3 pasos (1·PERSONAJE / 2·MUNDO / 3·¡JUGAR!).
+ * El paso activo brilla en holo; los completados también quedan encendidos.
+ */
+
+.steps {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 14px 0 4px;
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #0a1236;
+  color: #7183c4;
+}
+.node .label {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+}
+.on {
+  border-color: var(--holo);
+  color: var(--holo);
+  box-shadow:
+    0 0 14px rgba(62, 242, 255, 0.4),
+    inset 0 0 12px rgba(62, 242, 255, 0.15);
+}
+.done {
+  border-color: var(--lime);
+  color: var(--lime);
+}
+
+.bar {
+  width: 44px;
+  height: 1px;
+  background: var(--line);
+  margin: 0 4px;
+}
+.barOn {
+  background: var(--holo);
+  box-shadow: 0 0 8px var(--holo);
+}
+
+@media (max-width: 640px) {
+  .node {
+    padding: 8px 10px;
+  }
+  .bar {
+    width: 20px;
+  }
+  .node .label {
+    font-size: 7px;
+  }
+}

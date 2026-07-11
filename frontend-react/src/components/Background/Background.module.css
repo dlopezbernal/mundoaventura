@@ -1,0 +1,88 @@
+/**
+ * Background — Los tres elementos "firma" del fondo:
+ * rejilla en perspectiva animada + partículas holográficas + scanlines CRT.
+ * Todo fijo, sin capturar clics, detrás del contenido (z-index bajo).
+ * Con prefers-reduced-motion se congela la rejilla y se ocultan las partículas.
+ */
+
+/* --- Rejilla en perspectiva (suelo de recreativa) --- */
+.floor {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 44vh;
+  z-index: 0;
+  pointer-events: none;
+  perspective: 300px;
+  overflow: hidden;
+}
+.floor::before {
+  content: "";
+  position: absolute;
+  inset: -20% -20% 0;
+  transform: rotateX(62deg);
+  transform-origin: top;
+  background:
+    linear-gradient(var(--grid) 2px, transparent 2px) 0 0 / 100% 38px,
+    linear-gradient(90deg, var(--grid) 2px, transparent 2px) 0 0 / 38px 100%;
+  animation: flow 1.1s linear infinite;
+  -webkit-mask: linear-gradient(transparent, #000);
+  mask: linear-gradient(transparent, #000);
+}
+@keyframes flow {
+  to {
+    background-position:
+      0 38px,
+      0 0;
+  }
+}
+
+/* --- Partículas holográficas que suben --- */
+.dots {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+.dots i {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--holo);
+  opacity: 0.5;
+  animation: rise 6s linear infinite;
+}
+@keyframes rise {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  to {
+    transform: translateY(-130px);
+    opacity: 0;
+  }
+}
+
+/* --- Scanlines CRT (por encima de todo, decorativas) --- */
+.scan {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.3;
+  background: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.4) 2px 3px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .floor::before {
+    animation: none;
+  }
+  .dots i {
+    display: none;
+  }
+}

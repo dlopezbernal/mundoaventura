@@ -3,18 +3,17 @@
  * ================================================================
  *
  * Historial de burbujas (niño a la derecha, personaje a la izquierda), input
- * de texto con envío por botón o Enter, e indicador "está pensando..." mientras
- * el backend responde. Replica el chat de legacy/frontend-flet/main.py.
+ * de texto con envío por botón o Enter, chips de preguntas rápidas e indicador
+ * "está pensando..." mientras el backend responde.
  *
  * Voz de RESPUESTA: si la respuesta trae audio_base64, se reproduce sola al
  * llegar (y cada burbuja con audio tiene un botón para volver a escucharla).
  * Si es null, el chat sigue funcionando solo con texto (degradación).
  *
- * Voz de PREGUNTA (Hito 4): el botón de micrófono graba con MediaRecorder
- * (webm/opus en Chrome, ogg/opus en Firefox — ambos validados contra Scribe
- * en el spike), sube el blob a /api/transcribe y el texto entra por el MISMO
- * flujo que una pregunta escrita. Si no hay getUserMedia (contexto no seguro),
- * ni permiso, ni micrófono, el chat de texto no se ve afectado.
+ * Voz de PREGUNTA: el botón de micrófono graba con MediaRecorder, sube el blob
+ * a /api/transcribe y el texto entra por el MISMO flujo que una pregunta
+ * escrita. Si no hay getUserMedia (contexto no seguro), ni permiso, ni
+ * micrófono, el chat de texto no se ve afectado.
  *
  * El historial vive DENTRO de este componente: App lo remonta (via key) al
  * generar una escena nueva, con lo que la conversación empieza de cero.
@@ -22,7 +21,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ask, BackendError, transcribe } from "../api/client";
-import "./Chat.css";
+import QuickChips from "./QuickChips/QuickChips";
+import styles from "./Chat.module.css";
 
 interface Mensaje {
   autor: "nino" | "personaje" | "error";
@@ -43,7 +43,7 @@ interface Props {
 /**
  * Formatos a intentar con MediaRecorder, de más a menos preferido. Scribe
  * deduce el formato de los propios bytes, así que cualquiera de ellos vale
- * (webm/ogg opus verificados en el spike del Hito 4; mp4 es el de Safari).
+ * (webm/ogg opus verificados en el spike; mp4 es el de Safari).
  */
 const MIME_PREFERIDOS = [
   "audio/webm;codecs=opus",
@@ -137,7 +137,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
     setMensajes((previos) => [...previos, { autor: "error", texto }]);
   }
 
-  // -- Envío de una pregunta (escrita o transcrita: MISMO flujo) --------------
+  // -- Envío de una pregunta (escrita, transcrita o por chip: MISMO flujo) ----
 
   async function enviarPregunta(texto: string) {
     setMensajes((previos) => [...previos, { autor: "nino", texto }]);
@@ -170,6 +170,13 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
     event.preventDefault(); // Enter en el input también envía
     const texto = pregunta.trim();
     if (!texto || ocupado) return;
+    setPregunta("");
+    void enviarPregunta(texto);
+  }
+
+  /** Chip de pregunta rápida: entra por el mismo flujo que una escrita. */
+  function onChip(texto: string) {
+    if (ocupado) return;
     setPregunta("");
     void enviarPregunta(texto);
   }
@@ -255,29 +262,29 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
   }[micEstado];
 
   return (
-    <section className="chat">
-      <h3 className="chat-titulo">💬 Habla con {nombre}</h3>
+    <section className={styles.chat}>
+      <h3 className={styles.titulo}>💬 Habla con {nombre}</h3>
 
-      <div className="chat-historial" ref={historialRef}>
+      <div className={styles.historial} ref={historialRef}>
         {mensajes.length === 0 && !pensando && (
-          <p className="chat-vacio">
-            ¡Pregúntale lo que quieras! (ej. ¿Qué comes?)
+          <p className={styles.vacio}>
+            ¡Pregúntale lo que quieras! (usa los botones de abajo o escribe)
           </p>
         )}
 
         {mensajes.map((mensaje, i) => (
-          <div key={i} className={`burbuja burbuja-${mensaje.autor}`}>
-            <span className="burbuja-autor">
-              {mensaje.autor === "nino" && "🧒 Tú"}
-              {mensaje.autor === "personaje" && `${emoji} ${nombre}`}
-              {mensaje.autor === "error" && "⚠️ Ups"}
+          <div key={i} className={`${styles.burbuja} ${styles[mensaje.autor]}`}>
+            <span className={styles.autor}>
+              {mensaje.autor === "nino" && "🧒 TÚ"}
+              {mensaje.autor === "personaje" && `${emoji} ${nombre.toUpperCase()}`}
+              {mensaje.autor === "error" && "⚠️ UPS"}
             </span>
-            <p className="burbuja-texto">{mensaje.texto}</p>
+            <p className={styles.texto}>{mensaje.texto}</p>
 
             {mensaje.audioBase64 && (
               <button
                 type="button"
-                className="burbuja-audio"
+                className={styles.audio}
                 aria-label="Volver a escuchar la respuesta"
                 onClick={() => reproducir(mensaje.audioBase64 as string)}
               >
@@ -286,7 +293,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
             )}
 
             {mensaje.fuentes && mensaje.fuentes.length > 0 && (
-              <details className="burbuja-fuentes">
+              <details className={styles.fuentes}>
                 <summary>📚 ¿De dónde lo he sacado?</summary>
                 <ul>
                   {mensaje.fuentes.map((fuente, j) => (
@@ -299,23 +306,25 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
         ))}
 
         {micEstado === "transcribiendo" && (
-          <div className="burbuja burbuja-nino burbuja-pensando">
-            <p className="burbuja-texto">👂 Escuchando lo que dijiste...</p>
+          <div className={`${styles.burbuja} ${styles.nino} ${styles.pensando}`}>
+            <p className={styles.texto}>👂 Escuchando lo que dijiste...</p>
           </div>
         )}
 
         {pensando && (
-          <div className="burbuja burbuja-personaje burbuja-pensando">
-            <p className="burbuja-texto">🤔 {nombre} está pensando...</p>
+          <div className={`${styles.burbuja} ${styles.personaje} ${styles.pensando}`}>
+            <p className={styles.texto}>🤔 {nombre} está pensando...</p>
           </div>
         )}
       </div>
 
-      <form className="chat-form" onSubmit={onSubmit}>
+      <QuickChips disabled={ocupado} onElegir={onChip} />
+
+      <form className={styles.form} onSubmit={onSubmit}>
         <input
           ref={inputRef}
           type="text"
-          className="chat-input"
+          className={styles.input}
           placeholder={
             micEstado === "grabando"
               ? "Grabando tu pregunta... 🔴"
@@ -329,7 +338,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
 
         <button
           type="button"
-          className={`chat-mic${micEstado === "grabando" ? " grabando" : ""}`}
+          className={`${styles.mic}${micEstado === "grabando" ? ` ${styles.grabando}` : ""}`}
           aria-label={micTitulo}
           title={micTitulo}
           disabled={
@@ -345,7 +354,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
         {micEstado === "grabando" && (
           <button
             type="button"
-            className="chat-cancelar-grabacion"
+            className={styles.cancelar}
             aria-label="Cancelar la grabación"
             title="Cancelar la grabación"
             onClick={() => pararGrabacion(true)}
@@ -356,7 +365,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
 
         <button
           type="submit"
-          className="chat-enviar"
+          className={styles.enviar}
           disabled={ocupado || !pregunta.trim()}
         >
           Preguntar

@@ -1,0 +1,157 @@
+/**
+ * HoloCard — Carta-holograma (líneas de escaneo, brillo cian, adornos de juego).
+ * La misma carta sirve de central (fijada, con haz de luz) o de lateral.
+ * El color de acento llega por la variable --tint (inline desde el componente).
+ */
+
+.card {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid var(--edge);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--tint) 16%, transparent),
+    rgba(6, 12, 34, 0.9)
+  );
+  box-shadow:
+    0 20px 42px rgba(0, 0, 0, 0.6),
+    inset 0 0 30px rgba(62, 242, 255, 0.1);
+  clip-path: polygon(0 0, 100% 0, 100% 88%, 88% 100%, 0 100%);
+}
+
+/* líneas de escaneo del holograma */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(transparent 0 3px, rgba(62, 242, 255, 0.08) 3px 4px);
+}
+
+.art {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 112px;
+  filter: drop-shadow(0 0 12px rgba(62, 242, 255, 0.5));
+}
+.art .bg {
+  position: absolute;
+  font-size: 190px;
+  opacity: 0.1;
+  transform: rotate(-10deg);
+}
+.artImg {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+  filter: drop-shadow(0 0 12px rgba(62, 242, 255, 0.5));
+}
+
+.corner {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--holo);
+}
+
+.cap {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 24px 10px 10px;
+  background: linear-gradient(transparent, rgba(4, 8, 24, 0.94));
+}
+.tag {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--amber);
+  letter-spacing: 0.04em;
+}
+.nm {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 18px;
+  margin-top: 5px;
+}
+.id {
+  font-size: 9px;
+  letter-spacing: 0.18em;
+  color: var(--holo);
+  opacity: 0.8;
+  margin-top: 1px;
+}
+.ebar {
+  height: 7px;
+  border-radius: 2px;
+  background: #0e183f;
+  margin-top: 6px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.ebar i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--lime), var(--amber));
+}
+
+/* --- Central: holograma fijado (borde vivo + latido) --- */
+.center {
+  border-color: var(--holo);
+  box-shadow:
+    0 0 0 2px var(--holo),
+    0 0 46px rgba(62, 242, 255, 0.55),
+    0 26px 52px rgba(0, 0, 0, 0.7),
+    inset 0 0 40px rgba(62, 242, 255, 0.2);
+}
+/* sólo late cuando la central cuenta como SELECCIONADA */
+.selected {
+  animation: sel 1s ease-in-out infinite alternate;
+}
+@keyframes sel {
+  to {
+    box-shadow:
+      0 0 0 2px var(--pink),
+      0 0 50px rgba(255, 46, 151, 0.6),
+      0 26px 52px rgba(0, 0, 0, 0.7),
+      inset 0 0 40px rgba(255, 46, 151, 0.15);
+  }
+}
+
+.lock {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: #04121f;
+  background: var(--holo);
+  padding: 4px 10px;
+  border-radius: 4px;
+  z-index: 2;
+}
+
+@media (max-width: 640px) {
+  .art {
+    font-size: 78px;
+  }
+  .art .bg {
+    font-size: 130px;
+  }
+  .nm {
+    font-size: 15px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .selected {
+    animation: none;
+  }
+}

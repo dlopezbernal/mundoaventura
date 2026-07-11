@@ -1,0 +1,30 @@
+/**
+ * QuickChips — Fila de preguntas rápidas para niños que no escriben deprisa.
+ * Chips holográficos que, al tocarlos, envían esa pregunta al personaje.
+ */
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--holo);
+  background: rgba(4, 8, 28, 0.6);
+  border: 1px solid var(--edge);
+  border-radius: 99px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.chip:hover:not(:disabled) {
+  background: rgba(62, 242, 255, 0.14);
+  box-shadow: 0 0 10px rgba(62, 242, 255, 0.25);
+}
+.chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
