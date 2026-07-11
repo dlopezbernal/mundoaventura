@@ -68,15 +68,9 @@
   }
 }
 
-/* --- Scanlines CRT (por encima de todo, decorativas) --- */
-.scan {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  pointer-events: none;
-  opacity: 0.3;
-  background: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.4) 2px 3px);
-}
+/* Las scanlines CRT (.crt-scan) viven ahora en global.css, renderizadas DENTRO
+   de .holo-wrap para compartir su contexto de apilado con la imagen generada
+   (así la escena puede quedar POR ENCIMA de ellas y verse nítida). */
 
 @media (prefers-reduced-motion: reduce) {
   .floor::before {

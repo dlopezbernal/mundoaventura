@@ -1,0 +1,228 @@
+/**
+ * Settings — Página de configuración (plantilla) en clave Arcade Holo.
+ * Rejilla de paneles con filas etiqueta/control (toggles, sliders, selects).
+ */
+
+.page {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* --- Cabecera de la página --- */
+.head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.kicker {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: var(--pink);
+  letter-spacing: 0.08em;
+  margin: 0 0 4px;
+}
+.title {
+  font-family: var(--font-disp);
+  font-weight: 900;
+  font-size: clamp(22px, 4vw, 34px);
+  letter-spacing: 0.05em;
+  color: #fff;
+  margin: 0;
+  text-shadow:
+    0 0 12px rgba(62, 242, 255, 0.6),
+    3px 3px 0 rgba(255, 46, 151, 0.7);
+}
+.close {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--holo);
+  border: 1px solid var(--edge);
+  background: rgba(4, 8, 28, 0.6);
+  border-radius: 10px;
+  padding: 8px 14px;
+}
+.close:hover {
+  filter: brightness(1.15);
+}
+
+/* --- Rejilla de paneles --- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.panel {
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.55), rgba(6, 12, 34, 0.6));
+  box-shadow: inset 0 0 26px rgba(62, 242, 255, 0.06);
+  padding: 14px 16px 16px;
+}
+.panelTitle {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.98rem;
+  letter-spacing: 0.03em;
+  color: var(--txt);
+  margin: 0 0 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--edge);
+}
+.panelBody {
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Fila etiqueta / control --- */
+.fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px dashed rgba(79, 242, 255, 0.14);
+}
+.fila:last-child {
+  border-bottom: none;
+}
+.filaTexto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.filaEtiqueta {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--txt);
+}
+.filaAyuda {
+  font-size: 0.72rem;
+  color: #8fa3e0;
+}
+.filaControl {
+  flex-shrink: 0;
+}
+
+/* --- Input de texto --- */
+.input {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--txt);
+  background: rgba(4, 8, 28, 0.7);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 7px 10px;
+  width: 190px;
+  max-width: 46vw;
+}
+.input:focus-visible {
+  outline: 2px solid var(--holo);
+  outline-offset: 1px;
+}
+
+/* --- Select --- */
+.select {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--txt);
+  background: rgba(4, 8, 28, 0.7);
+  border: 1px solid var(--edge);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+
+/* --- Toggle (interruptor) --- */
+.toggle {
+  position: relative;
+  width: 48px;
+  height: 26px;
+  border-radius: 99px;
+  border: 1px solid var(--edge);
+  background: rgba(4, 8, 28, 0.8);
+  padding: 0;
+  transition: background 0.15s ease, box-shadow 0.15s ease;
+}
+.toggleOn {
+  background: linear-gradient(90deg, var(--holo), var(--lime));
+  box-shadow: 0 0 14px rgba(62, 242, 255, 0.5);
+}
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #eaf7ff;
+  transition: transform 0.18s ease;
+}
+.toggleOn .toggleKnob {
+  transform: translateX(22px);
+}
+
+/* --- Slider (rango) --- */
+.sliderWrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.slider {
+  width: 150px;
+  max-width: 40vw;
+  accent-color: var(--holo);
+}
+.sliderVal {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  color: var(--holo);
+  min-width: 26px;
+  text-align: right;
+}
+
+/* --- Dato de solo lectura (Acerca de) --- */
+.dato {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #8fa3e0;
+}
+.reset {
+  margin-top: 12px;
+  width: 100%;
+  font-family: var(--font-disp);
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--pink);
+  border: 1px solid rgba(255, 46, 151, 0.5);
+  background: rgba(255, 46, 151, 0.08);
+  border-radius: 10px;
+  padding: 9px;
+}
+.reset:hover {
+  background: rgba(255, 46, 151, 0.16);
+}
+
+/* --- Pie con acciones --- */
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle,
+  .toggleKnob {
+    transition: none;
+  }
+}

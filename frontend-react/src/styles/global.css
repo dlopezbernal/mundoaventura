@@ -49,6 +49,19 @@ button {
   padding: 14px 14px 40px;
 }
 
+/* Scanlines CRT (efecto "TV antigua"). Fijo a pantalla completa y decorativo,
+   pero renderizado DENTRO de .holo-wrap para compartir su contexto de apilado:
+   así cubre fondo, botones y cartas (z-index menor), mientras que la imagen
+   generada (.marco, z-index 70) queda por encima y se ve nítida, sin líneas. */
+.crt-scan {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.3;
+  background: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.4) 2px 3px);
+}
+
 /* Botones grandes reutilizables (los usan SceneView y otros), en clave holo.
    El estilado fino del paso 3 se completa en la segunda tanda. */
 .btn {

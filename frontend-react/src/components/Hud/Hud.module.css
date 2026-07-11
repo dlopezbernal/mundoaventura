@@ -1,5 +1,6 @@
 /**
- * Hud — Barra superior de recreativa: marca + "SISTEMA ONLINE" + vidas + puntos.
+ * Hud — Barra superior de recreativa: marca (máquina del tiempo) + botón de
+ * configuración (y, en DEBUG, el botón de diagnóstico de conexión).
  */
 
 .hud {
@@ -39,34 +40,26 @@
 .readout {
   margin-left: auto;
   display: flex;
-  gap: 14px;
+  gap: 10px;
   align-items: center;
 }
-.pill {
-  font-size: 10px;
-  letter-spacing: 0.12em;
-  border: 1px solid var(--edge);
-  border-radius: 99px;
-  padding: 4px 12px;
-  color: var(--lime);
+
+/* Botón de Configuración/Setup (acción principal del HUD). */
+.config {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.06em;
+  color: #04121f;
+  background: linear-gradient(90deg, var(--holo), var(--lime));
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 0 14px rgba(62, 242, 255, 0.4);
+  transition: filter 0.15s ease, transform 0.15s ease;
 }
-.blink {
-  animation: bl 1.2s steps(1) infinite;
-}
-@keyframes bl {
-  50% {
-    opacity: 0.3;
-  }
-}
-.lives {
-  color: var(--pink);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-}
-.coin {
-  color: var(--amber);
-  font-size: 9px;
-  letter-spacing: 0.1em;
+.config:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
 }
 
 /* Botón de diagnóstico (solo DEBUG). */
@@ -81,13 +74,12 @@
 }
 
 @media (max-width: 640px) {
-  .pill,
-  .lives {
-    display: none;
+  /* En móvil el botón conserva solo el icono para no romper la barra. */
+  .config {
+    font-size: 0;
+    padding: 10px;
   }
-}
-@media (prefers-reduced-motion: reduce) {
-  .blink {
-    animation: none;
+  .config::first-letter {
+    font-size: 14px;
   }
 }

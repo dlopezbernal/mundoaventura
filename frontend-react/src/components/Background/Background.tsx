@@ -2,9 +2,13 @@
  * Background — Fondo animado "Arcade Holo"
  * =========================================
  *
- * Rejilla en perspectiva + partículas que suben + scanlines CRT. Es puramente
- * decorativo (aria-hidden, sin clics). Las partículas se generan una vez con
- * posiciones/retardos aleatorios, igual que el <script> del mockup.
+ * Rejilla en perspectiva + partículas que suben. Es puramente decorativo
+ * (aria-hidden, sin clics). Las partículas se generan una vez con posiciones/
+ * retardos aleatorios, igual que el <script> del mockup.
+ *
+ * Las scanlines CRT ya NO viven aquí: se renderizan dentro de .holo-wrap (App)
+ * para compartir contexto de apilado con la imagen generada y poder dejarla
+ * nítida por encima. Ver .crt-scan en global.css.
  */
 
 import { useMemo } from "react";
@@ -32,7 +36,6 @@ export default function Background() {
           <i key={i} style={estilo} />
         ))}
       </div>
-      <div className={styles.scan} />
     </div>
   );
 }

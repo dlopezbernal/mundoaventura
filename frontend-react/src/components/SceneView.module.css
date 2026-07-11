@@ -8,9 +8,14 @@
   gap: 12px;
 }
 
-/* Marco holográfico alrededor de la imagen. */
+/* Marco holográfico alrededor de la imagen.
+   z-index 70 + isolation: queda POR ENCIMA del film de scanlines .crt-scan
+   (z-index 60, mismo contexto de apilado en .holo-wrap) para que la imagen
+   generada se vea nítida, sin las líneas horizontales del efecto CRT. */
 .marco {
   position: relative;
+  z-index: 70;
+  isolation: isolate;
   border: 1px solid var(--holo);
   border-radius: 16px;
   padding: 8px;
