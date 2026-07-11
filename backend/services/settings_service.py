@@ -35,9 +35,58 @@ CAT_RAG = "rag"
 CAT_CHUNKING = "chunking"
 CAT_LLM = "llm"
 CAT_VOZ = "voz"
+CAT_PROMPTS = "prompts"
+CAT_GENERAL = "general"
 
 # Modos válidos del Evaluator (mismo criterio que config.py).
 _MODOS_EVALUATOR = ("umbral", "llm", "hibrido")
+
+# ---------------------------------------------------------------------------
+# Prompts de sistema por defecto (antes hardcodeados en rag_service.py)
+# ---------------------------------------------------------------------------
+# Se guardan como ajustes editables (categoría "prompts") para poder cambiar el
+# "carácter" de los personajes (tono, edad, "responde en español", "no inventes")
+# SIN tocar Python. Van EN INGLÉS a propósito (Llama 3 obedece mejor en inglés);
+# solo la RESPUESTA se pide en español. Variables admitidas (se sustituyen en
+# runtime): {nombre} (personaje), {fichas} (contexto recuperado), {pregunta}.
+_PROMPT_RAG_SYSTEM = (
+    "You are {nombre}, speaking in the first person to a child aged 8 to 12. "
+    "ALWAYS reply in Spanish, in a short (2-4 sentences), cheerful and simple "
+    "way. Use ONLY the information in the cards I give you. If the answer is not "
+    "in the cards, kindly say that you do not know that, without making anything "
+    "up. Never break character. "
+    "Do NOT start your answer with a greeting or by introducing yourself "
+    "(no 'Hola', no 'Como [name]'); answer directly as if continuing a conversation."
+)
+_PROMPT_RAG_USER = (
+    "Cards with data about me:\n{fichas}\n\n"
+    "Child's question: {pregunta}\n\n"
+    "Your answer (in the first person, in Spanish):"
+)
+_PROMPT_GENERAL_SYSTEM = (
+    "You are {nombre}, speaking in the first person to a child aged 8 to 12. "
+    "ALWAYS reply in Spanish, in a short (2-4 sentences), cheerful and simple "
+    "way, never breaking character. You have no data cards for this question: "
+    "answer with your own general knowledge, and if you do not know, kindly say "
+    "so without making anything up. "
+    "Do NOT start your answer with a greeting or by introducing yourself "
+    "(no 'Hola', no 'Como [name]'); answer directly as if continuing a conversation."
+)
+_PROMPT_GENERAL_USER = (
+    "Child's question: {pregunta}\n\n"
+    "Your answer (in the first person, in Spanish):"
+)
+_PROMPT_EVALUATOR_SYSTEM = (
+    "You are a strict evaluator for a RAG system. Your only task is to decide "
+    "whether the context cards contain information to answer the question. "
+    "Reply with EXACTLY one word, no explanation: 'YES' if the cards are "
+    "relevant and sufficient, or 'NO' if they are not."
+)
+_PROMPT_EVALUATOR_USER = (
+    "Context cards:\n{fichas}\n\n"
+    "Question: {pregunta}\n\n"
+    "Are the cards relevant to answer it? Reply only YES or NO:"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +169,12 @@ _SPEC: dict[str, dict[str, Any]] = {
         "min": 16, "max": 2000,
         "ayuda": "Longitud máxima de la respuesta del LLM (en tokens).",
     },
+    "LLM_TEMPERATURE": {
+        "categoria": CAT_LLM, "tipo": "float", "default": 0.3,
+        "min": 0.0, "max": 1.0, "paso": 0.05,
+        "ayuda": "Creatividad de la respuesta (0=predecible, 1=creativa). El juez "
+        "del Evaluator siempre usa 0.",
+    },
     # --- Voz ---
     "ELEVENLABS_STT_MODEL": {
         "categoria": CAT_VOZ, "tipo": "str", "default": config.ELEVENLABS_STT_MODEL,
@@ -136,6 +191,46 @@ _SPEC: dict[str, dict[str, Any]] = {
     "STT_LANG": {
         "categoria": CAT_VOZ, "tipo": "str", "default": config.STT_LANG,
         "ayuda": "Idioma de la transcripción (la pregunta del niño).",
+    },
+    # --- Prompts de sistema (editables sin tocar código) ---
+    # Van en inglés (Llama 3 obedece mejor); la respuesta se pide en español dentro
+    # del propio texto. Variables: {nombre}, {fichas}, {pregunta}. multilinea → la UI
+    # los pinta como área de texto grande.
+    "PROMPT_RAG_SYSTEM": {
+        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_RAG_SYSTEM,
+        "multilinea": True,
+        "ayuda": "Reglas del personaje cuando responde CON documentos (RAG). Variable: {nombre}.",
+    },
+    "PROMPT_RAG_USER": {
+        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_RAG_USER,
+        "multilinea": True,
+        "ayuda": "Mensaje con las fichas y la pregunta (RAG). Variables: {fichas}, {pregunta}.",
+    },
+    "PROMPT_GENERAL_SYSTEM": {
+        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_GENERAL_SYSTEM,
+        "multilinea": True,
+        "ayuda": "Reglas del personaje cuando responde SIN documentos (conocimiento propio). Variable: {nombre}.",
+    },
+    "PROMPT_GENERAL_USER": {
+        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_GENERAL_USER,
+        "multilinea": True,
+        "ayuda": "Mensaje con la pregunta (sin fichas). Variable: {pregunta}.",
+    },
+    "PROMPT_EVALUATOR_SYSTEM": {
+        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_EVALUATOR_SYSTEM,
+        "multilinea": True,
+        "ayuda": "Reglas del juez que decide si las fichas sirven (responde YES/NO).",
+    },
+    "PROMPT_EVALUATOR_USER": {
+        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_EVALUATOR_USER,
+        "multilinea": True,
+        "ayuda": "Mensaje del juez con fichas y pregunta. Variables: {fichas}, {pregunta}.",
+    },
+    # --- General ---
+    "DEBUG": {
+        "categoria": CAT_GENERAL, "tipo": "bool", "default": config.DEBUG,
+        "ayuda": "Modo desarrollo: imprime trazas en la consola del backend "
+        "(origen de la respuesta y prompts). Déjalo desactivado para el niño.",
     },
 }
 
@@ -303,8 +398,21 @@ def exportar() -> list[dict[str, Any]]:
             "requiere_reindex": bool(spec.get("requires_reindex", False)),
             "ayuda": spec.get("ayuda", ""),
         }
-        for extra in ("min", "max", "paso", "opciones"):
+        for extra in ("min", "max", "paso", "opciones", "multilinea"):
             if extra in spec:
                 entrada[extra] = spec[extra]
         salida.append(entrada)
     return salida
+
+
+def rellenar(plantilla: str, **variables: str) -> str:
+    """Sustituye {clave} por su valor en una plantilla de prompt.
+
+    Usa reemplazo literal (no str.format) para que un carácter suelto '{' o '}' en
+    un prompt editado por el usuario no rompa nada. Las variables ausentes en la
+    plantilla simplemente no se usan.
+    """
+    texto = plantilla
+    for clave, valor in variables.items():
+        texto = texto.replace("{" + clave + "}", valor)
+    return texto

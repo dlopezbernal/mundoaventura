@@ -103,6 +103,48 @@ export interface ApiTestResult {
 }
 
 /**
+ * Metadatos + valor vigente de UN ajuste editable (Hito 3). Replica una entrada
+ * de settings_service.exportar(): describe qué es el ajuste y cómo pintarlo.
+ */
+export interface SettingMeta {
+  /** Clave interna (p. ej. "EVALUATOR_UMBRAL_BAJO"). */
+  clave: string;
+  /** Valor vigente, ya tipado (number | string | boolean). */
+  valor: number | string | boolean;
+  /** Tipo del ajuste: "int" | "float" | "str" | "bool". */
+  tipo: string;
+  /** Categoría para agrupar en la UI (p. ej. "rag", "llm", "prompts", "general"). */
+  categoria: string;
+  /** Si cambiarlo obliga a reindexar ChromaDB (chunking). */
+  requiere_reindex: boolean;
+  /** Texto de ayuda en español para el adulto. */
+  ayuda: string;
+  /** Mínimo (solo int/float). */
+  min?: number;
+  /** Máximo (solo int/float). */
+  max?: number;
+  /** Salto del control numérico (solo float). */
+  paso?: number;
+  /** Opciones cerradas (si el ajuste es un desplegable). */
+  opciones?: string[];
+  /** Si el texto es largo → la UI lo pinta como área de texto. */
+  multilinea?: boolean;
+}
+
+/** Respuesta del endpoint GET /api/config (ajustes + estado de secretos). */
+export interface ConfigResponse {
+  ajustes: SettingMeta[];
+  secretos: ApiProviderStatus[];
+}
+
+/** Respuesta del endpoint PUT /api/config (guardar ajustes en caliente). */
+export interface ConfigSaveResult {
+  ok: boolean;
+  /** Ajustes cambiados que exigen reindexar ChromaDB (vacío si ninguno). */
+  reindex_necesario: string[];
+}
+
+/**
  * Respuesta del endpoint GET /health. No tiene schema Pydantic en el backend
  * (es un dict ad-hoc en main.py); tipamos los campos que el frontend consulta
  * y dejamos el resto abiertos.

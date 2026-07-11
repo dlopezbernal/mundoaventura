@@ -2,7 +2,7 @@
 backend/debug_log.py — Traza de prompts en modo DEBUG
 ======================================================
 
-Cuando `config.DEBUG` está activo, este módulo imprime por la consola del backend
+Cuando el ajuste DEBUG está activo, este módulo imprime por la consola del backend
 TODOS los prompts que enviamos a un servicio externo, para tenerlos a la vista de
 un vistazo y poder depurarlos/ajustarlos rápido:
 
@@ -18,7 +18,7 @@ un vistazo y poder depurarlos/ajustarlos rápido:
 Si DEBUG está desactivado no hace absolutamente nada (coste cero en producción).
 """
 
-from backend import config
+from backend.services import settings_service
 
 # Longitud de las líneas separadoras (solo estético).
 _ANCHO = 72
@@ -41,7 +41,7 @@ def trazar_prompt(destino: str, **secciones: str | None) -> None:
     Ejemplo:
         trazar_prompt("LLM · RAG", system=system, user=user)
     """
-    if not config.DEBUG:
+    if not settings_service.get("DEBUG"):
         return
 
     print(f"\n┌─ PROMPT → {destino} " + "─" * _ANCHO)

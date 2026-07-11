@@ -14,9 +14,12 @@ import type {
   ApiTestResult,
   AskRequest,
   AskResponse,
+  ConfigResponse,
+  ConfigSaveResult,
   GenerateRequest,
   GenerateResponse,
   HealthResponse,
+  SettingMeta,
   TranscribeResponse,
 } from "./types";
 
@@ -249,4 +252,35 @@ export async function revealApi(proveedor: string): Promise<string | null> {
   );
   const body = (await response.json()) as { clave: string | null };
   return body.clave;
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Ajustes del motor (Hito 3). Parámetros de IA, prompts y DEBUG.
+// ---------------------------------------------------------------------------
+
+/** Ajustes vigentes + metadatos (para pintar la UI). GET /api/config. */
+export async function getConfig(): Promise<SettingMeta[]> {
+  const response = await fetchBackend("/api/config", { method: "GET" }, TIMEOUT_CONFIG);
+  const body = (await response.json()) as ConfigResponse;
+  return body.ajustes;
+}
+
+/**
+ * Guarda ajustes y los aplica en caliente (sin reiniciar). PUT /api/config.
+ * Devuelve qué ajustes exigen reindexar ChromaDB (lista vacía si ninguno).
+ */
+export async function saveConfig(
+  ajustes: Record<string, number | string | boolean>,
+): Promise<string[]> {
+  const response = await fetchBackend(
+    "/api/config",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ajustes }),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as ConfigSaveResult;
+  return body.reindex_necesario;
 }
