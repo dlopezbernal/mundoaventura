@@ -550,6 +550,35 @@ deshabilita con un aviso claro y el chat de texto sigue intacto.
 > a 1.x rompiendo la interfaz—, así que grababa con `sounddevice` + `soundfile`. La migración a
 > la SPA React eliminó esa fricción al usar las APIs nativas del navegador.
 
+### 7. Menú de configuración sin código (ajustes en caliente sobre SQLite)
+
+**Decisión:** en lugar de tener todos los parámetros congelados como constantes de `config.py`,
+la app incorpora una **pantalla de configuración** que edita en caliente (sin reiniciar) los
+ajustes de IA, los prompts de sistema y las claves API. Los ajustes vivos se guardan en **SQLite**
+(vía `settings_service`) y las claves API siguen en el `.env`; con la base de datos vacía, la app
+se comporta **exactamente como antes** (los valores por defecto son los de `config.py`).
+
+**Por qué existe esta pantalla — dos motivos:**
+- **(1) Democratizar el uso.** Una persona **sin conocimientos de IA ni de programación** puede
+  poner en marcha y personalizar la aplicación —pegar las claves de las plataformas, crear
+  personajes y ubicaciones, subir documentos al RAG y tocar los parámetros del motor— **sin abrir
+  el código**. Basta con darse de alta en los proveedores (Replicate, DeepL, ElevenLabs) e
+  introducir las claves desde la propia interfaz.
+- **(2) Facilitar el testeo y la calibración.** Cambiar la configuración para **probar y comparar
+  resultados en caliente** (umbrales del Evaluator, modo `umbral`/`llm`/`hibrido`, chunking, modelo
+  y temperatura del LLM, prompts) es inmediato: no hay que reiniciar el backend ni editar ficheros.
+  Esto convierte la app en un **banco de pruebas** del pipeline RAG.
+
+**El umbral del RAG se configura como distancia coseno directa (0–2), sin porcentaje.** Los
+umbrales del Evaluator (`EVALUATOR_UMBRAL_BAJO` por defecto `0.75`, `EVALUATOR_UMBRAL_ALTO` `0.95`)
+se editan tal cual son —la **distancia coseno** de ChromaDB, `0` = idéntico … `2` = opuesto— con
+rango `0.00–2.00` y paso `0.01`, validando `0 ≤ BAJO ≤ ALTO ≤ 2`. **No** se convierten a "% de
+similitud" en ningún punto. Se deja en la métrica nativa porque: **(a)** mantiene el sistema honesto
+—lo que el adulto configura es exactamente lo que usa el motor—; **(b)** simplifica el código al
+eliminar una capa de conversión; y **(c)** facilita la calibración, ya que el valor configurado se
+compara directamente con la distancia real `d=...` que la app expone (en la respuesta de
+`/api/ask` y en la consola con `DEBUG`).
+
 ---
 
 ## 💡 Personalizar

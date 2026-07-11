@@ -70,6 +70,27 @@ personaje; el quinto solo si habla):
 Las ubicaciones siguen el mismo patrón (sin voz) entre `backend/ubicaciones.py` y
 `frontend-react/src/data/ubicaciones.ts`.
 
+## Capa de configuración (SQLite + `settings_service`)
+
+Los parámetros del motor **ya no son constantes congeladas de `config.py`**: se leen a
+través de `backend/services/settings_service.py`, que devuelve el valor **vigente** desde
+**SQLite** (con caché en memoria e invalidación al guardar) y **cae al valor por defecto**
+—el actual de `config.py`— si la base de datos está vacía. Así, un cambio hecho desde el
+menú de configuración surte efecto en la **siguiente petición sin reiniciar**, y con la
+BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atrás).
+
+- **Qué vive en SQLite:** ajustes de IA (umbrales/modo del Evaluator, `RAG_TOP_K`),
+  chunking, modelo/`max_tokens`/`temperature` del LLM, los **prompts de sistema**
+  (externalizados desde `rag_service.py`, con variables `{nombre}`/`{fichas}`/`{pregunta}`)
+  y opciones generales como `DEBUG`.
+- **Qué vive en el `.env`:** solo los **secretos** (claves API). La UI los lee/escribe de
+  forma atómica pero **nunca** devuelve la clave completa al frontend (solo enmascarada).
+- **Endpoints:** `GET /api/config` (ajustes + secretos enmascarados) y `PUT /api/config`
+  (guarda y aplica en caliente; informa de qué cambios exigen reindexar ChromaDB).
+- **Umbral del RAG:** se expone como **distancia coseno directa (0–2), sin conversión a
+  porcentaje**, la misma métrica nativa de ChromaDB que usa el Evaluator (ver README,
+  "Decisiones de diseño").
+
 ## Degradación y modo DEBUG
 
 - **Degradación:** sin ElevenLabs (o si el TTS falla), `audio_base64` es `null` y el
@@ -77,5 +98,7 @@ Las ubicaciones siguen el mismo patrón (sin voz) entre `backend/ubicaciones.py`
   traducción es obligatoria para el RAG). En el frontend, si no hay `getUserMedia`
   (contexto no seguro), micrófono o permiso, el micro se deshabilita y el chat de
   texto sigue disponible igualmente (la voz es un añadido, no un requisito del flujo).
-- **DEBUG (`config.DEBUG`):** trazas en la consola del backend: prompts al LLM/DeepL,
-  origen RAG/GENERAL (`[CHAT] ...`) y voz (`[VOZ] 🎙️ STT ...`, `[VOZ] 🔊 TTS ...`).
+- **DEBUG:** ajuste editable (`settings_service`, con valor inicial de `config.DEBUG`), por
+  lo que se puede activar/desactivar en caliente desde el menú. Enciende trazas en la
+  consola del backend: prompts al LLM/DeepL, origen RAG/GENERAL (`[CHAT] ...`) y voz
+  (`[VOZ] 🎙️ STT ...`, `[VOZ] 🔊 TTS ...`).
