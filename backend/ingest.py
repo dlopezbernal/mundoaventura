@@ -53,6 +53,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend import config  # noqa: E402
+from backend.services import settings_service  # noqa: E402
 
 # Extensiones de archivo soportadas.
 EXTENSIONES = {".pdf", ".txt", ".md"}
@@ -83,8 +84,8 @@ def _crear_splitter():
     # (párrafos, frases, palabras) antes que por mitad de palabra, y aplica el
     # solape entre chunks consecutivos.
     return RecursiveCharacterTextSplitter(
-        chunk_size=config.CHUNK_SIZE,
-        chunk_overlap=config.CHUNK_OVERLAP,
+        chunk_size=settings_service.get("CHUNK_SIZE"),
+        chunk_overlap=settings_service.get("CHUNK_OVERLAP"),
     )
 
 
@@ -95,21 +96,28 @@ def main(reset: bool = True) -> None:
         sys.exit(1)
 
     # 1) Abrir (o reiniciar) la colección de ChromaDB.
+    #    El nombre de la colección y el troceado se leen de settings_service (BBDD;
+    #    caen a los valores por defecto de config.py si la BBDD está vacía), igual
+    #    que hace el chat, para que ambos usen SIEMPRE la misma configuración.
+    coleccion = settings_service.get("CHROMA_COLLECTION")
     client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
     if reset:
         try:
-            client.delete_collection(config.CHROMA_COLLECTION)
-            print(f"♻️  Colección '{config.CHROMA_COLLECTION}' borrada (reindexado limpio).")
+            client.delete_collection(coleccion)
+            print(f"♻️  Colección '{coleccion}' borrada (reindexado limpio).")
         except Exception:
             pass  # no existía todavía: no pasa nada
 
     collection = client.get_or_create_collection(
-        name=config.CHROMA_COLLECTION,
+        name=coleccion,
         metadata={"hnsw:space": "cosine"},  # misma métrica que usa el chat
     )
 
     splitter = _crear_splitter()
-    print(f"Troceado: chunk_size={config.CHUNK_SIZE}, overlap={config.CHUNK_OVERLAP}\n")
+    print(
+        f"Troceado: chunk_size={settings_service.get('CHUNK_SIZE')}, "
+        f"overlap={settings_service.get('CHUNK_OVERLAP')}\n"
+    )
 
     total_chunks = 0
     total_archivos = 0
@@ -149,7 +157,7 @@ def main(reset: bool = True) -> None:
 
     print(
         f"\n✅ Indexado completo: {total_archivos} archivos → {total_chunks} chunks "
-        f"en la colección '{config.CHROMA_COLLECTION}'."
+        f"en la colección '{coleccion}'."
     )
     if total_chunks == 0:
         print("   (Aún no has puesto documentos. Mira backend/documentos/README.md)")

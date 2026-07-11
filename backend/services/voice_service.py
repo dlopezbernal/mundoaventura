@@ -17,6 +17,7 @@ import io
 from elevenlabs.client import ElevenLabs
 
 from backend import config
+from backend.services import settings_service
 
 
 class VoiceError(ValueError):
@@ -53,10 +54,12 @@ def transcribir(audio_bytes: bytes) -> str:
     """
     client = _get_client()
     try:
+        modelo_stt = settings_service.get("ELEVENLABS_STT_MODEL")
+        idioma = settings_service.get("STT_LANG")
         resultado = client.speech_to_text.convert(
             file=io.BytesIO(audio_bytes),
-            model_id=config.ELEVENLABS_STT_MODEL,
-            language_code=config.STT_LANG,
+            model_id=modelo_stt,
+            language_code=idioma,
         )
         texto = (resultado.text or "").strip()
     except Exception as exc:
@@ -66,7 +69,8 @@ def transcribir(audio_bytes: bytes) -> str:
         print(
             f"[VOZ] 🎙️ STT OK · {len(audio_bytes)} bytes de audio recibidos del "
             f'frontend → texto transcrito: "{texto}" '
-            f"(ElevenLabs modelo={config.ELEVENLABS_STT_MODEL}, idioma={config.STT_LANG})"
+            f"(ElevenLabs modelo={settings_service.get('ELEVENLABS_STT_MODEL')}, "
+            f"idioma={settings_service.get('STT_LANG')})"
         )
     return texto
 
@@ -80,9 +84,9 @@ def sintetizar(texto: str, voz_id: str) -> bytes:
     try:
         stream = client.text_to_speech.convert(
             voice_id=voz_id,
-            model_id=config.ELEVENLABS_TTS_MODEL,
+            model_id=settings_service.get("ELEVENLABS_TTS_MODEL"),
             text=texto,
-            output_format=config.TTS_OUTPUT_FORMAT,
+            output_format=settings_service.get("TTS_OUTPUT_FORMAT"),
         )
         # convert() devuelve un iterador de trozos de bytes; algunos SDK devuelven
         # los bytes ya unidos. Cubrimos ambos casos.

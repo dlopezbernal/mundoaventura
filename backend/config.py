@@ -119,6 +119,16 @@ DEEPL_API_KEY: str = os.getenv("DEEPL_API_KEY", "").strip()
 # Carpeta donde ChromaDB guarda su índice vectorial (persistente entre reinicios).
 CHROMA_DIR: Path = (PROJECT_ROOT / os.getenv("CHROMA_DIR", "backend/chroma_db")).resolve()
 
+# --- Base de datos de configuración (SQLite) ---
+# Fichero SQLite donde viven los AJUSTES editables en caliente y el catálogo
+# (personajes, ubicaciones, documentos). NO guarda secretos (las claves API
+# siguen en el .env). Es "bootstrap": la RUTA de la BBDD sí se lee del .env, pero
+# su CONTENIDO (los ajustes) se edita desde la UI, no desde aquí. Ver
+# services/settings_service.py. No se versiona (está en .gitignore).
+CONFIG_DB_PATH: Path = (
+    PROJECT_ROOT / os.getenv("CONFIG_DB_PATH", "backend/config_db.sqlite3")
+).resolve()
+
 # --- Ingesta de documentos (chunking) ---
 # Carpeta raíz de los documentos, organizada por personaje:
 #   backend/documentos/<personaje_id>/<archivo.pdf|.txt|.md>

@@ -33,6 +33,7 @@ import replicate
 from backend import config
 from backend import debug_log
 from backend import personajes as personajes_cfg
+from backend.services import settings_service
 from backend.services import translation_service
 from backend.services import voice_service
 
@@ -72,8 +73,8 @@ def _trazar_origen(
     if distancia is not None:
         print(
             f"[CHAT]        mejor distancia d={distancia:.2f}  "
-            f"(umbrales coseno: BAJO={config.EVALUATOR_UMBRAL_BAJO}→RAG, "
-            f"ALTO={config.EVALUATOR_UMBRAL_ALTO}→GENERAL; entre ambos=dudoso)"
+            f"(umbrales coseno: BAJO={settings_service.get('EVALUATOR_UMBRAL_BAJO')}→RAG, "
+            f"ALTO={settings_service.get('EVALUATOR_UMBRAL_ALTO')}→GENERAL; entre ambos=dudoso)"
         )
     print(f'[CHAT]        pregunta traducida (EN) que se buscó: "{pregunta_en}"')
 
@@ -99,7 +100,7 @@ def _get_collection():
     # La colección la construye el script de ingesta (python -m backend.ingest)
     # a partir de los documentos. Aquí solo la ABRIMOS para consultarla.
     _collection = _client.get_or_create_collection(
-        name=config.CHROMA_COLLECTION,
+        name=settings_service.get("CHROMA_COLLECTION"),
         metadata={"hnsw:space": "cosine"},
     )
 
@@ -130,7 +131,7 @@ def _recuperar_contexto(
     collection = _get_collection()
     resultado = collection.query(
         query_texts=[pregunta],
-        n_results=config.RAG_TOP_K,
+        n_results=settings_service.get("RAG_TOP_K"),
         where={"personaje_id": personaje_id},   # solo fichas de este personaje
         include=["documents", "distances"],     # pedimos también las distancias
     )
@@ -218,18 +219,19 @@ def _llamar_llm(
     """
     # En modo DEBUG, deja a la vista en consola el prompt completo (system + user)
     # que recibe el modelo. Es el ÚNICO sitio por el que pasan los 3 usos del LLM.
+    modelo_llm = settings_service.get("REPLICATE_LLM_MODEL")
     debug_log.trazar_prompt(
-        f"Replicate · {etiqueta} ({config.REPLICATE_LLM_MODEL})",
+        f"Replicate · {etiqueta} ({modelo_llm})",
         system=system,
         user=user,
     )
 
     salida = replicate.run(
-        config.REPLICATE_LLM_MODEL,
+        modelo_llm,
         input={
             "prompt": user,
             "system_prompt": system,
-            "max_tokens": max_tokens or config.LLM_MAX_TOKENS,
+            "max_tokens": max_tokens or settings_service.get("LLM_MAX_TOKENS"),
             "temperature": temperature,
         },
     )
@@ -288,9 +290,9 @@ def _clasificar_umbral(distancia: float) -> str:
 
     Es el árbitro GRATIS: solo compara números, sin llamar a ningún LLM.
     """
-    if distancia <= config.EVALUATOR_UMBRAL_BAJO:
+    if distancia <= settings_service.get("EVALUATOR_UMBRAL_BAJO"):
         return "relevante"     # muy parecida a una ficha → es RAG seguro
-    if distancia >= config.EVALUATOR_UMBRAL_ALTO:
+    if distancia >= settings_service.get("EVALUATOR_UMBRAL_ALTO"):
         return "irrelevante"   # muy lejana → no es RAG seguro
     return "dudoso"            # zona gris
 
@@ -305,7 +307,7 @@ def _decidir_origen(
       - metodo    : "umbral" o "llm" (cómo se tomó la decisión, útil para depurar).
       - distancia : la mejor (menor) distancia coseno encontrada (o None).
 
-    Según config.EVALUATOR_MODE:
+    Según el ajuste EVALUATOR_MODE (settings_service):
       • "umbral"  → decide solo el número (gratis). RAG si la mejor ficha está
                     por debajo del umbral BAJO.
       • "llm"     → decide solo el LLM-juez (cuesta una llamada).
@@ -317,7 +319,7 @@ def _decidir_origen(
         return False, "umbral", None
 
     mejor = min(distancias) if distancias else None
-    modo = config.EVALUATOR_MODE
+    modo = settings_service.get("EVALUATOR_MODE")
 
     # Modo LLM puro: el juez decide siempre (ignoramos el umbral).
     if modo == "llm":
@@ -363,7 +365,7 @@ def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
         print(
             f"[VOZ] 🔊 TTS OK · personaje={personaje_id} · voz_id={voz_id} · "
             f"{len(respuesta)} caracteres → mp3 base64 "
-            f"(ElevenLabs modelo={config.ELEVENLABS_TTS_MODEL})"
+            f"(ElevenLabs modelo={settings_service.get('ELEVENLABS_TTS_MODEL')})"
         )
     return audio_b64
 

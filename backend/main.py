@@ -20,7 +20,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend import config
+from backend import config, seed
+from backend.routers import config as config_router
 from backend.routers import conversacion, generation, transcription
 from backend.services import translation_service, voice_service
 
@@ -41,11 +42,24 @@ for _flujo in (sys.stdout, sys.stderr):
 async def lifespan(app: FastAPI):
     """Comprobaciones al arrancar (patrón `lifespan` moderno de FastAPI).
 
-    Al levantar el servidor verifica que DeepL está disponible (es OBLIGATORIO
-    para el chat) y si ElevenLabs (voz) está configurado. No detenemos el servidor
-    si algo falla (para que /docs y /health sigan accesibles), pero avisamos con
-    claridad. El código tras `yield` (apagado) no necesita nada por ahora.
+    Al levantar el servidor: (1) crea la BBDD de configuración y siembra los valores
+    del código si aún no existen (idempotente); (2) verifica que DeepL está disponible
+    (OBLIGATORIO para el chat) y si ElevenLabs (voz) está configurado. No detenemos el
+    servidor si algo falla (para que /docs y /health sigan accesibles), pero avisamos
+    con claridad. El código tras `yield` (apagado) no necesita nada por ahora.
     """
+    # Configuración: crear tablas + seeding "código → BBDD" (no pisa lo ya guardado).
+    try:
+        creados = seed.sembrar_todo()
+        print(
+            f"[Arranque] BBDD de configuración lista. Sembrados nuevos → "
+            f"ajustes={creados['ajustes']}, personajes={creados['personajes']}, "
+            f"ubicaciones={creados['ubicaciones']}. ✅"
+        )
+    except Exception as exc:
+        # Si el seeding falla, la app sigue: settings_service cae a los defaults.
+        print(f"[Arranque] ⚠️  No se pudo preparar/sembrar la BBDD de configuración: {exc}")
+
     est = translation_service.estado()
     if est["deepl_ok"]:
         print("[Arranque] DeepL conectado. ✅")
@@ -104,6 +118,8 @@ app.include_router(generation.router)
 app.include_router(conversacion.router)
 # Transcripción de voz (STT): la pregunta hablada del niño → texto (ElevenLabs Scribe).
 app.include_router(transcription.router)
+# Configuración: ajustes editables en caliente (SQLite + settings_service).
+app.include_router(config_router.router)
 
 
 # ---------------------------------------------------------------------------
