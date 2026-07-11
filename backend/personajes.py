@@ -88,7 +88,7 @@ NOMBRES = {
 # NOMBRES, la carta del frontend y la carpeta backend/documentos/<personaje_id>/.
 # Un personaje SIN entrada aquí responde solo en texto (no rompe).
 # Son voces "premade" de ElevenLabs (funcionan out-of-the-box). Suenan naturales
-# en español con el modelo multilingüe eleven_turbo_v2_5 (ver ELEVENLABS_TTS_MODEL
+# en español con el modelo multilingüe eleven_multilingual_v2 (ver ELEVENLABS_TTS_MODEL
 # en .env). Cámbialas por voces de tu biblioteca desde https://elevenlabs.io/voices.
 VOCES = {
     "sherlock_holmes":   "nPczCjzI2devNBz1zQrb",  # grave y madura (Brian)

@@ -10,6 +10,7 @@ Aquí pones los documentos con los que cada personaje responde en el chat.
    - `t-rex/`
    - `leonardo_da_vinci/`
    - `sherlock_holmes/`
+   - `peter_pan/`
 
 2. **Idioma: INGLÉS.** Los documentos deben estar en inglés (los embeddings funcionan
    mucho mejor). La pregunta del niño se traduce ES→EN automáticamente al preguntar.

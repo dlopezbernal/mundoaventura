@@ -92,15 +92,17 @@ capston/
 │   └── chroma_db/            # Índice vectorial de ChromaDB (lo crea ingest.py; no se versiona)
 ├── frontend-react/           # Interfaz de usuario (SPA: Vite + React 18 + TypeScript)
 │   ├── src/
-│   │   ├── App.tsx           # El asistente por pasos (estado con useReducer)
+│   │   ├── App.tsx           # Orquesta el asistente por pasos (monta fondo, HUD y pantallas)
+│   │   ├── main.tsx          # Punto de entrada de React (monta App)
+│   │   ├── state/useFlow.ts  # Máquina de estados del flujo (useReducer: personaje→mundo→escena)
 │   │   ├── api/              # Contrato tipado (types.ts) + cliente fetch (client.ts)
-│   │   ├── data/             # Catálogos visuales: personajes.ts, ubicaciones.ts
-│   │   └── components/       # StepBar, CardCarousel, SceneView, Chat (+ su .css)
+│   │   ├── data/             # Catálogos: personajes.ts, ubicaciones.ts (+ holo.ts, textos del tema)
+│   │   ├── screens/          # Pantallas: CharacterSelect, PlaceSelect, SceneChat, Settings
+│   │   ├── components/        # Background, Hud, Steps, Coverflow, HoloCard, Roster,
+│   │   │                      #   Console, SceneView, Chat, QuickChips (tema "Arcade Holo")
+│   │   └── styles/           # tokens.css (tokens de diseño) + global.css
 │   ├── vite.config.ts        # Proxy /api y /health → backend local (dev y preview)
-│   └── .env.example          # VITE_BACKEND_URL (URL del backend para la SPA)
-├── legacy/                   # Frontend original en Flet (referencia; ver legacy/README.md)
-│   ├── frontend-flet/
-│   └── requirements-frontend.txt
+│   └── .env.example          # VITE_BACKEND_URL (backend) y VITE_DEBUG (botón de diagnóstico)
 ├── requirements-backend.txt
 └── .env.example              # Plantilla de configuración (backend)
 ```
@@ -192,16 +194,6 @@ npm run preview    # sirve dist/ en local para probarla (proxy al backend inclui
 en **orígenes distintos**, limita los orígenes permitidos con la variable `CORS_ORIGINS` del
 `.env` del backend (lista separada por comas; sin definir se permite cualquier origen) y
 compila la SPA con `VITE_BACKEND_URL` apuntando al backend.
-
-### Frontend legacy (Flet)
-
-El frontend original de escritorio (Flet 0.28.3) se conserva como referencia en
-[`legacy/`](legacy/README.md). Se arranca con:
-
-```powershell
-pip install -r legacy/requirements-frontend.txt
-flet run legacy/frontend-flet/main.py
-```
 
 > Antes de usar el chat hay que **indexar los documentos una vez** (ver
 > [§ Preparar la base de conocimiento](#-preparar-la-base-de-conocimiento-documentos--chunking)).
@@ -336,12 +328,21 @@ recibe ni procesa** datos de depuración (más ligero) y la interfaz que ve el n
 limpia**. En la consola del backend verás líneas como:
 
 ```
-[CHAT] 🟢 [RAG · umbral · d=0.42 · "what do you eat"]
-[CHAT] 🟡 [GENERAL · llm · "how much is 2+2"]
+[CHAT] 🟢 Evaluator → origen=RAG: respuesta FUNDAMENTADA en las fichas recuperadas de este personaje
+[CHAT]        método: decidido GRATIS por la distancia coseno (sin llamar al LLM-juez)
+[CHAT]        mejor distancia d=0.42  (umbrales coseno: BAJO=0.75→RAG, ALTO=0.95→GENERAL; entre ambos=dudoso)
+[CHAT]        pregunta traducida (EN) que se buscó: "what do you eat"
+
+[CHAT] 🟡 Evaluator → origen=GENERAL: las fichas no servían → responde con el conocimiento propio del LLM
+[CHAT]        método: desempatado por el LLM-juez (la distancia caía en la zona dudosa)
+[CHAT]        mejor distancia d=0.88  (umbrales coseno: BAJO=0.75→RAG, ALTO=0.95→GENERAL; entre ambos=dudoso)
+[CHAT]        pregunta traducida (EN) que se buscó: "how much is 2+2"
 ```
 
-El formato es `[CHAT] <icono> [<origen> · <metodo> · d=<distancia> · "<pregunta_en>"]`. **Lo más
-importante es entender que `origen` y `metodo` son DOS cosas distintas**, por eso aparecen juntas:
+Cada decisión imprime un **bloque de varias líneas**: el **origen** (🟢 RAG / 🟡 GENERAL) con su
+explicación, el **método** con el que se decidió (`umbral` gratis o `llm`-juez), la **mejor
+distancia** `d=...` con los umbrales activos, y la **pregunta traducida** a inglés que se buscó.
+**Lo más importante es entender que `origen` y `metodo` son DOS cosas distintas:**
 
 #### Eje 1 — `origen`: de DÓNDE sale el contenido de la respuesta
 
@@ -544,10 +545,10 @@ navegador (`data:audio/mpeg;base64,...`). `getUserMedia` solo existe en contexto
 (https o localhost); si no está disponible o el niño deniega el permiso, el micro se
 deshabilita con un aviso claro y el chat de texto sigue intacto.
 
-> *Nota histórica (frontend legacy de Flet):* un spike demostró que `flet-audio` no graba
-> micrófono y que, sin pinnear versión, arrastraba Flet de 0.28.3 a 1.x rompiendo la interfaz.
-> Por eso el frontend Flet usaba `sounddevice` + `soundfile` (grabar) y reproducción con
-> `sounddevice` (ver `legacy/`).
+> *Nota histórica:* el primer frontend (de escritorio, en Flet) no podía usar `flet-audio`
+> —un spike demostró que no graba micrófono y que, sin fijar versión, arrastraba Flet de 0.28.3
+> a 1.x rompiendo la interfaz—, así que grababa con `sounddevice` + `soundfile`. La migración a
+> la SPA React eliminó esa fricción al usar las APIs nativas del navegador.
 
 ---
 

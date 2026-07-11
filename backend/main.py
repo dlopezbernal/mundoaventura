@@ -15,6 +15,7 @@ Luego abre la documentación interactiva en:  http://127.0.0.1:8000/docs
 
 import os
 import sys
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -34,12 +35,39 @@ for _flujo in (sys.stdout, sys.stderr):
         pass
 
 # ---------------------------------------------------------------------------
-# 1) Crear la aplicación
+# 1) Ciclo de vida de la app (arranque) + creación
 # ---------------------------------------------------------------------------
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Comprobaciones al arrancar (patrón `lifespan` moderno de FastAPI).
+
+    Al levantar el servidor verifica que DeepL está disponible (es OBLIGATORIO
+    para el chat) y si ElevenLabs (voz) está configurado. No detenemos el servidor
+    si algo falla (para que /docs y /health sigan accesibles), pero avisamos con
+    claridad. El código tras `yield` (apagado) no necesita nada por ahora.
+    """
+    est = translation_service.estado()
+    if est["deepl_ok"]:
+        print("[Arranque] DeepL conectado. ✅")
+    else:
+        print("[Arranque] ⚠️  DeepL NO disponible (OBLIGATORIO para el chat):")
+        print(f"[Arranque]     {est['deepl_mensaje']}")
+
+    est_voz = voice_service.estado()
+    if est_voz["elevenlabs_ok"]:
+        print("[Arranque] ElevenLabs (voz) configurado. ✅")
+    else:
+        print("[Arranque] ⚠️  ElevenLabs NO configurado (voz desactivada):")
+        print(f"[Arranque]     {est_voz['elevenlabs_mensaje']}")
+
+    yield
+
+
 app = FastAPI(
     title="Máquina del Tiempo en tu Habitación — Backend",
     description="Servidor de IA. Genera una escena (ubicación + personaje) con Replicate.",
     version="0.3.0",
+    lifespan=lifespan,
 )
 
 # ---------------------------------------------------------------------------
@@ -73,7 +101,6 @@ app.add_middleware(
 # Generación de la escena (ubicación + personaje) con Replicate.
 app.include_router(generation.router)
 # Conversación con el personaje (RAG: ChromaDB + LLM en Replicate).
-# (La entrada por voz con Whisper se añadirá en el siguiente paso.)
 app.include_router(conversacion.router)
 # Transcripción de voz (STT): la pregunta hablada del niño → texto (ElevenLabs Scribe).
 app.include_router(transcription.router)
@@ -93,28 +120,6 @@ def root():
         ],
         "documentacion": "/docs",
     }
-
-
-@app.on_event("startup")
-def _verificar_dependencias():
-    """Al arrancar, comprueba que DeepL está disponible (es obligatorio).
-
-    No detenemos el servidor si falla (para que /docs y /health sigan accesibles),
-    pero avisamos claramente: el chat no funcionará hasta configurar DeepL.
-    """
-    est = translation_service.estado()
-    if est["deepl_ok"]:
-        print("[Arranque] DeepL conectado. ✅")
-    else:
-        print("[Arranque] ⚠️  DeepL NO disponible (OBLIGATORIO para el chat):")
-        print(f"[Arranque]     {est['deepl_mensaje']}")
-
-    est_voz = voice_service.estado()
-    if est_voz["elevenlabs_ok"]:
-        print("[Arranque] ElevenLabs (voz) configurado. ✅")
-    else:
-        print("[Arranque] ⚠️  ElevenLabs NO configurado (voz desactivada):")
-        print(f"[Arranque]     {est_voz['elevenlabs_mensaje']}")
 
 
 @app.get("/health", tags=["Info"])

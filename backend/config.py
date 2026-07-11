@@ -155,7 +155,8 @@ ELEVENLABS_STT_MODEL: str = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v1").strip
 # Alternativas (menos claras): eleven_turbo_v2_5 o eleven_flash_v2_5 (más rápidas/baratas).
 ELEVENLABS_TTS_MODEL: str = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_multilingual_v2").strip()
 
-# Formato del audio devuelto por el TTS (mp3, reproducible por Flet en base64).
+# Formato del audio devuelto por el TTS (mp3; el frontend React lo reproduce
+# como base64 con el Audio() del navegador: "data:audio/mpeg;base64,...").
 TTS_OUTPUT_FORMAT: str = os.getenv("TTS_OUTPUT_FORMAT", "mp3_44100_128").strip()
 
 # Idioma de la transcripción (la pregunta del niño se dice en español).
@@ -170,9 +171,12 @@ def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
 # ---------------------------------------------------------------------------
 # 4) Modo desarrollo
 # ---------------------------------------------------------------------------
-# Cuando DEBUG está activo, el frontend muestra una etiqueta de origen en cada
-# respuesta del chat ([RAG] / [LLM]) para ver de dónde sale la información.
-# En la versión final para el usuario se deja en false (respuestas limpias).
+# Cuando DEBUG está activo, el BACKEND imprime en SU consola (uvicorn) el origen
+# de cada respuesta del chat (🟢 RAG / 🟡 GENERAL) y la traza de los prompts que
+# envía a los servicios externos. NO se muestra en el frontend: la interfaz que ve
+# el niño queda siempre limpia. En la versión final se deja en false.
+# (El botón "Probar conexión" del frontend se controla aparte con VITE_DEBUG en
+# frontend-react/.env, no con esta variable.)
 DEBUG: bool = _leer_bool("DEBUG", "false")
 
 

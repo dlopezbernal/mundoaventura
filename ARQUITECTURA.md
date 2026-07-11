@@ -9,8 +9,7 @@ memoria final del capstone.
 App educativa (niños 8–12) cliente-servidor desacoplada:
 
 - **Frontend (SPA React):** Vite + React 18 + TypeScript, en el navegador; asistente por
-  pasos: catálogos (carrusel), escena y chat (texto + voz). El frontend original de Flet
-  se conserva como referencia en `legacy/`.
+  pasos: catálogos (carrusel), escena y chat (texto + voz).
 - **Backend (FastAPI):** routers finos → services → config. Sin GPU local.
 - **Nube:** Replicate (imagen + LLM), DeepL (traducción), ElevenLabs (voz).
 
@@ -52,10 +51,10 @@ contextos seguros (https o localhost): fuera de ellos, o si se deniega el
 permiso, el micro se deshabilita con un aviso claro y el chat de texto sigue
 funcionando.
 
-> *Nota histórica:* el frontend legacy de Flet no podía usar `flet-audio` (un
-> spike comprobó que no graba y que arrastraba una actualización de Flet que
-> rompía la interfaz), así que grababa con `sounddevice` + `soundfile` y
-> reproducía con `sounddevice`. Ver `legacy/`.
+> *Nota histórica:* el primer frontend (de escritorio, en Flet) no podía usar
+> `flet-audio` (un spike comprobó que no graba y que arrastraba una actualización
+> de Flet que rompía la interfaz), así que grababa con `sounddevice` + `soundfile`.
+> La migración a la SPA React eliminó esa fricción con las APIs nativas del navegador.
 
 ## Invariante `personaje_id`
 

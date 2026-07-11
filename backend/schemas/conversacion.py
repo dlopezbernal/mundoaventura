@@ -6,8 +6,9 @@ Define la ENTRADA y la SALIDA del endpoint POST /api/ask: el niño manda un
 personaje y una pregunta (texto), y recibe la respuesta del personaje junto a
 las fichas en las que se ha basado.
 
-(La pregunta llega como texto. En el siguiente paso añadiremos la versión por
-voz: el audio se transcribirá con Whisper y alimentará este mismo flujo.)
+La pregunta llega como texto. La versión por voz ya está implementada: el audio
+se transcribe en /api/transcribe (ElevenLabs Scribe) y su texto alimenta este
+mismo flujo. Además, la respuesta incluye `audio_base64` (voz del personaje, TTS).
 """
 
 from pydantic import BaseModel, Field
