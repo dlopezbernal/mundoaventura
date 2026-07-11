@@ -91,3 +91,23 @@ def estado() -> dict:
         return {"deepl_ok": True, "deepl_mensaje": "DeepL conectado."}
     except TranslationError as exc:
         return {"deepl_ok": False, "deepl_mensaje": str(exc)}
+
+
+def reiniciar() -> None:
+    """Olvida el cliente cacheado para que se recree con la clave nueva.
+
+    Lo usa la pantalla de APIs (Hito 2) tras guardar una clave de DeepL: así la
+    siguiente traducción usa la clave recién guardada sin reiniciar el backend.
+    """
+    global _translator
+    _translator = None
+
+
+def probar() -> dict:
+    """Prueba de conexión con DeepL para la pantalla de APIs: {ok, mensaje}.
+
+    Fuerza recrear el cliente (por si la clave cambió) y valida contra la API.
+    """
+    reiniciar()
+    est = estado()
+    return {"ok": est["deepl_ok"], "mensaje": est["deepl_mensaje"]}

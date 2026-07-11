@@ -109,3 +109,41 @@ def estado() -> dict:
             "elevenlabs_mensaje": "Falta ELEVENLABS_API_KEY (voz desactivada).",
         }
     return {"elevenlabs_ok": True, "elevenlabs_mensaje": "ElevenLabs configurado."}
+
+
+def reiniciar() -> None:
+    """Olvida el cliente cacheado para que se recree con la clave nueva (pantalla APIs)."""
+    global _client
+    _client = None
+
+
+def _detalle_error(exc: Exception) -> dict:
+    """Extrae el `detail` del error del SDK de ElevenLabs (dict), o {} si no hay."""
+    body = getattr(exc, "body", None)
+    if isinstance(body, dict) and isinstance(body.get("detail"), dict):
+        return body["detail"]
+    return {}
+
+
+def probar() -> dict:
+    """Prueba de conexión con ElevenLabs para la pantalla de APIs: {ok, mensaje}.
+
+    Hace una llamada ligera autenticada (`models.list()`). Ojo con las claves de
+    ElevenLabs con permisos LIMITADOS ("scoped"): una clave válida que solo puede
+    hacer TTS/STT devuelve 401 con `missing_permissions` en este endpoint de lectura.
+    Eso NO es un fallo de conexión: la clave autenticó bien y sirve para lo que la
+    app necesita, así que la damos por válida. Solo una clave realmente INVÁLIDA
+    (`invalid_api_key`) se considera error.
+    """
+    reiniciar()
+    if not config.ELEVENLABS_API_KEY:
+        return {"ok": False, "mensaje": "Falta ELEVENLABS_API_KEY."}
+    try:
+        _get_client().models.list()  # llamada ligera autenticada
+        return {"ok": True, "mensaje": "ElevenLabs conectado."}
+    except Exception as exc:
+        detalle = _detalle_error(exc)
+        if getattr(exc, "status_code", None) == 401 and detalle.get("status") == "missing_permissions":
+            return {"ok": True, "mensaje": "ElevenLabs conectado (clave válida, con permisos limitados)."}
+        mensaje = detalle.get("message") or str(exc)
+        return {"ok": False, "mensaje": f"No se pudo conectar con ElevenLabs: {mensaje}"}

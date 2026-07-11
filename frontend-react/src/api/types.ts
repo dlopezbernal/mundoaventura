@@ -78,6 +78,31 @@ export interface TranscribeResponse {
 }
 
 /**
+ * Estado de un proveedor de API (GET /api/apis). La clave NUNCA llega completa:
+ * solo `configurado` y el valor `enmascarado`. Replica secrets_service.estado().
+ */
+export interface ApiProviderStatus {
+  /** "replicate" | "deepl" | "elevenlabs". */
+  proveedor: string;
+  /** Nombre de la variable en el .env (p. ej. "DEEPL_API_KEY"). */
+  variable: string;
+  /** Nombre visible del proveedor (p. ej. "DeepL"). */
+  nombre: string;
+  /** Enlace para darse de alta y crear la clave. */
+  ayuda_url: string;
+  /** ¿Hay una clave configurada? */
+  configurado: boolean;
+  /** Clave enmascarada ("••••••1234") o null si no hay. */
+  enmascarado: string | null;
+}
+
+/** Resultado de POST /api/apis/{proveedor}/test (probar conexión). */
+export interface ApiTestResult {
+  ok: boolean;
+  mensaje: string;
+}
+
+/**
  * Respuesta del endpoint GET /health. No tiene schema Pydantic en el backend
  * (es un dict ad-hoc en main.py); tipamos los campos que el frontend consulta
  * y dejamos el resto abiertos.

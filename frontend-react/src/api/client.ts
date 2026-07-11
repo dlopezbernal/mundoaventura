@@ -10,6 +10,8 @@
  */
 
 import type {
+  ApiProviderStatus,
+  ApiTestResult,
   AskRequest,
   AskResponse,
   GenerateRequest,
@@ -29,6 +31,7 @@ const TIMEOUT_GENERATE = 120_000;
 const TIMEOUT_GENERATE_ON_PHOTO = 180_000; // la edición (Kontext) tarda más que schnell
 const TIMEOUT_ASK = 120_000;
 const TIMEOUT_TRANSCRIBE = 60_000;
+const TIMEOUT_CONFIG = 30_000; // config: lecturas rápidas y "probar conexión"
 
 /** Error al comunicarnos con el backend (lo mostramos al usuario). */
 export class BackendError extends Error {
@@ -197,4 +200,53 @@ export async function transcribe(
   );
   const body = (await response.json()) as TranscribeResponse;
   return body.texto ?? "";
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · APIs (Hito 2). Las claves NUNCA llegan completas salvo revealApi.
+// ---------------------------------------------------------------------------
+
+/** Estado de los 3 proveedores (claves enmascaradas). GET /api/apis. */
+export async function getApis(): Promise<ApiProviderStatus[]> {
+  const response = await fetchBackend("/api/apis", { method: "GET" }, TIMEOUT_CONFIG);
+  const body = (await response.json()) as { proveedores: ApiProviderStatus[] };
+  return body.proveedores;
+}
+
+/** Guarda claves en el .env (solo los proveedores incluidos). PUT /api/apis. */
+export async function saveApis(
+  claves: Record<string, string>,
+): Promise<ApiProviderStatus[]> {
+  const response = await fetchBackend(
+    "/api/apis",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ claves }),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { proveedores: ApiProviderStatus[] };
+  return body.proveedores;
+}
+
+/** Prueba la conexión de un proveedor. POST /api/apis/{proveedor}/test. */
+export async function testApi(proveedor: string): Promise<ApiTestResult> {
+  const response = await fetchBackend(
+    `/api/apis/${proveedor}/test`,
+    { method: "POST" },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as ApiTestResult;
+}
+
+/** Revela la clave COMPLETA de un proveedor (icono del ojo). POST .../reveal. */
+export async function revealApi(proveedor: string): Promise<string | null> {
+  const response = await fetchBackend(
+    `/api/apis/${proveedor}/reveal`,
+    { method: "POST" },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { clave: string | null };
+  return body.clave;
 }
