@@ -41,7 +41,7 @@ import replicate
 from backend import config
 from backend import debug_log
 from backend import personajes as personajes_cfg
-from backend import ubicaciones as ubicaciones_cfg
+from backend.services import personajes_service, settings_service, ubicaciones_service
 
 
 def _salida_a_base64(output) -> str:
@@ -68,10 +68,11 @@ def _avisar_si_prompt_largo(prompt: str) -> None:
     razón por la que colocamos ahí lo MENOS crítico (ver docstring del módulo).
     """
     tokens = _estimar_tokens(prompt)
-    if tokens > config.CLIP_TOKEN_LIMIT:
+    limite = settings_service.get("CLIP_TOKEN_LIMIT")
+    if tokens > limite:
         print(
             f"[GEN] ⚠️  El prompt (~{tokens} tokens) supera el límite de CLIP "
-            f"({config.CLIP_TOKEN_LIMIT}). CLIP truncará el final, pero T5 lo leerá "
+            f"({limite}). CLIP truncará el final, pero T5 lo leerá "
             "completo. Lo importante va al principio, así que la imagen no debería "
             "verse afectada."
         )
@@ -91,9 +92,11 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     Lanza ValueError (→ 400 en el router) si el personaje/ubicación no existen o
     si falta el token de Replicate.
     """
-    if personaje_id not in personajes_cfg.PROMPTS:
+    ficha_personaje = personajes_service.obtener(personaje_id)
+    if ficha_personaje is None:
         raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
-    if ubicacion_id not in ubicaciones_cfg.UBICACIONES:
+    ficha_ubicacion = ubicaciones_service.obtener(ubicacion_id)
+    if ficha_ubicacion is None:
         raise ValueError(f"Ubicación desconocida: '{ubicacion_id}'.")
     _exigir_token()
 
@@ -101,26 +104,25 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     #   1) SUJETO     → personaje + ubicación (lo esencial, entra en CLIP).
     #   2) ENCUADRE   → FRAMING (cómo de lejos/grande sale el personaje).
     #   3) ESTILO     → STYLE_SUFFIX (look común; si CLIP lo recorta, T5 lo lee).
-    personaje = personajes_cfg.PROMPTS[personaje_id]["prompt"]
-    ubicacion = ubicaciones_cfg.UBICACIONES[ubicacion_id]["prompt"]
+    personaje = ficha_personaje["prompt_imagen"]
+    ubicacion = ficha_ubicacion["prompt_imagen"]
     prompt = (
         f"{personaje}, {ubicacion}, "
         f"{personajes_cfg.FRAMING}, {personajes_cfg.STYLE_SUFFIX}"
     )
     _avisar_si_prompt_largo(prompt)
-    debug_log.trazar_prompt(
-        f"Replicate · escena ({config.REPLICATE_MODEL})", prompt=prompt
-    )
+    modelo = settings_service.get("REPLICATE_MODEL")
+    debug_log.trazar_prompt(f"Replicate · escena ({modelo})", prompt=prompt)
 
     output = replicate.run(
-        config.REPLICATE_MODEL,
+        modelo,
         input={
             "prompt": prompt,
-            "aspect_ratio": config.IMG_ASPECT_RATIO,
-            "output_format": config.IMG_OUTPUT_FORMAT,
+            "aspect_ratio": settings_service.get("IMG_ASPECT_RATIO"),
+            "output_format": settings_service.get("IMG_OUTPUT_FORMAT"),
             "num_outputs": 1,
             # FLUX schnell está destilado para 4 pasos: óptimo y ultra rápido.
-            "num_inference_steps": config.IMG_NUM_STEPS,
+            "num_inference_steps": settings_service.get("IMG_NUM_STEPS"),
         },
     )
 
@@ -147,11 +149,12 @@ def generar_en_foto(
 
     Lanza ValueError (→ 400) si el personaje no existe o falta el token.
     """
-    if personaje_id not in personajes_cfg.PROMPTS:
+    ficha_personaje = personajes_service.obtener(personaje_id)
+    if ficha_personaje is None:
         raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
     _exigir_token()
 
-    personaje = personajes_cfg.PROMPTS[personaje_id]["prompt"]
+    personaje = ficha_personaje["prompt_imagen"]
     # Instrucción de edición, también de MÁS a MENOS importante (CLIP vs T5):
     # primero QUÉ hacer y a QUIÉN añadir, y al final el estilo común (STYLE_SUFFIX),
     # que es lo que mejor tolera caer fuera de CLIP.
@@ -163,8 +166,9 @@ def generar_en_foto(
         f"{personajes_cfg.STYLE_SUFFIX}"
     )
     _avisar_si_prompt_largo(instruccion)
+    modelo_edicion = settings_service.get("REPLICATE_EDIT_MODEL")
     debug_log.trazar_prompt(
-        f"Replicate · edición foto ({config.REPLICATE_EDIT_MODEL})",
+        f"Replicate · edición foto ({modelo_edicion})",
         prompt=instruccion,
     )
 
@@ -172,11 +176,11 @@ def generar_en_foto(
     data_uri = f"data:{mime};base64,{base64.b64encode(image_bytes).decode('utf-8')}"
 
     output = replicate.run(
-        config.REPLICATE_EDIT_MODEL,
+        modelo_edicion,
         input={
             "prompt": instruccion,
             "input_image": data_uri,
-            "output_format": config.IMG_OUTPUT_FORMAT,
+            "output_format": settings_service.get("IMG_OUTPUT_FORMAT"),
             # aspect_ratio por defecto "match_input_image": respeta la foto original.
         },
     )

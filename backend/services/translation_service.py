@@ -84,6 +84,66 @@ def traducir_es_en(texto: str) -> str:
         raise TranslationError(f"Error al traducir con DeepL: {exc}")
 
 
+# Tamaño máximo (caracteres) por petición a DeepL al traducir documentos largos.
+# La API tiene un límite de tamaño por request; troceamos por párrafos MUY por
+# debajo de ese límite para no fallar y no mandar textos gigantes de una vez.
+_MAX_CHARS_LOTE = 40_000
+
+
+def _trocear_para_traducir(texto: str) -> list[str]:
+    """Parte un texto largo en lotes (por párrafos) por debajo de _MAX_CHARS_LOTE.
+
+    Respeta los límites de párrafo (dobles saltos de línea) siempre que puede; si
+    un solo párrafo excede el máximo, lo trocea "a lo bruto" por tamaño.
+    """
+    lotes: list[str] = []
+    actual = ""
+    for parrafo in texto.split("\n\n"):
+        # Un párrafo por sí solo más grande que el máximo: se parte por tamaño.
+        if len(parrafo) > _MAX_CHARS_LOTE:
+            if actual:
+                lotes.append(actual)
+                actual = ""
+            for i in range(0, len(parrafo), _MAX_CHARS_LOTE):
+                lotes.append(parrafo[i : i + _MAX_CHARS_LOTE])
+            continue
+        # ¿Cabe el párrafo en el lote actual?
+        if len(actual) + len(parrafo) + 2 > _MAX_CHARS_LOTE:
+            lotes.append(actual)
+            actual = parrafo
+        else:
+            actual = f"{actual}\n\n{parrafo}" if actual else parrafo
+    if actual:
+        lotes.append(actual)
+    return lotes
+
+
+def traducir_a_ingles(texto: str) -> str:
+    """Traduce un DOCUMENTO a inglés (auto-detectando el idioma de origen).
+
+    Se usa al guardar un documento del RAG cuando el adulto NO ha marcado que ya
+    está en inglés: los embeddings rinden mucho mejor en inglés. A diferencia de
+    `traducir_es_en` (pregunta corta, ES fijo), aquí el origen se autodetecta
+    (source_lang=None) y el texto puede ser largo, así que lo troceamos por lotes.
+
+    Lanza TranslationError si DeepL no está disponible.
+    """
+    translator = _get_translator()
+    lotes = _trocear_para_traducir(texto)
+    debug_log.trazar_prompt(
+        "DeepL · traducción documento → EN",
+        prompt=f"({len(texto)} caracteres en {len(lotes)} lote/s)",
+    )
+    try:
+        # translate_text acepta una lista y devuelve una lista (un resultado por lote).
+        resultados = translator.translate_text(lotes, target_lang="EN-US")
+        if not isinstance(resultados, list):
+            resultados = [resultados]
+        return "\n\n".join(r.text for r in resultados)
+    except Exception as exc:
+        raise TranslationError(f"Error al traducir el documento con DeepL: {exc}")
+
+
 def estado() -> dict:
     """Comprueba el estado de DeepL SIN lanzar excepción (para /health y arranque)."""
     try:
@@ -91,3 +151,23 @@ def estado() -> dict:
         return {"deepl_ok": True, "deepl_mensaje": "DeepL conectado."}
     except TranslationError as exc:
         return {"deepl_ok": False, "deepl_mensaje": str(exc)}
+
+
+def reiniciar() -> None:
+    """Olvida el cliente cacheado para que se recree con la clave nueva.
+
+    Lo usa la pantalla de APIs (Hito 2) tras guardar una clave de DeepL: así la
+    siguiente traducción usa la clave recién guardada sin reiniciar el backend.
+    """
+    global _translator
+    _translator = None
+
+
+def probar() -> dict:
+    """Prueba de conexión con DeepL para la pantalla de APIs: {ok, mensaje}.
+
+    Fuerza recrear el cliente (por si la clave cambió) y valida contra la API.
+    """
+    reiniciar()
+    est = estado()
+    return {"ok": est["deepl_ok"], "mensaje": est["deepl_mensaje"]}

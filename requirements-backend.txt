@@ -12,6 +12,10 @@
 # --- Generación de imágenes y conversación (en la nube) ---
 replicate                 # Cliente de Replicate.com: genera imágenes y consulta el LLM (chat)
 
+# --- Configuración editable en caliente (menú de ajustes) ---
+sqlmodel                  # ORM ligero (Pydantic + SQLAlchemy) sobre SQLite: ajustes y catálogo.
+                          # SQLite ya viene en Python; no añade servidor de BBDD.
+
 # --- Conversación / RAG ---
 chromadb                  # Base de datos vectorial local (CPU). Guarda e indexa los chunks.
                           # Trae su propio modelo de embeddings (onnx, CPU): no necesita torch ni claves.

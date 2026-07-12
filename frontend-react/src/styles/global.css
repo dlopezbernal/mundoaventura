@@ -62,6 +62,42 @@ button {
   background: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.4) 2px 3px);
 }
 
+/* Estado de carga/error del catálogo de personajes (App, Hito 4): mientras se
+   trae por API o si falla. Centrado y sobrio, en clave holo. */
+.holo-cargando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  min-height: 40vh;
+  margin-top: 24px;
+  font-family: var(--font-disp);
+  font-weight: 700;
+  color: var(--txt);
+}
+.holo-cargando-emoji {
+  font-size: 2.4rem;
+  animation: holo-latido 1.4s ease-in-out infinite;
+}
+.holo-cargando-detalle {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: #8fa3e0;
+  max-width: 42ch;
+}
+@keyframes holo-latido {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo-cargando-emoji {
+    animation: none;
+  }
+}
+
 /* Botones grandes reutilizables (los usan SceneView y otros), en clave holo.
    El estilado fino del paso 3 se completa en la segunda tanda. */
 .btn {

@@ -1,6 +1,7 @@
 /**
- * Settings — Página de configuración (plantilla) en clave Arcade Holo.
- * Rejilla de paneles con filas etiqueta/control (toggles, sliders, selects).
+ * Settings — Área de configuración en clave Arcade Holo.
+ * Cabecera + barra de pestañas + contenido de la pestaña activa.
+ * Estilos de la pestaña "APIs" al final (tarjetas de proveedor).
  */
 
 .page {
@@ -225,4 +226,490 @@
   .toggleKnob {
     transition: none;
   }
+}
+
+/* ===========================================================================
+ * Barra de pestañas
+ * ======================================================================== */
+.tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--edge);
+  padding-bottom: 10px;
+}
+.tab {
+  font-family: var(--font-disp);
+  font-weight: 700;
+  font-size: 0.85rem;
+  letter-spacing: 0.02em;
+  color: #8fa3e0;
+  background: rgba(4, 8, 28, 0.5);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 8px 14px;
+  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+.tab:hover {
+  color: var(--txt);
+}
+.tabOn {
+  color: #04121f;
+  background: linear-gradient(90deg, var(--holo), var(--lime));
+  border-color: transparent;
+  box-shadow: 0 0 16px rgba(62, 242, 255, 0.35);
+}
+
+/* ===========================================================================
+ * Pestañas "IA" / "General" — formulario genérico de ajustes
+ * ======================================================================== */
+.cfgWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cfgCampo {
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.5), rgba(6, 12, 34, 0.55));
+  box-shadow: inset 0 0 22px rgba(62, 242, 255, 0.05);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cfgCabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+/* Los prompts (multilínea) ocupan a lo ancho: etiqueta arriba, textarea abajo. */
+.cfgCampoAncho .cfgCabecera {
+  flex-direction: column;
+  align-items: stretch;
+}
+.cfgPunto {
+  margin-left: 8px;
+  color: var(--pink);
+  font-size: 0.7rem;
+  vertical-align: middle;
+}
+
+.textarea {
+  width: 100%;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--txt);
+  background: rgba(4, 8, 28, 0.7);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+.textarea:focus-visible {
+  outline: 2px solid var(--holo);
+  outline-offset: 1px;
+}
+
+.reindexAviso {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #ffd45e;
+  border: 1px solid rgba(255, 212, 94, 0.4);
+  background: rgba(255, 212, 94, 0.08);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.reindexAviso code {
+  font-family: var(--font-pixel);
+  font-size: 0.72em;
+  color: var(--holo);
+}
+
+/* ===========================================================================
+ * Puerta de adulto (AdminGate) — crear/introducir PIN
+ * ======================================================================== */
+.gate {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+.gateCard {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  border: 1px solid var(--holo);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.6), rgba(6, 12, 34, 0.7));
+  box-shadow: inset 0 0 30px rgba(62, 242, 255, 0.1);
+  padding: 26px 22px;
+}
+.gateIcono {
+  font-size: 2.6rem;
+}
+.gateTitulo {
+  font-family: var(--font-disp);
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: #fff;
+  margin: 8px 0 6px;
+}
+.gateTexto {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: #8fa3e0;
+  margin: 0 0 16px;
+}
+.gateCard form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+.gateCard .input {
+  width: 100%;
+  max-width: none;
+  text-align: center;
+  letter-spacing: 0.3em;
+  font-size: 1.1rem;
+  padding: 10px 12px;
+}
+
+/* ===========================================================================
+ * Pestaña "Personajes" — lista + tarjetas + formulario de alta/edición
+ * ======================================================================== */
+.pjLista {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.pjCard {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.5), rgba(6, 12, 34, 0.55));
+  box-shadow: inset 0 0 22px rgba(62, 242, 255, 0.05);
+  padding: 10px 14px;
+}
+.pjEmoji {
+  font-size: 1.8rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.pjInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.pjNombre {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--txt);
+}
+.pjInactivo {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: var(--pink);
+}
+.pjMeta {
+  font-size: 0.75rem;
+  color: #8fa3e0;
+}
+.pjMeta code {
+  font-family: var(--font-pixel);
+  font-size: 0.72em;
+  color: var(--holo);
+}
+.pjAcciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.pjBorrar {
+  border: 1px solid rgba(255, 46, 151, 0.5);
+  background: rgba(255, 46, 151, 0.08);
+  color: var(--pink);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 15px;
+}
+.pjBorrar:hover {
+  background: rgba(255, 46, 151, 0.18);
+}
+
+/* --- Formulario de alta/edición --- */
+.pjForm {
+  border: 1px solid var(--holo);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.6), rgba(6, 12, 34, 0.65));
+  box-shadow: inset 0 0 26px rgba(62, 242, 255, 0.08);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.pjFormTitulo {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--txt);
+  margin: 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--edge);
+}
+.pjLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.82rem;
+  color: var(--txt);
+}
+/* Dentro de una label, los inputs ocupan todo el ancho disponible. */
+.pjLabel .input,
+.pjLabel .select {
+  width: 100%;
+  max-width: none;
+}
+.pjFila2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.pjToggleFila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pjBarra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* --- Panel de documentos del RAG (dentro de la edición de un personaje) --- */
+.docsPanel {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(79, 242, 255, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.docsTitulo {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--txt);
+  margin: 0;
+}
+.docsCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: #8fa3e0;
+}
+.docsAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+/* La etiqueta que envuelve el <input type=file> se ve como un botón (.testBtn). */
+.docsAcciones label {
+  cursor: pointer;
+}
+.docsDisabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.docsUrlFila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.docsUrlFila .input {
+  flex: 1;
+  min-width: 200px;
+  max-width: none;
+}
+.docsLista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.docsItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: rgba(4, 8, 28, 0.4);
+  padding: 8px 10px;
+}
+.docsNombre {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--txt);
+  word-break: break-all;
+}
+.docsMeta {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--holo);
+  white-space: nowrap;
+}
+
+/* ===========================================================================
+ * Pestaña "APIs" — tarjetas de proveedor
+ * ======================================================================== */
+.apisWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.apisIntro {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #8fa3e0;
+}
+.apisIntro code {
+  font-family: var(--font-pixel);
+  font-size: 0.72em;
+  color: var(--holo);
+}
+
+.apiCard {
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.55), rgba(6, 12, 34, 0.6));
+  box-shadow: inset 0 0 26px rgba(62, 242, 255, 0.06);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.apiHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.apiName {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--txt);
+}
+.badge {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.badgeOk {
+  color: #04121f;
+  background: var(--lime);
+}
+.badgeNo {
+  color: var(--txt);
+  background: rgba(255, 46, 151, 0.25);
+  border: 1px solid rgba(255, 46, 151, 0.5);
+}
+
+.keyRow {
+  display: flex;
+  gap: 8px;
+}
+.keyInput {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  letter-spacing: 0.04em;
+  color: var(--txt);
+  background: rgba(4, 8, 28, 0.7);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.keyInput:focus-visible {
+  outline: 2px solid var(--holo);
+  outline-offset: 1px;
+}
+.eyeBtn {
+  flex-shrink: 0;
+  width: 44px;
+  border: 1px solid var(--edge);
+  background: rgba(4, 8, 28, 0.6);
+  border-radius: 10px;
+  font-size: 16px;
+}
+.eyeBtn:hover {
+  border-color: var(--holo);
+}
+
+.apiActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.testBtn {
+  font-family: var(--font-disp);
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--holo);
+  border: 1px solid var(--edge);
+  background: rgba(4, 8, 28, 0.6);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.testBtn:hover:not(:disabled) {
+  border-color: var(--holo);
+  box-shadow: 0 0 12px rgba(62, 242, 255, 0.25);
+}
+.testBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.testOk {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--lime);
+}
+.testNo {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--pink);
+}
+.helpLink {
+  margin-left: auto;
+  font-size: 0.78rem;
+  color: var(--holo);
+  text-decoration: none;
+}
+.helpLink:hover {
+  text-decoration: underline;
 }

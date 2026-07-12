@@ -12,17 +12,12 @@
  * la escena si la selección no cambió.
  */
 
-import { useReducer, useRef } from "react";
+import { useMemo, useReducer, useRef } from "react";
 import { BackendError, generate, generateOnPhoto } from "../api/client";
-import { PERSONAJES } from "../data/personajes";
-import { UBICACIONES } from "../data/ubicaciones";
+import type { PersonajeDTO, UbicacionDTO } from "../api/types";
 
 /** Id especial (no es una ubicación real) para el modo "Usar mi foto". */
 export const FOTO_ID = "__foto__";
-
-/** Catálogos como listas ordenadas para los carruseles (con vuelta circular). */
-export const PERSONAJE_KEYS = Object.keys(PERSONAJES);
-export const LUGAR_KEYS = [FOTO_ID, ...Object.keys(UBICACIONES)]; // "Mi foto" 1º
 
 interface Estado {
   paso: 1 | 2 | 3;
@@ -37,18 +32,21 @@ interface Estado {
   error: string | null;
 }
 
-const ESTADO_INICIAL: Estado = {
-  paso: 1,
-  personajeIdx: 0,
-  ubicacionIdx: 0,
-  personajeId: PERSONAJE_KEYS[0],
-  ubicacionId: null,
-  fotoFile: null,
-  escenaBase64: null,
-  generadoPara: null,
-  cargando: false,
-  error: null,
-};
+/** Estado inicial (el personaje 0 del catálogo recibido queda autoseleccionado). */
+function estadoInicial(personajeKeys: string[]): Estado {
+  return {
+    paso: 1,
+    personajeIdx: 0,
+    ubicacionIdx: 0,
+    personajeId: personajeKeys[0],
+    ubicacionId: null,
+    fotoFile: null,
+    escenaBase64: null,
+    generadoPara: null,
+    cargando: false,
+    error: null,
+  };
+}
 
 type Accion =
   | { type: "MOVER_PERSONAJE"; delta: number }
@@ -60,17 +58,23 @@ type Accion =
   | { type: "ESCENA_ERROR"; mensaje: string }
   | { type: "REINICIAR" };
 
-function reducer(estado: Estado, accion: Accion): Estado {
+/**
+ * Fábrica del reducer: recibe las claves de los catálogos (que ahora llegan por
+ * API, no de módulos estáticos) y devuelve el reducer que las usa para los
+ * carruseles de personaje y de lugar.
+ */
+function crearReducer(personajeKeys: string[], lugarKeys: string[]) {
+  return function reducer(estado: Estado, accion: Accion): Estado {
   switch (accion.type) {
     case "MOVER_PERSONAJE": {
-      const n = PERSONAJE_KEYS.length;
+      const n = personajeKeys.length;
       const idx = (((estado.personajeIdx + accion.delta) % n) + n) % n;
-      return { ...estado, personajeIdx: idx, personajeId: PERSONAJE_KEYS[idx] };
+      return { ...estado, personajeIdx: idx, personajeId: personajeKeys[idx] };
     }
     case "MOVER_LUGAR": {
-      const n = LUGAR_KEYS.length;
+      const n = lugarKeys.length;
       const idx = (((estado.ubicacionIdx + accion.delta) % n) + n) % n;
-      const key = LUGAR_KEYS[idx];
+      const key = lugarKeys[idx];
       if (key === FOTO_ID) {
         // "Mi foto" sólo queda seleccionada si ya hay un archivo elegido.
         return {
@@ -103,8 +107,9 @@ function reducer(estado: Estado, accion: Accion): Estado {
     case "ESCENA_ERROR":
       return { ...estado, cargando: false, error: accion.mensaje };
     case "REINICIAR":
-      return ESTADO_INICIAL;
+      return estadoInicial(personajeKeys);
   }
+  };
 }
 
 /** Clave que identifica una selección completa; si no cambia, no se regenera. */
@@ -112,8 +117,25 @@ function claveSeleccion(pid: string, uid: string, foto: File | null): string {
   return `${pid}|${uid}|${foto ? `${foto.name}:${foto.lastModified}` : ""}`;
 }
 
-export function useFlow() {
-  const [estado, dispatch] = useReducer(reducer, ESTADO_INICIAL);
+/**
+ * Máquina de estados del asistente. Recibe los CATÁLOGOS de personajes y de
+ * ubicaciones (cargados por API en App), de los que salen las claves de los
+ * carruseles, el personaje inicial y el nombre del lugar elegido.
+ */
+export function useFlow(personajes: PersonajeDTO[], ubicaciones: UbicacionDTO[]) {
+  const personajeKeys = useMemo(() => personajes.map((p) => p.id), [personajes]);
+  // "Mi foto" va primera, luego las ubicaciones del catálogo.
+  const lugarKeys = useMemo(() => [FOTO_ID, ...ubicaciones.map((u) => u.id)], [ubicaciones]);
+  // Nombre visible por id de ubicación (para el mensaje "MUNDO FIJADO: …").
+  const nombrePorLugar = useMemo(
+    () => Object.fromEntries(ubicaciones.map((u) => [u.id, u.nombre])),
+    [ubicaciones],
+  );
+  const reducer = useMemo(
+    () => crearReducer(personajeKeys, lugarKeys),
+    [personajeKeys, lugarKeys],
+  );
+  const [estado, dispatch] = useReducer(reducer, personajeKeys, estadoInicial);
   // Guard anti doble clic: evita lanzar dos generaciones (dos cobros) seguidas.
   const generandoRef = useRef(false);
 
@@ -125,7 +147,7 @@ export function useFlow() {
 
   function nombreLugar(): string {
     if (ubicacionId === FOTO_ID) return "tu foto";
-    if (ubicacionId) return UBICACIONES[ubicacionId].label;
+    if (ubicacionId) return nombrePorLugar[ubicacionId] ?? "";
     return "";
   }
 

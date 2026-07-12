@@ -32,7 +32,8 @@ import replicate
 
 from backend import config
 from backend import debug_log
-from backend import personajes as personajes_cfg
+from backend.services import personajes_service
+from backend.services import settings_service
 from backend.services import translation_service
 from backend.services import voice_service
 
@@ -49,11 +50,11 @@ def _trazar_origen(
 ) -> None:
     """Imprime por la consola del BACKEND si la respuesta vino del RAG o no.
 
-    Solo en modo DEBUG (config.DEBUG). Antes esto se calculaba/mostraba en el
+    Solo en modo DEBUG (settings_service). Antes esto se calculaba/mostraba en el
     frontend; se hace aquí porque el backend ya tiene todos los datos, así no hay
     que enviarlos ni procesarlos en el cliente.
     """
-    if not config.DEBUG:
+    if not settings_service.get("DEBUG"):
         return
     icono = _ICONO_ORIGEN.get(origen, "⚪")
     # Qué significa el origen elegido (de dónde sale la respuesta del personaje).
@@ -72,8 +73,8 @@ def _trazar_origen(
     if distancia is not None:
         print(
             f"[CHAT]        mejor distancia d={distancia:.2f}  "
-            f"(umbrales coseno: BAJO={config.EVALUATOR_UMBRAL_BAJO}→RAG, "
-            f"ALTO={config.EVALUATOR_UMBRAL_ALTO}→GENERAL; entre ambos=dudoso)"
+            f"(umbrales coseno: BAJO={settings_service.get('EVALUATOR_UMBRAL_BAJO')}→RAG, "
+            f"ALTO={settings_service.get('EVALUATOR_UMBRAL_ALTO')}→GENERAL; entre ambos=dudoso)"
         )
     print(f'[CHAT]        pregunta traducida (EN) que se buscó: "{pregunta_en}"')
 
@@ -99,7 +100,7 @@ def _get_collection():
     # La colección la construye el script de ingesta (python -m backend.ingest)
     # a partir de los documentos. Aquí solo la ABRIMOS para consultarla.
     _collection = _client.get_or_create_collection(
-        name=config.CHROMA_COLLECTION,
+        name=settings_service.get("CHROMA_COLLECTION"),
         metadata={"hnsw:space": "cosine"},
     )
 
@@ -113,6 +114,19 @@ def _get_collection():
         )
 
     return _collection
+
+
+def reiniciar_coleccion() -> None:
+    """Olvida el cliente/colección cacheados de ChromaDB.
+
+    Lo llama documentos_service tras un REINDEXADO GLOBAL (que borra y recrea la
+    colección): el handle cacheado apuntaría a una colección eliminada, así que se
+    fuerza a reabrirla en la siguiente pregunta. Tras un reindexado incremental
+    (borrar+reañadir chunks de un personaje) NO hace falta: la colección es la misma.
+    """
+    global _client, _collection
+    _client = None
+    _collection = None
 
 
 def _recuperar_contexto(
@@ -130,7 +144,7 @@ def _recuperar_contexto(
     collection = _get_collection()
     resultado = collection.query(
         query_texts=[pregunta],
-        n_results=config.RAG_TOP_K,
+        n_results=settings_service.get("RAG_TOP_K"),
         where={"personaje_id": personaje_id},   # solo fichas de este personaje
         include=["documents", "distances"],     # pedimos también las distancias
     )
@@ -153,21 +167,15 @@ def _construir_prompt(nombre: str, contexto: list[str], pregunta: str) -> tuple[
     en inglés).
     """
     fichas_texto = "\n".join(f"- {ficha}" for ficha in contexto) or "(no data)"
-
-    system = (
-        f"You are {nombre}, speaking in the first person to a child aged 8 to 12. "
-        "ALWAYS reply in Spanish, in a short (2-4 sentences), cheerful and simple "
-        "way. Use ONLY the information in the cards I give you. If the answer is not "
-        "in the cards, kindly say that you do not know that, without making anything "
-        "up. Never break character. "
-        "Do NOT start your answer with a greeting or by introducing yourself "
-        "(no 'Hola', no 'Como [name]'); answer directly as if continuing a conversation."
+    # Plantillas editables desde el menú de configuración (settings_service);
+    # sus valores por defecto son los prompts en inglés de siempre.
+    system = settings_service.rellenar(
+        settings_service.get("PROMPT_RAG_SYSTEM"), nombre=nombre
     )
-
-    user = (
-        f"Cards with data about me:\n{fichas_texto}\n\n"
-        f"Child's question: {pregunta}\n\n"
-        "Your answer (in the first person, in Spanish):"
+    user = settings_service.rellenar(
+        settings_service.get("PROMPT_RAG_USER"),
+        fichas=fichas_texto,
+        pregunta=pregunta,
     )
     return system, user
 
@@ -181,18 +189,11 @@ def _construir_prompt_general(nombre: str, pregunta: str) -> tuple[str, str]:
     Mismo criterio que _construir_prompt: instrucciones + pregunta EN INGLÉS (Llama 3
     obedece mejor), pero la RESPUESTA se pide EN ESPAÑOL (es lo que lee el niño).
     """
-    system = (
-        f"You are {nombre}, speaking in the first person to a child aged 8 to 12. "
-        "ALWAYS reply in Spanish, in a short (2-4 sentences), cheerful and simple "
-        "way, never breaking character. You have no data cards for this question: "
-        "answer with your own general knowledge, and if you do not know, kindly say "
-        "so without making anything up. "
-        "Do NOT start your answer with a greeting or by introducing yourself "
-        "(no 'Hola', no 'Como [name]'); answer directly as if continuing a conversation."
+    system = settings_service.rellenar(
+        settings_service.get("PROMPT_GENERAL_SYSTEM"), nombre=nombre
     )
-    user = (
-        f"Child's question: {pregunta}\n\n"
-        "Your answer (in the first person, in Spanish):"
+    user = settings_service.rellenar(
+        settings_service.get("PROMPT_GENERAL_USER"), pregunta=pregunta
     )
     return system, user
 
@@ -201,7 +202,7 @@ def _llamar_llm(
     system: str,
     user: str,
     max_tokens: int | None = None,
-    temperature: float = 0.3,
+    temperature: float | None = None,
     etiqueta: str = "LLM",
 ) -> str:
     """Llama al LLM en Replicate y devuelve el texto de la respuesta.
@@ -218,18 +219,24 @@ def _llamar_llm(
     """
     # En modo DEBUG, deja a la vista en consola el prompt completo (system + user)
     # que recibe el modelo. Es el ÚNICO sitio por el que pasan los 3 usos del LLM.
+    modelo_llm = settings_service.get("REPLICATE_LLM_MODEL")
     debug_log.trazar_prompt(
-        f"Replicate · {etiqueta} ({config.REPLICATE_LLM_MODEL})",
+        f"Replicate · {etiqueta} ({modelo_llm})",
         system=system,
         user=user,
     )
 
+    # temperature=None → usa la temperatura configurable del menú (LLM_TEMPERATURE).
+    # El Evaluator pasa 0.0 explícito (juez determinista) y por eso NO cae aquí.
+    if temperature is None:
+        temperature = settings_service.get("LLM_TEMPERATURE")
+
     salida = replicate.run(
-        config.REPLICATE_LLM_MODEL,
+        modelo_llm,
         input={
             "prompt": user,
             "system_prompt": system,
-            "max_tokens": max_tokens or config.LLM_MAX_TOKENS,
+            "max_tokens": max_tokens or settings_service.get("LLM_MAX_TOKENS"),
             "temperature": temperature,
         },
     )
@@ -260,16 +267,11 @@ def _evaluar_relevancia(contexto: list[str], pregunta: str) -> bool:
         return False  # sin fichas no hay nada que evaluar: no es RAG
 
     fichas_texto = "\n".join(f"- {ficha}" for ficha in contexto)
-    system = (
-        "You are a strict evaluator for a RAG system. Your only task is to decide "
-        "whether the context cards contain information to answer the question. "
-        "Reply with EXACTLY one word, no explanation: 'YES' if the cards are "
-        "relevant and sufficient, or 'NO' if they are not."
-    )
-    user = (
-        f"Context cards:\n{fichas_texto}\n\n"
-        f"Question: {pregunta}\n\n"
-        "Are the cards relevant to answer it? Reply only YES or NO:"
+    system = settings_service.get("PROMPT_EVALUATOR_SYSTEM")
+    user = settings_service.rellenar(
+        settings_service.get("PROMPT_EVALUATOR_USER"),
+        fichas=fichas_texto,
+        pregunta=pregunta,
     )
 
     # Respuesta cortísima y temperatura baja: queremos un juez consistente.
@@ -288,9 +290,9 @@ def _clasificar_umbral(distancia: float) -> str:
 
     Es el árbitro GRATIS: solo compara números, sin llamar a ningún LLM.
     """
-    if distancia <= config.EVALUATOR_UMBRAL_BAJO:
+    if distancia <= settings_service.get("EVALUATOR_UMBRAL_BAJO"):
         return "relevante"     # muy parecida a una ficha → es RAG seguro
-    if distancia >= config.EVALUATOR_UMBRAL_ALTO:
+    if distancia >= settings_service.get("EVALUATOR_UMBRAL_ALTO"):
         return "irrelevante"   # muy lejana → no es RAG seguro
     return "dudoso"            # zona gris
 
@@ -305,7 +307,7 @@ def _decidir_origen(
       - metodo    : "umbral" o "llm" (cómo se tomó la decisión, útil para depurar).
       - distancia : la mejor (menor) distancia coseno encontrada (o None).
 
-    Según config.EVALUATOR_MODE:
+    Según el ajuste EVALUATOR_MODE (settings_service):
       • "umbral"  → decide solo el número (gratis). RAG si la mejor ficha está
                     por debajo del umbral BAJO.
       • "llm"     → decide solo el LLM-juez (cuesta una llamada).
@@ -317,7 +319,7 @@ def _decidir_origen(
         return False, "umbral", None
 
     mejor = min(distancias) if distancias else None
-    modo = config.EVALUATOR_MODE
+    modo = settings_service.get("EVALUATOR_MODE")
 
     # Modo LLM puro: el juez decide siempre (ignoramos el umbral).
     if modo == "llm":
@@ -345,25 +347,26 @@ def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
     ElevenLabs, o si el TTS falla, devuelve None. El texto de la respuesta NUNCA
     se rompe por un fallo de voz.
     """
-    voz_id = personajes_cfg.VOCES.get(personaje_id)
+    ficha = personajes_service.obtener(personaje_id)
+    voz_id = ficha["voz_id"] if ficha else None
     if not voz_id or not config.ELEVENLABS_API_KEY:
         return None
     try:
         audio_bytes = voice_service.sintetizar(respuesta, voz_id)
         audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
     except Exception as exc:
-        if config.DEBUG:
+        if settings_service.get("DEBUG"):
             print(
                 f"[VOZ] ⚠️ TTS (síntesis de voz) FALLÓ para el personaje "
                 f"'{personaje_id}' (voz_id={voz_id}): {exc}. Degradación elegante: la "
                 "respuesta se entrega SOLO en texto (audio_base64=null); el chat sigue."
             )
         return None
-    if config.DEBUG:
+    if settings_service.get("DEBUG"):
         print(
             f"[VOZ] 🔊 TTS OK · personaje={personaje_id} · voz_id={voz_id} · "
             f"{len(respuesta)} caracteres → mp3 base64 "
-            f"(ElevenLabs modelo={config.ELEVENLABS_TTS_MODEL})"
+            f"(ElevenLabs modelo={settings_service.get('ELEVENLABS_TTS_MODEL')})"
         )
     return audio_b64
 
@@ -374,7 +377,8 @@ def responder(personaje_id: str, pregunta: str) -> dict:
     Lanza ValueError (→ 400 en el router) si el personaje no existe o falta el
     token de Replicate.
     """
-    if personaje_id not in personajes_cfg.NOMBRES:
+    ficha_personaje = personajes_service.obtener(personaje_id)
+    if ficha_personaje is None:
         raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
     if not config.REPLICATE_API_TOKEN:
         raise ValueError(
@@ -382,7 +386,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
             "https://replicate.com/account/api-tokens y añádelo al .env."
         )
 
-    nombre = personajes_cfg.NOMBRES[personaje_id]
+    nombre = ficha_personaje["nombre"]
 
     # 0) TRADUCCIÓN (OBLIGATORIA): la enciclopedia está en inglés, así que
     #    traducimos la pregunta ES→EN. La versión en inglés (pregunta_en) se usa en

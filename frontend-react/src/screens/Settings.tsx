@@ -1,79 +1,54 @@
 /**
- * Settings — Página de configuración de la aplicación
- * ====================================================
+ * Settings — Área de configuración de la aplicación (con pestañas)
+ * ================================================================
  *
- * Plantilla completa de ajustes en clave "Arcade Holo": cuenta, audio y voz,
- * apariencia, accesibilidad, idioma, contenido y conexión. Se abre desde el
- * botón ⚙️ del HUD y ocupa el lugar del flujo principal (personaje→mundo→escena).
+ * Chasis "Arcade Holo" del menú de configuración. Se abre desde el botón ⚙️ del
+ * HUD y ocupa el lugar del flujo principal. Toda la zona va detrás de un PIN de
+ * adulto (Hito 7): hasta autenticarse se muestra <AdminGate/>; luego, las pestañas:
  *
- * Es una PLANTILLA presentacional: los controles guardan su estado en memoria
- * (útil para prototipar la UI) pero todavía no se persisten ni se aplican al
- * backend. El cableado real (guardar preferencias, aplicar tema, etc.) queda
- * pendiente; los sitios marcados con TODO indican dónde engancharlo.
+ *   - APIs         → claves de los proveedores (Hito 2).
+ *   - IA           → parámetros del motor: RAG, troceado, LLM y prompts (Hito 3).
+ *   - General      → modo desarrollo/DEBUG (Hito 3).
+ *   - Personajes   → CRUD de personajes + documentos del RAG (Hitos 4 y 5).
+ *   - Ubicaciones  → CRUD de ubicaciones (Hito 6).
+ *   - Sistema      → PIN, import/export y cerrar sesión (Hito 7).
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { adminLogout } from "../api/client";
 import styles from "./Settings.module.css";
+import AdminGate from "./config/AdminGate";
+import ApisTab from "./config/ApisTab";
+import ConfigForm from "./config/ConfigForm";
+import PersonajesTab from "./config/PersonajesTab";
+import SistemaTab from "./config/SistemaTab";
+import UbicacionesTab from "./config/UbicacionesTab";
 
 interface Props {
   /** Vuelve al flujo principal cerrando la configuración. */
   onCerrar: () => void;
 }
 
-/** Estado local de la plantilla (aún no se persiste; ver TODO en el docstring). */
-interface Ajustes {
-  jugador: string;
-  edad: string;
-  voz: boolean;
-  volumen: number;
-  velocidadVoz: number;
-  efectos: boolean;
-  scanlines: boolean;
-  animaciones: boolean;
-  brillo: number;
-  reducirMovimiento: boolean;
-  tamanoTexto: string;
-  altoContraste: boolean;
-  idioma: string;
-  dificultad: string;
-  controlParental: boolean;
-  backendUrl: string;
-  modoDesarrollo: boolean;
-}
+const PESTANAS = [
+  { id: "apis", label: "APIs", emoji: "🔑" },
+  { id: "ia", label: "IA", emoji: "🧠" },
+  { id: "general", label: "General", emoji: "⚙️" },
+  { id: "personajes", label: "Personajes", emoji: "🎭" },
+  { id: "ubicaciones", label: "Ubicaciones", emoji: "🗺️" },
+  { id: "sistema", label: "Sistema", emoji: "🛡️" },
+] as const;
 
-const AJUSTES_INICIALES: Ajustes = {
-  jugador: "",
-  edad: "8-10",
-  voz: true,
-  volumen: 80,
-  velocidadVoz: 100,
-  efectos: true,
-  scanlines: true,
-  animaciones: true,
-  brillo: 100,
-  reducirMovimiento: false,
-  tamanoTexto: "normal",
-  altoContraste: false,
-  idioma: "es",
-  dificultad: "media",
-  controlParental: true,
-  backendUrl: import.meta.env.VITE_BACKEND_URL ?? "http://127.0.0.1:8000",
-  modoDesarrollo: import.meta.env.VITE_DEBUG === "true",
-};
+type PestanaId = (typeof PESTANAS)[number]["id"];
 
 export default function Settings({ onCerrar }: Props) {
-  const [aj, setAj] = useState<Ajustes>(AJUSTES_INICIALES);
+  const [pestana, setPestana] = useState<PestanaId>("apis");
+  // Sesión de adulto: hasta autenticarse se muestra la puerta (AdminGate).
+  const [autenticado, setAutenticado] = useState(false);
 
-  // Actualiza un campo del estado de forma tipada.
-  function set<K extends keyof Ajustes>(clave: K, valor: Ajustes[K]) {
-    setAj((prev) => ({ ...prev, [clave]: valor }));
-  }
-
-  function guardar() {
-    // TODO: persistir preferencias (localStorage / backend) y aplicarlas al tema,
-    // audio, accesibilidad y api_client. De momento es una plantilla visual.
-    onCerrar();
-  }
+  const cerrarSesion = useCallback(async () => {
+    await adminLogout();
+    setAutenticado(false);
+  }, []);
 
   return (
     <section className={styles.page} aria-label="Configuración de la aplicación">
@@ -87,283 +62,45 @@ export default function Settings({ onCerrar }: Props) {
         </button>
       </header>
 
-      <div className={styles.grid}>
-        {/* --- Cuenta / Perfil --- */}
-        <Panel icono="🎮" titulo="Perfil del jugador">
-          <Fila etiqueta="Nombre" ayuda="Cómo te llamará tu personaje">
-            <input
-              className={styles.input}
-              type="text"
-              placeholder="Escribe tu nombre…"
-              value={aj.jugador}
-              onChange={(e) => set("jugador", e.target.value)}
-            />
-          </Fila>
-          <Fila etiqueta="Edad" ayuda="Ajusta el contenido a tu edad">
-            <Select
-              valor={aj.edad}
-              onCambio={(v) => set("edad", v)}
-              opciones={[
-                ["8-10", "8 a 10 años"],
-                ["11-12", "11 a 12 años"],
-              ]}
-            />
-          </Fila>
-        </Panel>
+      {!autenticado ? (
+        <AdminGate onListo={() => setAutenticado(true)} />
+      ) : (
+        <>
+          <nav className={styles.tabs} aria-label="Secciones de configuración">
+            {PESTANAS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`${styles.tab} ${pestana === t.id ? styles.tabOn : ""}`}
+                onClick={() => setPestana(t.id)}
+                aria-current={pestana === t.id}
+              >
+                <span aria-hidden="true">{t.emoji}</span> {t.label}
+              </button>
+            ))}
+          </nav>
 
-        {/* --- Audio y voz --- */}
-        <Panel icono="🔊" titulo="Audio y voz">
-          <Fila etiqueta="Voz del personaje" ayuda="El personaje te responde hablando">
-            <Toggle activo={aj.voz} onCambio={(v) => set("voz", v)} />
-          </Fila>
-          <Fila etiqueta="Volumen">
-            <Slider valor={aj.volumen} onCambio={(v) => set("volumen", v)} />
-          </Fila>
-          <Fila etiqueta="Velocidad de la voz">
-            <Slider
-              valor={aj.velocidadVoz}
-              min={50}
-              max={150}
-              onCambio={(v) => set("velocidadVoz", v)}
+          {pestana === "apis" && <ApisTab />}
+          {pestana === "ia" && (
+            <ConfigForm
+              categorias={["rag", "chunking", "llm", "prompts"]}
+              intro="Ajusta el motor de conversación: cómo decide el Evaluator (RAG vs conocimiento general), cuántas fichas recupera, el modelo de lenguaje, el troceado de documentos y los prompts de sistema. Los cambios se aplican al instante, sin reiniciar."
             />
-          </Fila>
-          <Fila etiqueta="Efectos de sonido">
-            <Toggle activo={aj.efectos} onCambio={(v) => set("efectos", v)} />
-          </Fila>
-        </Panel>
-
-        {/* --- Apariencia --- */}
-        <Panel icono="✨" titulo="Apariencia">
-          <Fila etiqueta="Efecto CRT (líneas)" ayuda="Las scanlines tipo TV antigua">
-            <Toggle activo={aj.scanlines} onCambio={(v) => set("scanlines", v)} />
-          </Fila>
-          <Fila etiqueta="Animaciones de fondo">
-            <Toggle activo={aj.animaciones} onCambio={(v) => set("animaciones", v)} />
-          </Fila>
-          <Fila etiqueta="Brillo holográfico">
-            <Slider
-              valor={aj.brillo}
-              min={50}
-              max={150}
-              onCambio={(v) => set("brillo", v)}
-            />
-          </Fila>
-        </Panel>
-
-        {/* --- Accesibilidad --- */}
-        <Panel icono="♿" titulo="Accesibilidad">
-          <Fila etiqueta="Reducir movimiento" ayuda="Menos animaciones en pantalla">
-            <Toggle
-              activo={aj.reducirMovimiento}
-              onCambio={(v) => set("reducirMovimiento", v)}
-            />
-          </Fila>
-          <Fila etiqueta="Tamaño del texto">
-            <Select
-              valor={aj.tamanoTexto}
-              onCambio={(v) => set("tamanoTexto", v)}
-              opciones={[
-                ["normal", "Normal"],
-                ["grande", "Grande"],
-                ["enorme", "Enorme"],
-              ]}
-            />
-          </Fila>
-          <Fila etiqueta="Alto contraste">
-            <Toggle activo={aj.altoContraste} onCambio={(v) => set("altoContraste", v)} />
-          </Fila>
-        </Panel>
-
-        {/* --- Idioma --- */}
-        <Panel icono="🌍" titulo="Idioma">
-          <Fila etiqueta="Idioma de la interfaz">
-            <Select
-              valor={aj.idioma}
-              onCambio={(v) => set("idioma", v)}
-              opciones={[
-                ["es", "Español"],
-                ["en", "English"],
-                ["fr", "Français"],
-              ]}
-            />
-          </Fila>
-        </Panel>
-
-        {/* --- Contenido y seguridad --- */}
-        <Panel icono="🛡️" titulo="Contenido y seguridad">
-          <Fila etiqueta="Nivel de dificultad" ayuda="Cómo de complejas son las respuestas">
-            <Select
-              valor={aj.dificultad}
-              onCambio={(v) => set("dificultad", v)}
-              opciones={[
-                ["facil", "Fácil"],
-                ["media", "Media"],
-                ["avanzada", "Avanzada"],
-              ]}
-            />
-          </Fila>
-          <Fila etiqueta="Control parental" ayuda="Filtra el contenido para peques">
-            <Toggle
-              activo={aj.controlParental}
-              onCambio={(v) => set("controlParental", v)}
-            />
-          </Fila>
-        </Panel>
-
-        {/* --- Conexión / Avanzado --- */}
-        <Panel icono="📡" titulo="Conexión (avanzado)">
-          <Fila etiqueta="URL del servidor" ayuda="Dónde vive el backend">
-            <input
-              className={styles.input}
-              type="text"
-              value={aj.backendUrl}
-              onChange={(e) => set("backendUrl", e.target.value)}
-            />
-          </Fila>
-          <Fila etiqueta="Modo desarrollo" ayuda="Muestra herramientas de diagnóstico">
-            <Toggle activo={aj.modoDesarrollo} onCambio={(v) => set("modoDesarrollo", v)} />
-          </Fila>
-        </Panel>
-
-        {/* --- Acerca de --- */}
-        <Panel icono="ℹ️" titulo="Acerca de">
-          <Fila etiqueta="Aplicación">
-            <span className={styles.dato}>Máquina del Tiempo</span>
-          </Fila>
-          <Fila etiqueta="Versión">
-            <span className={styles.dato}>1.0.0 · Arcade Holo</span>
-          </Fila>
-          <button
-            type="button"
-            className={styles.reset}
-            onClick={() => setAj(AJUSTES_INICIALES)}
-          >
-            ↺ Restablecer valores
-          </button>
-        </Panel>
-      </div>
+          )}
+          {pestana === "general" && (
+            <ConfigForm categorias={["general"]} intro="Opciones generales de la aplicación." />
+          )}
+          {pestana === "personajes" && <PersonajesTab />}
+          {pestana === "ubicaciones" && <UbicacionesTab />}
+          {pestana === "sistema" && <SistemaTab onLogout={() => void cerrarSesion()} />}
+        </>
+      )}
 
       <footer className={styles.footer}>
         <button type="button" className="btn btn-secundario" onClick={onCerrar}>
-          Cancelar
-        </button>
-        <button type="button" className="btn btn-primario" onClick={guardar}>
-          💾 Guardar cambios
+          Volver
         </button>
       </footer>
     </section>
-  );
-}
-
-/* ---------------------------------------------------------------------------
- * Primitivas de UI de la página (solo se usan aquí).
- * ------------------------------------------------------------------------- */
-
-function Panel({
-  icono,
-  titulo,
-  children,
-}: {
-  icono: string;
-  titulo: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={styles.panel}>
-      <h2 className={styles.panelTitle}>
-        <span aria-hidden="true">{icono}</span> {titulo}
-      </h2>
-      <div className={styles.panelBody}>{children}</div>
-    </div>
-  );
-}
-
-function Fila({
-  etiqueta,
-  ayuda,
-  children,
-}: {
-  etiqueta: string;
-  ayuda?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={styles.fila}>
-      <div className={styles.filaTexto}>
-        <span className={styles.filaEtiqueta}>{etiqueta}</span>
-        {ayuda && <span className={styles.filaAyuda}>{ayuda}</span>}
-      </div>
-      <div className={styles.filaControl}>{children}</div>
-    </div>
-  );
-}
-
-function Toggle({
-  activo,
-  onCambio,
-}: {
-  activo: boolean;
-  onCambio: (v: boolean) => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={activo}
-      className={`${styles.toggle} ${activo ? styles.toggleOn : ""}`}
-      onClick={() => onCambio(!activo)}
-    >
-      <span className={styles.toggleKnob} />
-    </button>
-  );
-}
-
-function Slider({
-  valor,
-  onCambio,
-  min = 0,
-  max = 100,
-}: {
-  valor: number;
-  onCambio: (v: number) => void;
-  min?: number;
-  max?: number;
-}) {
-  return (
-    <div className={styles.sliderWrap}>
-      <input
-        className={styles.slider}
-        type="range"
-        min={min}
-        max={max}
-        value={valor}
-        onChange={(e) => onCambio(Number(e.target.value))}
-      />
-      <span className={styles.sliderVal}>{valor}</span>
-    </div>
-  );
-}
-
-function Select({
-  valor,
-  onCambio,
-  opciones,
-}: {
-  valor: string;
-  onCambio: (v: string) => void;
-  opciones: [string, string][];
-}) {
-  return (
-    <select
-      className={styles.select}
-      value={valor}
-      onChange={(e) => onCambio(e.target.value)}
-    >
-      {opciones.map(([v, etiqueta]) => (
-        <option key={v} value={v}>
-          {etiqueta}
-        </option>
-      ))}
-    </select>
   );
 }

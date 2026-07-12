@@ -213,6 +213,14 @@ compila la SPA con `VITE_BACKEND_URL` apuntando al backend.
 El conocimiento del chat **ya no está en el código**: viene de documentos que tú aportas. La
 fase de preparación (cargar → trocear → indexar) la hace `backend/ingest.py` con **LangChain**.
 
+> **Sin terminal:** desde el botón ⚙️ → pestaña **Personajes** → editar un personaje → sección
+> **📄 Documentos** puedes **subir** un `.pdf/.txt/.md`, **ingerir un artículo de Wikipedia por
+> URL** y **borrar** documentos. Cada cambio **reindexa automáticamente solo a ese personaje**
+> (reindexado incremental), y hay un botón **♻️ Reindexar todo** para reconstruir el índice
+> completo. Si el material está en español, se **traduce a inglés con DeepL** al guardarlo (marca
+> "ya está en inglés" para no gastar cuota). Los pasos por terminal de abajo siguen disponibles
+> como alternativa y para cargas masivas.
+
 ### Paso 0 (opcional) — Descarga contenido de Wikipedia
 
 El script `backend/fetch_wikipedia.py` descarga un artículo de Wikipedia como
@@ -550,13 +558,58 @@ deshabilita con un aviso claro y el chat de texto sigue intacto.
 > a 1.x rompiendo la interfaz—, así que grababa con `sounddevice` + `soundfile`. La migración a
 > la SPA React eliminó esa fricción al usar las APIs nativas del navegador.
 
+### 7. Menú de configuración sin código (ajustes en caliente sobre SQLite)
+
+**Decisión:** en lugar de tener todos los parámetros congelados como constantes de `config.py`,
+la app incorpora una **pantalla de configuración** que edita en caliente (sin reiniciar) los
+ajustes de IA, los prompts de sistema y las claves API. Los ajustes vivos se guardan en **SQLite**
+(vía `settings_service`) y las claves API siguen en el `.env`; con la base de datos vacía, la app
+se comporta **exactamente como antes** (los valores por defecto son los de `config.py`).
+
+**Por qué existe esta pantalla — dos motivos:**
+- **(1) Democratizar el uso.** Una persona **sin conocimientos de IA ni de programación** puede
+  poner en marcha y personalizar la aplicación —pegar las claves de las plataformas, crear
+  personajes y ubicaciones, subir documentos al RAG y tocar los parámetros del motor— **sin abrir
+  el código**. Basta con darse de alta en los proveedores (Replicate, DeepL, ElevenLabs) e
+  introducir las claves desde la propia interfaz.
+- **(2) Facilitar el testeo y la calibración.** Cambiar la configuración para **probar y comparar
+  resultados en caliente** (umbrales del Evaluator, modo `umbral`/`llm`/`hibrido`, chunking, modelo
+  y temperatura del LLM, prompts) es inmediato: no hay que reiniciar el backend ni editar ficheros.
+  Esto convierte la app en un **banco de pruebas** del pipeline RAG.
+
+**El umbral del RAG se configura como distancia coseno directa (0–2), sin porcentaje.** Los
+umbrales del Evaluator (`EVALUATOR_UMBRAL_BAJO` por defecto `0.75`, `EVALUATOR_UMBRAL_ALTO` `0.95`)
+se editan tal cual son —la **distancia coseno** de ChromaDB, `0` = idéntico … `2` = opuesto— con
+rango `0.00–2.00` y paso `0.01`, validando `0 ≤ BAJO ≤ ALTO ≤ 2`. **No** se convierten a "% de
+similitud" en ningún punto. Se deja en la métrica nativa porque: **(a)** mantiene el sistema honesto
+—lo que el adulto configura es exactamente lo que usa el motor—; **(b)** simplifica el código al
+eliminar una capa de conversión; y **(c)** facilita la calibración, ya que el valor configurado se
+compara directamente con la distancia real `d=...` que la app expone (en la respuesta de
+`/api/ask` y en la consola con `DEBUG`).
+
+**Toda la configuración va detrás de un PIN de adulto.** Como el área contiene las claves de las
+plataformas y operaciones destructivas (borrar personajes/documentos) y la app la usan niños, la
+primera vez se crea un **PIN** y a partir de ahí se pide para entrar (⚙️). El PIN se guarda
+*hasheado* (nunca en claro) y el backend protege los endpoints sensibles; el flujo del niño
+(elegir personaje/mundo, generar y chatear) sigue siendo público. Desde la pestaña **Sistema** se
+puede cambiar el PIN, **exportar/importar** la configuración en JSON (ajustes + catálogos, nunca las
+claves API) y cerrar sesión; antes de importar se hace una **copia de seguridad** automática del
+fichero SQLite.
+
 ---
 
 ## 💡 Personalizar
 
-- **Añadir personajes:** edita `backend/personajes.py` (`PROMPTS`, `NOMBRES` y, si quieres que
-  hable, `VOCES` con su `voz_id` de ElevenLabs) y `frontend-react/src/data/personajes.ts` (la
-  tarjeta), usando el **mismo `id`** en todos. Un personaje sin `voz_id` responde solo en texto.
-- **Añadir ubicaciones:** igual, en `backend/ubicaciones.py` y `frontend-react/src/data/ubicaciones.ts`.
+- **Añadir personajes (sin tocar código):** ábrelo con el botón ⚙️ → pestaña **Personajes** y pulsa
+  **➕ Nuevo personaje**. Rellena nombre, categoría, emoji, la descripción para su imagen (en inglés)
+  y, si quieres que hable, elige una **voz** del desplegable de ElevenLabs (un personaje sin voz
+  responde solo en texto). Al guardarlo se crea también su carpeta `backend/documentos/<id>/` para
+  los documentos del RAG. El catálogo se guarda en la BBDD (tabla `personajes`) y lo consumen tanto
+  el backend como el frontend por API. Los personajes que trae la app de fábrica se siembran desde
+  `backend/personajes.py` en el primer arranque.
+- **Añadir ubicaciones (sin tocar código):** ⚙️ → pestaña **Ubicaciones** → **➕ Nueva ubicación**.
+  Rellena nombre, emoji y la descripción del fondo (en inglés). El catálogo se guarda en la BBDD
+  (tabla `ubicaciones`) y lo consumen backend y frontend por API. Las ubicaciones de fábrica se
+  siembran desde `backend/ubicaciones.py` en el primer arranque.
 - **Cambiar el modelo o el estilo:** `REPLICATE_MODEL` en el `.env` y el `STYLE_SUFFIX` en
   `backend/personajes.py`.

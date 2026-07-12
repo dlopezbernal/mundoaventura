@@ -13,19 +13,12 @@ import { useMemo, useRef } from "react";
 import Console from "../components/Console/Console";
 import Coverflow from "../components/Coverflow/Coverflow";
 import Roster from "../components/Roster/Roster";
+import type { UbicacionDTO } from "../api/types";
 import { holoCard, type HoloCardData } from "../data/holo";
-import { UBICACIONES } from "../data/ubicaciones";
-import { FOTO_ID, LUGAR_KEYS } from "../state/useFlow";
-
-/** Cartas de lugares reales (estáticas). "Mi foto" se construye en cada render. */
-const CARTAS_LUGAR: Record<string, HoloCardData> = Object.fromEntries(
-  Object.entries(UBICACIONES).map(([id, u]) => [
-    id,
-    holoCard({ id, art: u.emoji, name: u.label.toUpperCase(), tag: "MUNDO" }, "var(--holo)"),
-  ]),
-);
+import { FOTO_ID } from "../state/useFlow";
 
 interface Props {
+  ubicaciones: UbicacionDTO[];
   index: number;
   fotoFile: File | null;
   ubicacionLista: boolean;
@@ -36,6 +29,7 @@ interface Props {
 }
 
 export default function PlaceSelect({
+  ubicaciones,
   index,
   fotoFile,
   ubicacionLista,
@@ -45,9 +39,11 @@ export default function PlaceSelect({
   onBack,
 }: Props) {
   const fotoInputRef = useRef<HTMLInputElement>(null);
-  const n = LUGAR_KEYS.length;
+  // Claves del carrusel: "Mi foto" primera, luego las ubicaciones del catálogo.
+  const lugarKeys = useMemo(() => [FOTO_ID, ...ubicaciones.map((u) => u.id)], [ubicaciones]);
+  const n = lugarKeys.length;
   const i = ((index % n) + n) % n;
-  const keyCentral = LUGAR_KEYS[i];
+  const keyCentral = lugarKeys[i];
 
   // Lista completa: la carta "Mi foto" primero (su nombre refleja si ya hay foto).
   const cartas: HoloCardData[] = useMemo(() => {
@@ -60,8 +56,14 @@ export default function PlaceSelect({
       },
       "var(--pink)",
     );
-    return LUGAR_KEYS.map((id) => (id === FOTO_ID ? fotoCard : CARTAS_LUGAR[id]));
-  }, [fotoFile]);
+    const cartasLugar = ubicaciones.map((u) =>
+      holoCard(
+        { id: u.id, art: u.emoji ?? "🗺️", name: u.nombre.toUpperCase(), tag: "MUNDO" },
+        "var(--holo)",
+      ),
+    );
+    return [fotoCard, ...cartasLugar];
+  }, [fotoFile, ubicaciones]);
 
   function onFotoElegida(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];

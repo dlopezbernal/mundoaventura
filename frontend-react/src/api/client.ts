@@ -10,12 +10,27 @@
  */
 
 import type {
+  AdminStatus,
+  ApiProviderStatus,
+  ApiTestResult,
   AskRequest,
   AskResponse,
+  ConfigExport,
+  ConfigResponse,
+  ConfigSaveResult,
+  DocumentoDTO,
   GenerateRequest,
   GenerateResponse,
   HealthResponse,
+  ImportResult,
+  PersonajeCrear,
+  PersonajeDTO,
+  ReindexResult,
+  SettingMeta,
   TranscribeResponse,
+  UbicacionCrear,
+  UbicacionDTO,
+  VocesResponse,
 } from "./types";
 
 // URL del backend. Vacía = mismo origen (en dev, el proxy de vite.config.ts
@@ -29,6 +44,8 @@ const TIMEOUT_GENERATE = 120_000;
 const TIMEOUT_GENERATE_ON_PHOTO = 180_000; // la edición (Kontext) tarda más que schnell
 const TIMEOUT_ASK = 120_000;
 const TIMEOUT_TRANSCRIBE = 60_000;
+const TIMEOUT_CONFIG = 30_000; // config: lecturas rápidas y "probar conexión"
+const TIMEOUT_DOCS = 180_000; // subir/URL/reindex: traducción DeepL + embeddings
 
 /** Error al comunicarnos con el backend (lo mostramos al usuario). */
 export class BackendError extends Error {
@@ -36,6 +53,31 @@ export class BackendError extends Error {
     super(message);
     this.name = "BackendError";
   }
+}
+
+// ---------------------------------------------------------------------------
+// Token de administrador (Hito 7). El área de configuración va detrás de un PIN
+// de adulto; tras iniciar sesión guardamos el token aquí y en sessionStorage (se
+// borra al cerrar la pestaña) y lo enviamos en cada petición como X-Admin-Token.
+// ---------------------------------------------------------------------------
+const _ADMIN_KEY = "mdt_admin_token";
+let _adminToken: string | null =
+  typeof sessionStorage !== "undefined" ? sessionStorage.getItem(_ADMIN_KEY) : null;
+
+/** Guarda (o borra, con null) el token de sesión de administrador. */
+export function setAdminToken(token: string | null): void {
+  _adminToken = token;
+  try {
+    if (token) sessionStorage.setItem(_ADMIN_KEY, token);
+    else sessionStorage.removeItem(_ADMIN_KEY);
+  } catch {
+    /* sessionStorage puede no estar disponible; el token vive en memoria igualmente */
+  }
+}
+
+/** Token de administrador actual (o null si no hay sesión). */
+export function getAdminToken(): string | null {
+  return _adminToken;
 }
 
 /**
@@ -52,10 +94,16 @@ async function fetchBackend(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  // Añadimos el token de adulto (si hay) a TODAS las peticiones: los endpoints
+  // del flujo del niño lo ignoran, y los protegidos lo exigen.
+  const headers: Record<string, string> = { ...((options.headers as Record<string, string>) ?? {}) };
+  if (_adminToken) headers["X-Admin-Token"] = _adminToken;
+
   let response: Response;
   try {
     response = await fetch(`${BACKEND_URL}${path}`, {
       ...options,
+      headers,
       signal: controller.signal,
     });
   } catch (exc) {
@@ -197,4 +245,342 @@ export async function transcribe(
   );
   const body = (await response.json()) as TranscribeResponse;
   return body.texto ?? "";
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · APIs (Hito 2). Las claves NUNCA llegan completas salvo revealApi.
+// ---------------------------------------------------------------------------
+
+/** Estado de los 3 proveedores (claves enmascaradas). GET /api/apis. */
+export async function getApis(): Promise<ApiProviderStatus[]> {
+  const response = await fetchBackend("/api/apis", { method: "GET" }, TIMEOUT_CONFIG);
+  const body = (await response.json()) as { proveedores: ApiProviderStatus[] };
+  return body.proveedores;
+}
+
+/** Guarda claves en el .env (solo los proveedores incluidos). PUT /api/apis. */
+export async function saveApis(
+  claves: Record<string, string>,
+): Promise<ApiProviderStatus[]> {
+  const response = await fetchBackend(
+    "/api/apis",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ claves }),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { proveedores: ApiProviderStatus[] };
+  return body.proveedores;
+}
+
+/** Prueba la conexión de un proveedor. POST /api/apis/{proveedor}/test. */
+export async function testApi(proveedor: string): Promise<ApiTestResult> {
+  const response = await fetchBackend(
+    `/api/apis/${proveedor}/test`,
+    { method: "POST" },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as ApiTestResult;
+}
+
+/** Revela la clave COMPLETA de un proveedor (icono del ojo). POST .../reveal. */
+export async function revealApi(proveedor: string): Promise<string | null> {
+  const response = await fetchBackend(
+    `/api/apis/${proveedor}/reveal`,
+    { method: "POST" },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { clave: string | null };
+  return body.clave;
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Ajustes del motor (Hito 3). Parámetros de IA, prompts y DEBUG.
+// ---------------------------------------------------------------------------
+
+/** Ajustes vigentes + metadatos (para pintar la UI). GET /api/config. */
+export async function getConfig(): Promise<SettingMeta[]> {
+  const response = await fetchBackend("/api/config", { method: "GET" }, TIMEOUT_CONFIG);
+  const body = (await response.json()) as ConfigResponse;
+  return body.ajustes;
+}
+
+/**
+ * Guarda ajustes y los aplica en caliente (sin reiniciar). PUT /api/config.
+ * Devuelve qué ajustes exigen reindexar ChromaDB (lista vacía si ninguno).
+ */
+export async function saveConfig(
+  ajustes: Record<string, number | string | boolean>,
+): Promise<string[]> {
+  const response = await fetchBackend(
+    "/api/config",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ajustes }),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as ConfigSaveResult;
+  return body.reindex_necesario;
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Personajes (Hito 4). Catálogo consumido por la pantalla del
+// niño y por la pestaña de configuración (CRUD).
+// ---------------------------------------------------------------------------
+
+/** Catálogo de personajes. Por defecto solo activos; `todos=true` incluye inactivos. */
+export async function getPersonajes(todos = false): Promise<PersonajeDTO[]> {
+  const query = todos ? "?todos=1" : "";
+  const response = await fetchBackend(`/api/personajes${query}`, { method: "GET" }, TIMEOUT_CONFIG);
+  const body = (await response.json()) as { personajes: PersonajeDTO[] };
+  return body.personajes;
+}
+
+/** Crea un personaje nuevo. POST /api/personajes. */
+export async function createPersonaje(datos: PersonajeCrear): Promise<PersonajeDTO> {
+  const response = await fetchBackend(
+    "/api/personajes",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { personaje: PersonajeDTO };
+  return body.personaje;
+}
+
+/** Edita campos de un personaje (solo los incluidos). PUT /api/personajes/{id}. */
+export async function updatePersonaje(
+  id: string,
+  cambios: Partial<Omit<PersonajeDTO, "id">>,
+): Promise<PersonajeDTO> {
+  const response = await fetchBackend(
+    `/api/personajes/${id}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cambios),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { personaje: PersonajeDTO };
+  return body.personaje;
+}
+
+/** Borra un personaje del catálogo. DELETE /api/personajes/{id}. */
+export async function deletePersonaje(id: string): Promise<void> {
+  await fetchBackend(`/api/personajes/${id}`, { method: "DELETE" }, TIMEOUT_CONFIG);
+}
+
+/** Voces disponibles en ElevenLabs para el desplegable. GET /api/voices. */
+export async function getVoices(): Promise<VocesResponse> {
+  const response = await fetchBackend("/api/voices", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as VocesResponse;
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Documentos del RAG por personaje (Hito 5).
+// ---------------------------------------------------------------------------
+
+/** Documentos de un personaje. GET /api/personajes/{id}/documentos. */
+export async function getDocumentos(personajeId: string): Promise<DocumentoDTO[]> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos`,
+    { method: "GET" },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { documentos: DocumentoDTO[] };
+  return body.documentos;
+}
+
+/**
+ * Sube un fichero (.pdf/.txt/.md) al RAG de un personaje (multipart). Si
+ * `yaEnIngles` es false, el backend lo traduce con DeepL antes de indexar.
+ */
+export async function uploadDocumento(
+  personajeId: string,
+  archivo: File,
+  yaEnIngles: boolean,
+): Promise<DocumentoDTO> {
+  const formData = new FormData();
+  formData.append("archivo", archivo, archivo.name);
+  formData.append("ya_en_ingles", String(yaEnIngles));
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos`,
+    { method: "POST", body: formData },
+    TIMEOUT_DOCS,
+  );
+  const body = (await response.json()) as { documento: DocumentoDTO };
+  return body.documento;
+}
+
+/** Ingesta un artículo de Wikipedia por URL. POST .../documentos/url. */
+export async function addDocumentoUrl(
+  personajeId: string,
+  url: string,
+  yaEnIngles: boolean,
+): Promise<DocumentoDTO> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos/url`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, ya_en_ingles: yaEnIngles }),
+    },
+    TIMEOUT_DOCS,
+  );
+  const body = (await response.json()) as { documento: DocumentoDTO };
+  return body.documento;
+}
+
+/** Borra un documento. DELETE /api/personajes/{id}/documentos/{docId}. */
+export async function deleteDocumento(personajeId: string, documentoId: number): Promise<void> {
+  await fetchBackend(
+    `/api/personajes/${personajeId}/documentos/${documentoId}`,
+    { method: "DELETE" },
+    TIMEOUT_DOCS,
+  );
+}
+
+/** Reindexa (incremental) los documentos de un personaje. POST .../reindex. */
+export async function reindexPersonaje(personajeId: string): Promise<ReindexResult> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/reindex`,
+    { method: "POST" },
+    TIMEOUT_DOCS,
+  );
+  const body = (await response.json()) as { resultado: ReindexResult };
+  return body.resultado;
+}
+
+/** Reindexa TODA la colección (global). POST /api/reindex. */
+export async function reindexGlobal(): Promise<ReindexResult> {
+  const response = await fetchBackend("/api/reindex", { method: "POST" }, TIMEOUT_DOCS);
+  const body = (await response.json()) as { resultado: ReindexResult };
+  return body.resultado;
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Ubicaciones (Hito 6). Catálogo consumido por la pantalla del
+// niño (elegir mundo) y por la pestaña de configuración (CRUD).
+// ---------------------------------------------------------------------------
+
+/** Catálogo de ubicaciones. Por defecto solo activas; `todos=true` incluye inactivas. */
+export async function getUbicaciones(todos = false): Promise<UbicacionDTO[]> {
+  const query = todos ? "?todos=1" : "";
+  const response = await fetchBackend(`/api/ubicaciones${query}`, { method: "GET" }, TIMEOUT_CONFIG);
+  const body = (await response.json()) as { ubicaciones: UbicacionDTO[] };
+  return body.ubicaciones;
+}
+
+/** Crea una ubicación nueva. POST /api/ubicaciones. */
+export async function createUbicacion(datos: UbicacionCrear): Promise<UbicacionDTO> {
+  const response = await fetchBackend(
+    "/api/ubicaciones",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { ubicacion: UbicacionDTO };
+  return body.ubicacion;
+}
+
+/** Edita campos de una ubicación (solo los incluidos). PUT /api/ubicaciones/{id}. */
+export async function updateUbicacion(
+  id: string,
+  cambios: Partial<Omit<UbicacionDTO, "id">>,
+): Promise<UbicacionDTO> {
+  const response = await fetchBackend(
+    `/api/ubicaciones/${id}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cambios),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { ubicacion: UbicacionDTO };
+  return body.ubicacion;
+}
+
+/** Borra una ubicación del catálogo. DELETE /api/ubicaciones/{id}. */
+export async function deleteUbicacion(id: string): Promise<void> {
+  await fetchBackend(`/api/ubicaciones/${id}`, { method: "DELETE" }, TIMEOUT_CONFIG);
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Admin (Hito 7): PIN de adulto + import/export.
+// ---------------------------------------------------------------------------
+
+/** ¿Hay PIN configurado? ¿La sesión (token) sigue activa? GET /api/admin/status. */
+export async function adminStatus(): Promise<AdminStatus> {
+  const response = await fetchBackend("/api/admin/status", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as AdminStatus;
+}
+
+async function _postPin(path: string, pin: string): Promise<void> {
+  const response = await fetchBackend(
+    path,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { token: string };
+  setAdminToken(body.token); // guarda el token y lo aplica a las siguientes peticiones
+}
+
+/** Crea el PIN por primera vez (auto-login). POST /api/admin/setup. */
+export async function adminSetup(pin: string): Promise<void> {
+  await _postPin("/api/admin/setup", pin);
+}
+
+/** Inicia sesión con el PIN. POST /api/admin/login. */
+export async function adminLogin(pin: string): Promise<void> {
+  await _postPin("/api/admin/login", pin);
+}
+
+/** Cierra la sesión (invalida el token en el backend y lo olvida aquí). */
+export async function adminLogout(): Promise<void> {
+  try {
+    await fetchBackend("/api/admin/logout", { method: "POST" }, TIMEOUT_CONFIG);
+  } finally {
+    setAdminToken(null);
+  }
+}
+
+/** Cambia el PIN (requiere el actual). POST /api/admin/change. */
+export async function adminChangePin(pinActual: string, pinNuevo: string): Promise<void> {
+  await fetchBackend(
+    "/api/admin/change",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin_actual: pinActual, pin_nuevo: pinNuevo }),
+    },
+    TIMEOUT_CONFIG,
+  );
+}
+
+/** Descarga la configuración completa (sin secretos). GET /api/admin/export. */
+export async function adminExport(): Promise<ConfigExport> {
+  const response = await fetchBackend("/api/admin/export", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as ConfigExport;
+}
+
+/** Restaura una configuración (con copia de seguridad previa). POST /api/admin/import. */
+export async function adminImport(datos: unknown): Promise<ImportResult> {
+  const response = await fetchBackend(
+    "/api/admin/import",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ datos }) },
+    TIMEOUT_DOCS,
+  );
+  return (await response.json()) as ImportResult;
 }

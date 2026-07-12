@@ -97,3 +97,23 @@ VOCES = {
     "triceratops":       "bIHbv24MWmeRgasZH58o",  # amable (Will)
     "peter_pan":         "TX3LPaxmHKxFdv7VOQHJ",  # aventurera y joven (Liam)
 }
+
+# Categoría y emoji de cada personaje (antes solo vivían en el frontend, en
+# frontend-react/src/data/personajes.ts). Se incluyen aquí para que el "seeding"
+# a la BBDD deje el catálogo COMPLETO: a partir del Hito 4 el catálogo se lee de
+# la tabla `personajes` (vía personajes_service) y el frontend lo consume por API.
+# categoria agrupa la carta en la UI: "prehistorico" | "historico" | "ficticio".
+CATEGORIAS = {
+    "triceratops":       "prehistorico",
+    "t-rex":             "prehistorico",
+    "leonardo_da_vinci": "historico",
+    "sherlock_holmes":   "ficticio",
+    "peter_pan":         "ficticio",
+}
+EMOJIS = {
+    "triceratops":       "🦕",
+    "t-rex":             "🦖",
+    "leonardo_da_vinci": "🎨",
+    "sherlock_holmes":   "🕵️",
+    "peter_pan":         "👦",
+}

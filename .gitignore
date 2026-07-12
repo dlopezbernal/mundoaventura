@@ -24,6 +24,15 @@ backend/models/*.safetensors
 # ─── Base vectorial de ChromaDB (se regenera con: python -m backend.ingest) ─
 backend/chroma_db/
 
+# ─── BBDD de configuración (SQLite) — se recrea y se siembra al arrancar ─────
+# Contiene ajustes/catálogo locales de cada instalación; no se versiona.
+backend/config_db.sqlite3
+backend/*.sqlite3
+# Copias de seguridad automáticas (SQLite antes de importar; .env al guardar claves).
+backend/*.sqlite3.*.bak
+.env.bak
+.env.*.bak
+
 # ─── Salidas / archivos generados durante pruebas ───────────────
 *.log
 outputs/
