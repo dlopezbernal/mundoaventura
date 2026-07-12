@@ -444,6 +444,91 @@
   justify-content: space-between;
   gap: 12px;
 }
+.pjBarra {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+/* --- Panel de documentos del RAG (dentro de la edición de un personaje) --- */
+.docsPanel {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(79, 242, 255, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.docsTitulo {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--txt);
+  margin: 0;
+}
+.docsCheck {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: #8fa3e0;
+}
+.docsAcciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+/* La etiqueta que envuelve el <input type=file> se ve como un botón (.testBtn). */
+.docsAcciones label {
+  cursor: pointer;
+}
+.docsDisabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+.docsUrlFila {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.docsUrlFila .input {
+  flex: 1;
+  min-width: 200px;
+  max-width: none;
+}
+.docsLista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.docsItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: rgba(4, 8, 28, 0.4);
+  padding: 8px 10px;
+}
+.docsNombre {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  color: var(--txt);
+  word-break: break-all;
+}
+.docsMeta {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  color: var(--holo);
+  white-space: nowrap;
+}
 
 /* ===========================================================================
  * Pestaña "APIs" — tarjetas de proveedor

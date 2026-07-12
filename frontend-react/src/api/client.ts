@@ -16,11 +16,13 @@ import type {
   AskResponse,
   ConfigResponse,
   ConfigSaveResult,
+  DocumentoDTO,
   GenerateRequest,
   GenerateResponse,
   HealthResponse,
   PersonajeCrear,
   PersonajeDTO,
+  ReindexResult,
   SettingMeta,
   TranscribeResponse,
   VocesResponse,
@@ -38,6 +40,7 @@ const TIMEOUT_GENERATE_ON_PHOTO = 180_000; // la edición (Kontext) tarda más q
 const TIMEOUT_ASK = 120_000;
 const TIMEOUT_TRANSCRIBE = 60_000;
 const TIMEOUT_CONFIG = 30_000; // config: lecturas rápidas y "probar conexión"
+const TIMEOUT_DOCS = 180_000; // subir/URL/reindex: traducción DeepL + embeddings
 
 /** Error al comunicarnos con el backend (lo mostramos al usuario). */
 export class BackendError extends Error {
@@ -343,4 +346,86 @@ export async function deletePersonaje(id: string): Promise<void> {
 export async function getVoices(): Promise<VocesResponse> {
   const response = await fetchBackend("/api/voices", { method: "GET" }, TIMEOUT_CONFIG);
   return (await response.json()) as VocesResponse;
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Documentos del RAG por personaje (Hito 5).
+// ---------------------------------------------------------------------------
+
+/** Documentos de un personaje. GET /api/personajes/{id}/documentos. */
+export async function getDocumentos(personajeId: string): Promise<DocumentoDTO[]> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos`,
+    { method: "GET" },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { documentos: DocumentoDTO[] };
+  return body.documentos;
+}
+
+/**
+ * Sube un fichero (.pdf/.txt/.md) al RAG de un personaje (multipart). Si
+ * `yaEnIngles` es false, el backend lo traduce con DeepL antes de indexar.
+ */
+export async function uploadDocumento(
+  personajeId: string,
+  archivo: File,
+  yaEnIngles: boolean,
+): Promise<DocumentoDTO> {
+  const formData = new FormData();
+  formData.append("archivo", archivo, archivo.name);
+  formData.append("ya_en_ingles", String(yaEnIngles));
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos`,
+    { method: "POST", body: formData },
+    TIMEOUT_DOCS,
+  );
+  const body = (await response.json()) as { documento: DocumentoDTO };
+  return body.documento;
+}
+
+/** Ingesta un artículo de Wikipedia por URL. POST .../documentos/url. */
+export async function addDocumentoUrl(
+  personajeId: string,
+  url: string,
+  yaEnIngles: boolean,
+): Promise<DocumentoDTO> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos/url`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url, ya_en_ingles: yaEnIngles }),
+    },
+    TIMEOUT_DOCS,
+  );
+  const body = (await response.json()) as { documento: DocumentoDTO };
+  return body.documento;
+}
+
+/** Borra un documento. DELETE /api/personajes/{id}/documentos/{docId}. */
+export async function deleteDocumento(personajeId: string, documentoId: number): Promise<void> {
+  await fetchBackend(
+    `/api/personajes/${personajeId}/documentos/${documentoId}`,
+    { method: "DELETE" },
+    TIMEOUT_DOCS,
+  );
+}
+
+/** Reindexa (incremental) los documentos de un personaje. POST .../reindex. */
+export async function reindexPersonaje(personajeId: string): Promise<ReindexResult> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/reindex`,
+    { method: "POST" },
+    TIMEOUT_DOCS,
+  );
+  const body = (await response.json()) as { resultado: ReindexResult };
+  return body.resultado;
+}
+
+/** Reindexa TODA la colección (global). POST /api/reindex. */
+export async function reindexGlobal(): Promise<ReindexResult> {
+  const response = await fetchBackend("/api/reindex", { method: "POST" }, TIMEOUT_DOCS);
+  const body = (await response.json()) as { resultado: ReindexResult };
+  return body.resultado;
 }

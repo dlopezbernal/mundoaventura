@@ -213,6 +213,14 @@ compila la SPA con `VITE_BACKEND_URL` apuntando al backend.
 El conocimiento del chat **ya no está en el código**: viene de documentos que tú aportas. La
 fase de preparación (cargar → trocear → indexar) la hace `backend/ingest.py` con **LangChain**.
 
+> **Sin terminal:** desde el botón ⚙️ → pestaña **Personajes** → editar un personaje → sección
+> **📄 Documentos** puedes **subir** un `.pdf/.txt/.md`, **ingerir un artículo de Wikipedia por
+> URL** y **borrar** documentos. Cada cambio **reindexa automáticamente solo a ese personaje**
+> (reindexado incremental), y hay un botón **♻️ Reindexar todo** para reconstruir el índice
+> completo. Si el material está en español, se **traduce a inglés con DeepL** al guardarlo (marca
+> "ya está en inglés" para no gastar cuota). Los pasos por terminal de abajo siguen disponibles
+> como alternativa y para cargas masivas.
+
 ### Paso 0 (opcional) — Descarga contenido de Wikipedia
 
 El script `backend/fetch_wikipedia.py` descarga un artículo de Wikipedia como

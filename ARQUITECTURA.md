@@ -89,9 +89,13 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
 - **Qué vive en SQLite:** ajustes de IA (umbrales/modo del Evaluator, `RAG_TOP_K`),
   chunking, modelo/`max_tokens`/`temperature` del LLM, los **prompts de sistema**
   (externalizados desde `rag_service.py`, con variables `{nombre}`/`{fichas}`/`{pregunta}`),
-  opciones generales como `DEBUG` y el **catálogo de personajes** (tabla `personajes`,
+  opciones generales como `DEBUG`, el **catálogo de personajes** (tabla `personajes`,
   vía `personajes_service`; CRUD por `GET/POST/PUT/DELETE /api/personajes` y las voces
-  de ElevenLabs por `GET /api/voices`).
+  de ElevenLabs por `GET /api/voices`) y los **metadatos de los documentos del RAG**
+  (tabla `documentos`, vía `documentos_service`; subir/URL/borrar/reindexar por
+  `.../documentos` y `.../reindex`). Los ficheros del RAG siguen en disco
+  (`backend/documentos/<id>/`) y ChromaDB en su carpeta; el reindexado es incremental
+  por personaje (solo se reconstruyen sus chunks) con opción de reindexado global.
 - **Qué vive en el `.env`:** solo los **secretos** (claves API). La UI los lee/escribe de
   forma atómica pero **nunca** devuelve la clave completa al frontend (solo enmascarada).
 - **Endpoints:** `GET /api/config` (ajustes + secretos enmascarados) y `PUT /api/config`

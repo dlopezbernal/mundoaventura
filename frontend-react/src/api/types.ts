@@ -186,6 +186,35 @@ export interface VocesResponse {
   mensaje: string;
 }
 
+/**
+ * Un documento del RAG de un personaje (GET /api/personajes/{id}/documentos).
+ * Replica el dict de documentos_service (metadatos; el fichero vive en disco).
+ */
+export interface DocumentoDTO {
+  id: number;
+  personaje_id: string;
+  /** Nombre del fichero guardado en documentos/<id>/. */
+  nombre_archivo: string;
+  /** "subido" | "url". */
+  origen: string;
+  /** URL de origen si vino de Wikipedia, o null. */
+  url_origen: string | null;
+  /** Idioma detectado/asumido del original ("es" | "en" | null). */
+  idioma_original: string | null;
+  /** Si se tradujo a inglés al guardarlo. */
+  traducido: boolean;
+  /** Fecha de alta (ISO). */
+  creado_en: string;
+}
+
+/** Resultado de un reindexado (por personaje o global). */
+export interface ReindexResult {
+  personaje_id?: string;
+  personajes?: number;
+  archivos: number;
+  chunks: number;
+}
+
 /** Respuesta del endpoint PUT /api/config (guardar ajustes en caliente). */
 export interface ConfigSaveResult {
   ok: boolean;

@@ -21,10 +21,12 @@ import {
   deletePersonaje,
   getPersonajes,
   getVoices,
+  reindexGlobal,
   updatePersonaje,
 } from "../../api/client";
 import type { PersonajeDTO, VozDTO } from "../../api/types";
 import styles from "../Settings.module.css";
+import DocumentosPanel from "./DocumentosPanel";
 
 const CATEGORIAS = [
   { valor: "prehistorico", label: "Prehistórico" },
@@ -136,6 +138,19 @@ export default function PersonajesTab() {
     }
   }
 
+  async function onReindexTodo() {
+    setError(null);
+    setOkMsg(null);
+    try {
+      const r = await reindexGlobal();
+      setOkMsg(
+        `Reindexado global: ${r.archivos} archivo(s) → ${r.chunks} fragmento(s) de ${r.personajes} personaje(s).`,
+      );
+    } catch (exc) {
+      setError(exc instanceof BackendError ? exc.message : String(exc));
+    }
+  }
+
   async function onBorrar(p: PersonajeDTO) {
     if (!window.confirm(`¿Seguro que quieres borrar a "${p.nombre}"? Esto lo quita del catálogo.`))
       return;
@@ -190,17 +205,27 @@ export default function PersonajesTab() {
           onGuardar={(f) => onSubmit(f, true)}
         />
       ) : (
-        <button
-          type="button"
-          className="btn btn-primario"
-          onClick={() => {
-            setOkMsg(null);
-            setError(null);
-            setEditando("__nuevo__");
-          }}
-        >
-          ➕ Nuevo personaje
-        </button>
+        <div className={styles.pjBarra}>
+          <button
+            type="button"
+            className="btn btn-primario"
+            onClick={() => {
+              setOkMsg(null);
+              setError(null);
+              setEditando("__nuevo__");
+            }}
+          >
+            ➕ Nuevo personaje
+          </button>
+          <button
+            type="button"
+            className="btn btn-secundario"
+            onClick={() => void onReindexTodo()}
+            title="Reconstruye el índice del RAG para TODOS los personajes"
+          >
+            ♻️ Reindexar todo
+          </button>
+        </div>
       )}
 
       <div className={styles.pjLista}>
@@ -407,6 +432,9 @@ function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuarda
           {guardando ? "Guardando…" : esNuevo ? "Crear personaje" : "Guardar cambios"}
         </button>
       </div>
+
+      {/* Los documentos del RAG solo existen para un personaje ya creado. */}
+      {!esNuevo && <DocumentosPanel personajeId={inicial.id} />}
     </div>
   );
 }

@@ -116,6 +116,19 @@ def _get_collection():
     return _collection
 
 
+def reiniciar_coleccion() -> None:
+    """Olvida el cliente/colección cacheados de ChromaDB.
+
+    Lo llama documentos_service tras un REINDEXADO GLOBAL (que borra y recrea la
+    colección): el handle cacheado apuntaría a una colección eliminada, así que se
+    fuerza a reabrirla en la siguiente pregunta. Tras un reindexado incremental
+    (borrar+reañadir chunks de un personaje) NO hace falta: la colección es la misma.
+    """
+    global _client, _collection
+    _client = None
+    _collection = None
+
+
 def _recuperar_contexto(
     personaje_id: str, pregunta: str
 ) -> tuple[list[str], list[float]]:
