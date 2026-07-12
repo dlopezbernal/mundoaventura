@@ -28,6 +28,10 @@ backend/chroma_db/
 # Contiene ajustes/catálogo locales de cada instalación; no se versiona.
 backend/config_db.sqlite3
 backend/*.sqlite3
+# Copias de seguridad automáticas (SQLite antes de importar; .env al guardar claves).
+backend/*.sqlite3.*.bak
+.env.bak
+.env.*.bak
 
 # ─── Salidas / archivos generados durante pruebas ───────────────
 *.log

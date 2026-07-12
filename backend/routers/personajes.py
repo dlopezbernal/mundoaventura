@@ -15,12 +15,16 @@ Lo consumen tanto la pantalla del niño (elegir personaje) como la pestaña de
 configuración. El control de acceso admin a la edición llega en el Hito 7.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.schemas.personajes import PersonajeCrear, PersonajeEditar
-from backend.services import personajes_service, voice_service
+from backend.services import admin_service, personajes_service, voice_service
 
 router = APIRouter(prefix="/api", tags=["Configuración · Personajes"])
+
+# Dependencia de adulto: el catálogo se LEE en público (lo usa el niño), pero
+# crear/editar/borrar y listar voces exigen el PIN.
+_admin = [Depends(admin_service.requiere_admin)]
 
 
 @router.get("/personajes")
@@ -29,7 +33,7 @@ def listar_personajes(todos: bool = False):
     return {"personajes": personajes_service.listar(incluir_inactivos=todos)}
 
 
-@router.post("/personajes")
+@router.post("/personajes", dependencies=_admin)
 def crear_personaje(req: PersonajeCrear):
     """Crea un personaje nuevo y todas sus piezas del invariante. 400 si algo es inválido."""
     try:
@@ -39,7 +43,7 @@ def crear_personaje(req: PersonajeCrear):
     return {"ok": True, "personaje": personaje}
 
 
-@router.put("/personajes/{personaje_id}")
+@router.put("/personajes/{personaje_id}", dependencies=_admin)
 def editar_personaje(personaje_id: str, req: PersonajeEditar):
     """Actualiza los campos indicados de un personaje (el id no cambia). 400 si inválido."""
     try:
@@ -51,7 +55,7 @@ def editar_personaje(personaje_id: str, req: PersonajeEditar):
     return {"ok": True, "personaje": personaje}
 
 
-@router.delete("/personajes/{personaje_id}")
+@router.delete("/personajes/{personaje_id}", dependencies=_admin)
 def borrar_personaje(personaje_id: str):
     """Borra un personaje del catálogo. 400 si no existe."""
     try:
@@ -61,7 +65,7 @@ def borrar_personaje(personaje_id: str):
     return {"ok": True}
 
 
-@router.get("/voices")
+@router.get("/voices", dependencies=_admin)
 def listar_voces():
     """Voces de ElevenLabs para el desplegable: {disponible, voces, mensaje}."""
     return voice_service.listar_voces()

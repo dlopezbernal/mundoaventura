@@ -13,12 +13,15 @@ Lo consumen tanto la pantalla del niño (elegir mundo) como la pestaña de
 configuración. El control de acceso admin a la edición llega en el Hito 7.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from backend.schemas.ubicaciones import UbicacionCrear, UbicacionEditar
-from backend.services import ubicaciones_service
+from backend.services import admin_service, ubicaciones_service
 
 router = APIRouter(prefix="/api", tags=["Configuración · Ubicaciones"])
+
+# El catálogo se LEE en público (lo usa el niño); las escrituras exigen el PIN.
+_admin = [Depends(admin_service.requiere_admin)]
 
 
 @router.get("/ubicaciones")
@@ -27,7 +30,7 @@ def listar_ubicaciones(todos: bool = False):
     return {"ubicaciones": ubicaciones_service.listar(incluir_inactivos=todos)}
 
 
-@router.post("/ubicaciones")
+@router.post("/ubicaciones", dependencies=_admin)
 def crear_ubicacion(req: UbicacionCrear):
     """Crea una ubicación nueva. 400 si algo es inválido."""
     try:
@@ -37,7 +40,7 @@ def crear_ubicacion(req: UbicacionCrear):
     return {"ok": True, "ubicacion": ubicacion}
 
 
-@router.put("/ubicaciones/{ubicacion_id}")
+@router.put("/ubicaciones/{ubicacion_id}", dependencies=_admin)
 def editar_ubicacion(ubicacion_id: str, req: UbicacionEditar):
     """Actualiza los campos indicados de una ubicación (el id no cambia). 400 si inválido."""
     try:
@@ -49,7 +52,7 @@ def editar_ubicacion(ubicacion_id: str, req: UbicacionEditar):
     return {"ok": True, "ubicacion": ubicacion}
 
 
-@router.delete("/ubicaciones/{ubicacion_id}")
+@router.delete("/ubicaciones/{ubicacion_id}", dependencies=_admin)
 def borrar_ubicacion(ubicacion_id: str):
     """Borra una ubicación del catálogo. 400 si no existe."""
     try:

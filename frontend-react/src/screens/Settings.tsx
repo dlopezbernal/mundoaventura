@@ -3,23 +3,25 @@
  * ================================================================
  *
  * Chasis "Arcade Holo" del menú de configuración. Se abre desde el botón ⚙️ del
- * HUD y ocupa el lugar del flujo principal. Organiza los ajustes en pestañas:
+ * HUD y ocupa el lugar del flujo principal. Toda la zona va detrás de un PIN de
+ * adulto (Hito 7): hasta autenticarse se muestra <AdminGate/>; luego, las pestañas:
  *
- *   - APIs         → claves de los proveedores (Hito 2, funcional).
+ *   - APIs         → claves de los proveedores (Hito 2).
  *   - IA           → parámetros del motor: RAG, troceado, LLM y prompts (Hito 3).
  *   - General      → modo desarrollo/DEBUG (Hito 3).
- *   - Personajes   → CRUD de personajes (Hito 4, funcional).
- *   - Ubicaciones  → CRUD de ubicaciones (Hito 6, funcional).
- *
- * Todas las pestañas son operativas. La antigua plantilla presentacional (volumen,
- * brillo…) se ha retirado: se reaprovecha el estilo, no aquel contenido.
+ *   - Personajes   → CRUD de personajes + documentos del RAG (Hitos 4 y 5).
+ *   - Ubicaciones  → CRUD de ubicaciones (Hito 6).
+ *   - Sistema      → PIN, import/export y cerrar sesión (Hito 7).
  */
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { adminLogout } from "../api/client";
 import styles from "./Settings.module.css";
+import AdminGate from "./config/AdminGate";
 import ApisTab from "./config/ApisTab";
 import ConfigForm from "./config/ConfigForm";
 import PersonajesTab from "./config/PersonajesTab";
+import SistemaTab from "./config/SistemaTab";
 import UbicacionesTab from "./config/UbicacionesTab";
 
 interface Props {
@@ -33,12 +35,20 @@ const PESTANAS = [
   { id: "general", label: "General", emoji: "⚙️" },
   { id: "personajes", label: "Personajes", emoji: "🎭" },
   { id: "ubicaciones", label: "Ubicaciones", emoji: "🗺️" },
+  { id: "sistema", label: "Sistema", emoji: "🛡️" },
 ] as const;
 
 type PestanaId = (typeof PESTANAS)[number]["id"];
 
 export default function Settings({ onCerrar }: Props) {
   const [pestana, setPestana] = useState<PestanaId>("apis");
+  // Sesión de adulto: hasta autenticarse se muestra la puerta (AdminGate).
+  const [autenticado, setAutenticado] = useState(false);
+
+  const cerrarSesion = useCallback(async () => {
+    await adminLogout();
+    setAutenticado(false);
+  }, []);
 
   return (
     <section className={styles.page} aria-label="Configuración de la aplicación">
@@ -52,35 +62,39 @@ export default function Settings({ onCerrar }: Props) {
         </button>
       </header>
 
-      <nav className={styles.tabs} aria-label="Secciones de configuración">
-        {PESTANAS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={`${styles.tab} ${pestana === t.id ? styles.tabOn : ""}`}
-            onClick={() => setPestana(t.id)}
-            aria-current={pestana === t.id}
-          >
-            <span aria-hidden="true">{t.emoji}</span> {t.label}
-          </button>
-        ))}
-      </nav>
+      {!autenticado ? (
+        <AdminGate onListo={() => setAutenticado(true)} />
+      ) : (
+        <>
+          <nav className={styles.tabs} aria-label="Secciones de configuración">
+            {PESTANAS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={`${styles.tab} ${pestana === t.id ? styles.tabOn : ""}`}
+                onClick={() => setPestana(t.id)}
+                aria-current={pestana === t.id}
+              >
+                <span aria-hidden="true">{t.emoji}</span> {t.label}
+              </button>
+            ))}
+          </nav>
 
-      {pestana === "apis" && <ApisTab />}
-      {pestana === "ia" && (
-        <ConfigForm
-          categorias={["rag", "chunking", "llm", "prompts"]}
-          intro="Ajusta el motor de conversación: cómo decide el Evaluator (RAG vs conocimiento general), cuántas fichas recupera, el modelo de lenguaje, el troceado de documentos y los prompts de sistema. Los cambios se aplican al instante, sin reiniciar."
-        />
+          {pestana === "apis" && <ApisTab />}
+          {pestana === "ia" && (
+            <ConfigForm
+              categorias={["rag", "chunking", "llm", "prompts"]}
+              intro="Ajusta el motor de conversación: cómo decide el Evaluator (RAG vs conocimiento general), cuántas fichas recupera, el modelo de lenguaje, el troceado de documentos y los prompts de sistema. Los cambios se aplican al instante, sin reiniciar."
+            />
+          )}
+          {pestana === "general" && (
+            <ConfigForm categorias={["general"]} intro="Opciones generales de la aplicación." />
+          )}
+          {pestana === "personajes" && <PersonajesTab />}
+          {pestana === "ubicaciones" && <UbicacionesTab />}
+          {pestana === "sistema" && <SistemaTab onLogout={() => void cerrarSesion()} />}
+        </>
       )}
-      {pestana === "general" && (
-        <ConfigForm
-          categorias={["general"]}
-          intro="Opciones generales de la aplicación."
-        />
-      )}
-      {pestana === "personajes" && <PersonajesTab />}
-      {pestana === "ubicaciones" && <UbicacionesTab />}
 
       <footer className={styles.footer}>
         <button type="button" className="btn btn-secundario" onClick={onCerrar}>

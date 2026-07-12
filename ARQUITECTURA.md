@@ -108,6 +108,13 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
 - **Umbral del RAG:** se expone como **distancia coseno directa (0–2), sin conversión a
   porcentaje**, la misma métrica nativa de ChromaDB que usa el Evaluator (ver README,
   "Decisiones de diseño").
+- **Acceso de adulto (Hito 7):** toda la zona de configuración va detrás de un **PIN**
+  (`admin_service`): el PIN se guarda *hasheado* (PBKDF2) en la tabla `settings`, el login
+  devuelve un token de sesión en memoria y la dependencia `requiere_admin` protege los
+  endpoints sensibles (config, apis, documentos, y las escrituras de personajes/ubicaciones);
+  los `GET` de catálogos y el flujo del niño (`/generate`, `/ask`, `/transcribe`, `/health`)
+  siguen públicos. Incluye **import/export** JSON de la configuración (sin secretos) y una
+  **copia de seguridad** del SQLite antes de importar.
 
 ## Degradación y modo DEBUG
 

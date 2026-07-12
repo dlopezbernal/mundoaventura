@@ -330,6 +330,55 @@
 }
 
 /* ===========================================================================
+ * Puerta de adulto (AdminGate) — crear/introducir PIN
+ * ======================================================================== */
+.gate {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+.gateCard {
+  width: 100%;
+  max-width: 380px;
+  text-align: center;
+  border: 1px solid var(--holo);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.6), rgba(6, 12, 34, 0.7));
+  box-shadow: inset 0 0 30px rgba(62, 242, 255, 0.1);
+  padding: 26px 22px;
+}
+.gateIcono {
+  font-size: 2.6rem;
+}
+.gateTitulo {
+  font-family: var(--font-disp);
+  font-weight: 900;
+  font-size: 1.15rem;
+  color: #fff;
+  margin: 8px 0 6px;
+}
+.gateTexto {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: #8fa3e0;
+  margin: 0 0 16px;
+}
+.gateCard form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+.gateCard .input {
+  width: 100%;
+  max-width: none;
+  text-align: center;
+  letter-spacing: 0.3em;
+  font-size: 1.1rem;
+  padding: 10px 12px;
+}
+
+/* ===========================================================================
  * Pestaña "Personajes" — lista + tarjetas + formulario de alta/edición
  * ======================================================================== */
 .pjLista {

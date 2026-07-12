@@ -17,17 +17,22 @@ import os
 import sys
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from backend import config, seed
+from backend.routers import admin as admin_router
 from backend.routers import apis as apis_router
 from backend.routers import config as config_router
 from backend.routers import personajes as personajes_router
 from backend.routers import documentos as documentos_router
 from backend.routers import ubicaciones as ubicaciones_router
 from backend.routers import conversacion, generation, transcription
-from backend.services import translation_service, voice_service
+from backend.services import admin_service, translation_service, voice_service
+
+# Dependencia que exige el PIN de adulto (token de sesión) en los endpoints
+# sensibles del área de configuración. Los del flujo del niño no la llevan.
+_admin = [Depends(admin_service.requiere_admin)]
 
 # En Windows la consola puede usar cp1252 y romper al imprimir emojis (✅, ⚠️...),
 # lo que llegaría a tumbar el arranque (el hook de startup imprime "DeepL conectado ✅").
@@ -122,15 +127,20 @@ app.include_router(generation.router)
 app.include_router(conversacion.router)
 # Transcripción de voz (STT): la pregunta hablada del niño → texto (ElevenLabs Scribe).
 app.include_router(transcription.router)
+# Admin: acceso con PIN de adulto + import/export (endpoints públicos mínimos
+# para arrancar; los sensibles se protegen dentro del propio router).
+app.include_router(admin_router.router)
 # Configuración: ajustes editables en caliente (SQLite + settings_service).
-app.include_router(config_router.router)
+# TODA la zona de config va detrás del PIN de adulto (requiere_admin).
+app.include_router(config_router.router, dependencies=_admin)
 # Configuración · APIs: claves de los proveedores (leer/escribir el .env).
-app.include_router(apis_router.router)
-# Configuración · Personajes: catálogo (CRUD) + voces de ElevenLabs.
+app.include_router(apis_router.router, dependencies=_admin)
+# Configuración · Personajes: el catálogo se LEE en público (lo usa el niño);
+# las escrituras y las voces se protegen por ruta dentro del router.
 app.include_router(personajes_router.router)
-# Configuración · Documentos: base de conocimiento del RAG (subir/URL/reindex).
-app.include_router(documentos_router.router)
-# Configuración · Ubicaciones: catálogo de lugares (CRUD).
+# Configuración · Documentos: base de conocimiento del RAG (todo protegido).
+app.include_router(documentos_router.router, dependencies=_admin)
+# Configuración · Ubicaciones: catálogo (GET público; escrituras protegidas por ruta).
 app.include_router(ubicaciones_router.router)
 
 

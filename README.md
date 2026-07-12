@@ -587,6 +587,15 @@ eliminar una capa de conversión; y **(c)** facilita la calibración, ya que el 
 compara directamente con la distancia real `d=...` que la app expone (en la respuesta de
 `/api/ask` y en la consola con `DEBUG`).
 
+**Toda la configuración va detrás de un PIN de adulto.** Como el área contiene las claves de las
+plataformas y operaciones destructivas (borrar personajes/documentos) y la app la usan niños, la
+primera vez se crea un **PIN** y a partir de ahí se pide para entrar (⚙️). El PIN se guarda
+*hasheado* (nunca en claro) y el backend protege los endpoints sensibles; el flujo del niño
+(elegir personaje/mundo, generar y chatear) sigue siendo público. Desde la pestaña **Sistema** se
+puede cambiar el PIN, **exportar/importar** la configuración en JSON (ajustes + catálogos, nunca las
+claves API) y cerrar sesión; antes de importar se hace una **copia de seguridad** automática del
+fichero SQLite.
+
 ---
 
 ## 💡 Personalizar

@@ -240,6 +240,31 @@ export interface UbicacionCrear {
   activo?: boolean;
 }
 
+/** Estado del acceso de administrador (GET /api/admin/status). */
+export interface AdminStatus {
+  /** ¿Hay ya un PIN de adulto creado? */
+  configurado: boolean;
+  /** ¿El token actual (si hay) sigue siendo válido? */
+  sesion_activa: boolean;
+}
+
+/** Configuración exportada (GET /api/admin/export). Sin secretos. */
+export interface ConfigExport {
+  version: number;
+  exportado_en: string;
+  ajustes: Record<string, unknown>;
+  personajes: PersonajeDTO[];
+  ubicaciones: UbicacionDTO[];
+}
+
+/** Resultado de importar configuración (POST /api/admin/import). */
+export interface ImportResult {
+  ok: boolean;
+  resumen: { ajustes: number; personajes: number; ubicaciones: number };
+  /** Ruta de la copia de seguridad del SQLite hecha antes de importar (o null). */
+  backup: string | null;
+}
+
 /** Respuesta del endpoint PUT /api/config (guardar ajustes en caliente). */
 export interface ConfigSaveResult {
   ok: boolean;

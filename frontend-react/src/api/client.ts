@@ -10,16 +10,19 @@
  */
 
 import type {
+  AdminStatus,
   ApiProviderStatus,
   ApiTestResult,
   AskRequest,
   AskResponse,
+  ConfigExport,
   ConfigResponse,
   ConfigSaveResult,
   DocumentoDTO,
   GenerateRequest,
   GenerateResponse,
   HealthResponse,
+  ImportResult,
   PersonajeCrear,
   PersonajeDTO,
   ReindexResult,
@@ -52,6 +55,31 @@ export class BackendError extends Error {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Token de administrador (Hito 7). El área de configuración va detrás de un PIN
+// de adulto; tras iniciar sesión guardamos el token aquí y en sessionStorage (se
+// borra al cerrar la pestaña) y lo enviamos en cada petición como X-Admin-Token.
+// ---------------------------------------------------------------------------
+const _ADMIN_KEY = "mdt_admin_token";
+let _adminToken: string | null =
+  typeof sessionStorage !== "undefined" ? sessionStorage.getItem(_ADMIN_KEY) : null;
+
+/** Guarda (o borra, con null) el token de sesión de administrador. */
+export function setAdminToken(token: string | null): void {
+  _adminToken = token;
+  try {
+    if (token) sessionStorage.setItem(_ADMIN_KEY, token);
+    else sessionStorage.removeItem(_ADMIN_KEY);
+  } catch {
+    /* sessionStorage puede no estar disponible; el token vive en memoria igualmente */
+  }
+}
+
+/** Token de administrador actual (o null si no hay sesión). */
+export function getAdminToken(): string | null {
+  return _adminToken;
+}
+
 /**
  * fetch con timeout vía AbortController.
  * Lanza BackendError con mensaje amigable si la petición falla, expira o el
@@ -66,10 +94,16 @@ async function fetchBackend(
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  // Añadimos el token de adulto (si hay) a TODAS las peticiones: los endpoints
+  // del flujo del niño lo ignoran, y los protegidos lo exigen.
+  const headers: Record<string, string> = { ...((options.headers as Record<string, string>) ?? {}) };
+  if (_adminToken) headers["X-Admin-Token"] = _adminToken;
+
   let response: Response;
   try {
     response = await fetch(`${BACKEND_URL}${path}`, {
       ...options,
+      headers,
       signal: controller.signal,
     });
   } catch (exc) {
@@ -481,4 +515,72 @@ export async function updateUbicacion(
 /** Borra una ubicación del catálogo. DELETE /api/ubicaciones/{id}. */
 export async function deleteUbicacion(id: string): Promise<void> {
   await fetchBackend(`/api/ubicaciones/${id}`, { method: "DELETE" }, TIMEOUT_CONFIG);
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Admin (Hito 7): PIN de adulto + import/export.
+// ---------------------------------------------------------------------------
+
+/** ¿Hay PIN configurado? ¿La sesión (token) sigue activa? GET /api/admin/status. */
+export async function adminStatus(): Promise<AdminStatus> {
+  const response = await fetchBackend("/api/admin/status", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as AdminStatus;
+}
+
+async function _postPin(path: string, pin: string): Promise<void> {
+  const response = await fetchBackend(
+    path,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { token: string };
+  setAdminToken(body.token); // guarda el token y lo aplica a las siguientes peticiones
+}
+
+/** Crea el PIN por primera vez (auto-login). POST /api/admin/setup. */
+export async function adminSetup(pin: string): Promise<void> {
+  await _postPin("/api/admin/setup", pin);
+}
+
+/** Inicia sesión con el PIN. POST /api/admin/login. */
+export async function adminLogin(pin: string): Promise<void> {
+  await _postPin("/api/admin/login", pin);
+}
+
+/** Cierra la sesión (invalida el token en el backend y lo olvida aquí). */
+export async function adminLogout(): Promise<void> {
+  try {
+    await fetchBackend("/api/admin/logout", { method: "POST" }, TIMEOUT_CONFIG);
+  } finally {
+    setAdminToken(null);
+  }
+}
+
+/** Cambia el PIN (requiere el actual). POST /api/admin/change. */
+export async function adminChangePin(pinActual: string, pinNuevo: string): Promise<void> {
+  await fetchBackend(
+    "/api/admin/change",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin_actual: pinActual, pin_nuevo: pinNuevo }),
+    },
+    TIMEOUT_CONFIG,
+  );
+}
+
+/** Descarga la configuración completa (sin secretos). GET /api/admin/export. */
+export async function adminExport(): Promise<ConfigExport> {
+  const response = await fetchBackend("/api/admin/export", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as ConfigExport;
+}
+
+/** Restaura una configuración (con copia de seguridad previa). POST /api/admin/import. */
+export async function adminImport(datos: unknown): Promise<ImportResult> {
+  const response = await fetchBackend(
+    "/api/admin/import",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ datos }) },
+    TIMEOUT_DOCS,
+  );
+  return (await response.json()) as ImportResult;
 }
