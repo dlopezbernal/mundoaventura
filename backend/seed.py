@@ -32,20 +32,32 @@ def sembrar_todo() -> dict[str, int]:
     personajes_nuevos = 0
     ubicaciones_nuevas = 0
     with db.get_session() as sesion:
-        # Personajes: id + nombre + prompt de imagen + voz (categoría/emoji viven
-        # en el frontend; se completarán al mover el catálogo en el Hito 4).
+        # Personajes: id + nombre + prompt de imagen + voz + categoría + emoji.
+        # Desde el Hito 4 el catálogo se lee de esta tabla (personajes_service) y
+        # el frontend lo consume por API, así que sembramos TODOS los campos.
         for pid, datos in personajes_cfg.PROMPTS.items():
-            if sesion.get(Personaje, pid) is None:
+            fila = sesion.get(Personaje, pid)
+            if fila is None:
                 sesion.add(
                     Personaje(
                         id=pid,
                         nombre=personajes_cfg.NOMBRES.get(pid, pid),
+                        categoria=personajes_cfg.CATEGORIAS.get(pid),
+                        emoji=personajes_cfg.EMOJIS.get(pid),
                         prompt_imagen=datos["prompt"],
                         voz_id=personajes_cfg.VOCES.get(pid),
                         activo=True,
                     )
                 )
                 personajes_nuevos += 1
+            else:
+                # Backfill: BBDD sembradas antes del Hito 4 no tienen categoría/emoji.
+                # Solo rellenamos lo que falte; nunca pisamos un valor ya editado.
+                if fila.categoria is None:
+                    fila.categoria = personajes_cfg.CATEGORIAS.get(pid)
+                if fila.emoji is None:
+                    fila.emoji = personajes_cfg.EMOJIS.get(pid)
+                sesion.add(fila)
 
         # Ubicaciones: id + prompt (el nombre visible vive en el frontend; Hito 6).
         for uid, datos in ubicaciones_cfg.UBICACIONES.items():

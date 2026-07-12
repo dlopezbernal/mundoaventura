@@ -32,7 +32,7 @@ import replicate
 
 from backend import config
 from backend import debug_log
-from backend import personajes as personajes_cfg
+from backend.services import personajes_service
 from backend.services import settings_service
 from backend.services import translation_service
 from backend.services import voice_service
@@ -334,7 +334,8 @@ def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
     ElevenLabs, o si el TTS falla, devuelve None. El texto de la respuesta NUNCA
     se rompe por un fallo de voz.
     """
-    voz_id = personajes_cfg.VOCES.get(personaje_id)
+    ficha = personajes_service.obtener(personaje_id)
+    voz_id = ficha["voz_id"] if ficha else None
     if not voz_id or not config.ELEVENLABS_API_KEY:
         return None
     try:
@@ -363,7 +364,8 @@ def responder(personaje_id: str, pregunta: str) -> dict:
     Lanza ValueError (→ 400 en el router) si el personaje no existe o falta el
     token de Replicate.
     """
-    if personaje_id not in personajes_cfg.NOMBRES:
+    ficha_personaje = personajes_service.obtener(personaje_id)
+    if ficha_personaje is None:
         raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
     if not config.REPLICATE_API_TOKEN:
         raise ValueError(
@@ -371,7 +373,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
             "https://replicate.com/account/api-tokens y añádelo al .env."
         )
 
-    nombre = personajes_cfg.NOMBRES[personaje_id]
+    nombre = ficha_personaje["nombre"]
 
     # 0) TRADUCCIÓN (OBLIGATORIA): la enciclopedia está en inglés, así que
     #    traducimos la pregunta ES→EN. La versión en inglés (pregunta_en) se usa en

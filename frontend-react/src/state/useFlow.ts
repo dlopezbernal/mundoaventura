@@ -12,17 +12,19 @@
  * la escena si la selección no cambió.
  */
 
-import { useReducer, useRef } from "react";
+import { useMemo, useReducer, useRef } from "react";
 import { BackendError, generate, generateOnPhoto } from "../api/client";
-import { PERSONAJES } from "../data/personajes";
+import type { PersonajeDTO } from "../api/types";
 import { UBICACIONES } from "../data/ubicaciones";
 
 /** Id especial (no es una ubicación real) para el modo "Usar mi foto". */
 export const FOTO_ID = "__foto__";
 
-/** Catálogos como listas ordenadas para los carruseles (con vuelta circular). */
-export const PERSONAJE_KEYS = Object.keys(PERSONAJES);
-export const LUGAR_KEYS = [FOTO_ID, ...Object.keys(UBICACIONES)]; // "Mi foto" 1º
+/**
+ * Lugares como lista ordenada para el carrusel (con vuelta circular). Las
+ * ubicaciones siguen siendo estáticas hasta el Hito 6; "Mi foto" va primera.
+ */
+export const LUGAR_KEYS = [FOTO_ID, ...Object.keys(UBICACIONES)];
 
 interface Estado {
   paso: 1 | 2 | 3;
@@ -37,18 +39,21 @@ interface Estado {
   error: string | null;
 }
 
-const ESTADO_INICIAL: Estado = {
-  paso: 1,
-  personajeIdx: 0,
-  ubicacionIdx: 0,
-  personajeId: PERSONAJE_KEYS[0],
-  ubicacionId: null,
-  fotoFile: null,
-  escenaBase64: null,
-  generadoPara: null,
-  cargando: false,
-  error: null,
-};
+/** Estado inicial (el personaje 0 del catálogo recibido queda autoseleccionado). */
+function estadoInicial(personajeKeys: string[]): Estado {
+  return {
+    paso: 1,
+    personajeIdx: 0,
+    ubicacionIdx: 0,
+    personajeId: personajeKeys[0],
+    ubicacionId: null,
+    fotoFile: null,
+    escenaBase64: null,
+    generadoPara: null,
+    cargando: false,
+    error: null,
+  };
+}
 
 type Accion =
   | { type: "MOVER_PERSONAJE"; delta: number }
@@ -60,12 +65,17 @@ type Accion =
   | { type: "ESCENA_ERROR"; mensaje: string }
   | { type: "REINICIAR" };
 
-function reducer(estado: Estado, accion: Accion): Estado {
+/**
+ * Fábrica del reducer: recibe las claves del catálogo (que ahora llegan por API,
+ * no de un módulo estático) y devuelve el reducer que las usa para el carrusel.
+ */
+function crearReducer(personajeKeys: string[]) {
+  return function reducer(estado: Estado, accion: Accion): Estado {
   switch (accion.type) {
     case "MOVER_PERSONAJE": {
-      const n = PERSONAJE_KEYS.length;
+      const n = personajeKeys.length;
       const idx = (((estado.personajeIdx + accion.delta) % n) + n) % n;
-      return { ...estado, personajeIdx: idx, personajeId: PERSONAJE_KEYS[idx] };
+      return { ...estado, personajeIdx: idx, personajeId: personajeKeys[idx] };
     }
     case "MOVER_LUGAR": {
       const n = LUGAR_KEYS.length;
@@ -103,8 +113,9 @@ function reducer(estado: Estado, accion: Accion): Estado {
     case "ESCENA_ERROR":
       return { ...estado, cargando: false, error: accion.mensaje };
     case "REINICIAR":
-      return ESTADO_INICIAL;
+      return estadoInicial(personajeKeys);
   }
+  };
 }
 
 /** Clave que identifica una selección completa; si no cambia, no se regenera. */
@@ -112,8 +123,14 @@ function claveSeleccion(pid: string, uid: string, foto: File | null): string {
   return `${pid}|${uid}|${foto ? `${foto.name}:${foto.lastModified}` : ""}`;
 }
 
-export function useFlow() {
-  const [estado, dispatch] = useReducer(reducer, ESTADO_INICIAL);
+/**
+ * Máquina de estados del asistente. Recibe el CATÁLOGO de personajes (cargado por
+ * API en App), del que salen las claves del carrusel y el personaje inicial.
+ */
+export function useFlow(personajes: PersonajeDTO[]) {
+  const personajeKeys = useMemo(() => personajes.map((p) => p.id), [personajes]);
+  const reducer = useMemo(() => crearReducer(personajeKeys), [personajeKeys]);
+  const [estado, dispatch] = useReducer(reducer, personajeKeys, estadoInicial);
   // Guard anti doble clic: evita lanzar dos generaciones (dos cobros) seguidas.
   const generandoRef = useRef(false);
 

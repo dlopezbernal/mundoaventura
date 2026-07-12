@@ -58,17 +58,24 @@ funcionando.
 
 ## Invariante `personaje_id`
 
-Una misma clave conecta cinco sitios (los cuatro primeros para cualquier
-personaje; el quinto solo si habla):
+Desde el Hito 4, el catálogo de personajes vive en la **tabla `personajes`**
+(SQLite) y se lee a través de `personajes_service`; tanto el backend (generación
+de imagen y chat) como el frontend (pantalla del niño y pestaña de configuración)
+lo consumen por API (`GET /api/personajes`). Así, el `personaje_id` conecta:
 
-1. `backend/personajes.py` → `PROMPTS`
-2. `backend/personajes.py` → `NOMBRES`
-3. `frontend-react/src/data/personajes.ts` → tarjeta visual
-4. `backend/documentos/<personaje_id>/` → base de conocimiento
-5. `backend/personajes.py` → `VOCES` (`voz_id` de ElevenLabs) — solo si el personaje habla
+1. Fila en la tabla `personajes` → `nombre`, `categoria`, `emoji`, `prompt_imagen`,
+   `voz_id` (ElevenLabs, opcional: sin voz = solo texto), `activo`.
+2. `backend/documentos/<personaje_id>/` → base de conocimiento del RAG (la carpeta
+   se crea automáticamente al dar de alta un personaje).
 
-Las ubicaciones siguen el mismo patrón (sin voz) entre `backend/ubicaciones.py` y
-`frontend-react/src/data/ubicaciones.ts`.
+`backend/personajes.py` pasa a ser solo la **fuente de "seeding"** (`PROMPTS`,
+`NOMBRES`, `VOCES`, `CATEGORIAS`, `EMOJIS`, más el estilo global `STYLE_SUFFIX`/
+`FRAMING`): en el primer arranque `seed.py` vuelca esos valores a la tabla (de
+forma idempotente y con backfill de las columnas nuevas). Crear un personaje desde
+la UI (`POST /api/personajes`) genera de golpe la fila y su carpeta de documentos.
+
+Las **ubicaciones** siguen de momento el patrón antiguo (código): `backend/ubicaciones.py`
+y `frontend-react/src/data/ubicaciones.ts` con el mismo id (su migración es el Hito 6).
 
 ## Capa de configuración (SQLite + `settings_service`)
 
@@ -81,8 +88,10 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
 
 - **Qué vive en SQLite:** ajustes de IA (umbrales/modo del Evaluator, `RAG_TOP_K`),
   chunking, modelo/`max_tokens`/`temperature` del LLM, los **prompts de sistema**
-  (externalizados desde `rag_service.py`, con variables `{nombre}`/`{fichas}`/`{pregunta}`)
-  y opciones generales como `DEBUG`.
+  (externalizados desde `rag_service.py`, con variables `{nombre}`/`{fichas}`/`{pregunta}`),
+  opciones generales como `DEBUG` y el **catálogo de personajes** (tabla `personajes`,
+  vía `personajes_service`; CRUD por `GET/POST/PUT/DELETE /api/personajes` y las voces
+  de ElevenLabs por `GET /api/voices`).
 - **Qué vive en el `.env`:** solo los **secretos** (claves API). La UI los lee/escribe de
   forma atómica pero **nunca** devuelve la clave completa al frontend (solo enmascarada).
 - **Endpoints:** `GET /api/config` (ajustes + secretos enmascarados) y `PUT /api/config`

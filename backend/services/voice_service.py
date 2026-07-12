@@ -147,3 +147,48 @@ def probar() -> dict:
             return {"ok": True, "mensaje": "ElevenLabs conectado (clave válida, con permisos limitados)."}
         mensaje = detalle.get("message") or str(exc)
         return {"ok": False, "mensaje": f"No se pudo conectar con ElevenLabs: {mensaje}"}
+
+
+def listar_voces() -> dict:
+    """Lista las voces disponibles en ElevenLabs para el desplegable de personajes.
+
+    Devuelve {disponible, voces, mensaje}, SIN lanzar excepción:
+      - disponible: True si se pudo traer la lista.
+      - voces: lista de {voz_id, nombre, categoria} (vacía si no disponible).
+      - mensaje: aviso para la UI cuando no se pudo (falta clave / permisos / error).
+
+    Degradación elegante: si falta la clave, o la clave es "scoped" y no tiene el
+    permiso de LECTURA de voces (401 missing_permissions), devolvemos la lista vacía
+    con un aviso para que el adulto pueda escribir el `voz_id` a mano. Un personaje
+    sin voz responde solo en texto (no rompe el chat).
+    """
+    if not config.ELEVENLABS_API_KEY:
+        return {
+            "disponible": False,
+            "voces": [],
+            "mensaje": "Falta ELEVENLABS_API_KEY: no se puede cargar la lista de voces.",
+        }
+    try:
+        respuesta = _get_client().voices.get_all()
+    except Exception as exc:
+        detalle = _detalle_error(exc)
+        if getattr(exc, "status_code", None) == 401 and detalle.get("status") == "missing_permissions":
+            return {
+                "disponible": False,
+                "voces": [],
+                "mensaje": "Tu clave de ElevenLabs no tiene permiso para leer la lista de "
+                "voces. Puedes escribir el ID de la voz a mano (lo copias desde "
+                "elevenlabs.io/voices).",
+            }
+        mensaje = detalle.get("message") or str(exc)
+        return {"disponible": False, "voces": [], "mensaje": f"No se pudieron cargar las voces: {mensaje}"}
+
+    voces = [
+        {
+            "voz_id": v.voice_id,
+            "nombre": getattr(v, "name", None) or v.voice_id,
+            "categoria": getattr(v, "category", None),
+        }
+        for v in (respuesta.voices or [])
+    ]
+    return {"disponible": True, "voces": voces, "mensaje": ""}

@@ -5,14 +5,19 @@
  * Coverflow de personajes (la carta central es el héroe elegido) + roster de
  * acceso rápido + consola con el CTA "SIGUIENTE". La carta central siempre
  * queda seleccionada, así que el paso está listo desde el primer momento.
+ *
+ * El catálogo llega por props (cargado por API en App, Hito 4): ya no depende
+ * del módulo estático. La agrupación por categorías (GRUPOS) y los tintes sí
+ * siguen siendo presentación estática.
  */
 
+import { useMemo } from "react";
 import Console from "../components/Console/Console";
 import Coverflow from "../components/Coverflow/Coverflow";
 import Roster from "../components/Roster/Roster";
+import type { PersonajeDTO } from "../api/types";
 import { holoCard, type HoloCardData } from "../data/holo";
-import { GRUPOS, PERSONAJES } from "../data/personajes";
-import { PERSONAJE_KEYS } from "../state/useFlow";
+import { GRUPOS } from "../data/personajes";
 
 /** categoría → título de grupo legible ("prehistorico" → "Prehistóricos"). */
 const CATEGORIA_LABEL: Record<string, string> = Object.fromEntries(
@@ -26,30 +31,35 @@ const TINTE_CATEGORIA: Record<string, string> = {
   ficticio: "var(--purple)",
 };
 
-/** Cartas de personaje (estáticas: derivadas del catálogo). */
-const CARTAS: HoloCardData[] = PERSONAJE_KEYS.map((id) => {
-  const p = PERSONAJES[id];
-  return holoCard(
-    {
-      id,
-      art: p.emoji,
-      name: p.label.toUpperCase(),
-      tag: CATEGORIA_LABEL[p.categoria]?.toUpperCase() ?? p.categoria.toUpperCase(),
-    },
-    TINTE_CATEGORIA[p.categoria],
-  );
-});
-
 interface Props {
+  personajes: PersonajeDTO[];
   index: number;
   onMove: (delta: number) => void;
   onNext: () => void;
 }
 
-export default function CharacterSelect({ index, onMove, onNext }: Props) {
-  const n = PERSONAJE_KEYS.length;
+export default function CharacterSelect({ personajes, index, onMove, onNext }: Props) {
+  // Cartas de personaje derivadas del catálogo recibido por API.
+  const cartas: HoloCardData[] = useMemo(
+    () =>
+      personajes.map((p) => {
+        const categoria = p.categoria ?? "";
+        return holoCard(
+          {
+            id: p.id,
+            art: p.emoji ?? "🎭",
+            name: p.nombre.toUpperCase(),
+            tag: (CATEGORIA_LABEL[categoria] ?? categoria).toUpperCase(),
+          },
+          TINTE_CATEGORIA[categoria] ?? "var(--holo)",
+        );
+      }),
+    [personajes],
+  );
+
+  const n = personajes.length;
   const i = ((index % n) + n) % n;
-  const elegido = PERSONAJES[PERSONAJE_KEYS[i]];
+  const elegido = personajes[i];
 
   return (
     <section>
@@ -57,25 +67,20 @@ export default function CharacterSelect({ index, onMove, onNext }: Props) {
         kicker="◇ ESCANEANDO LÍNEA TEMPORAL ◇"
         title="SELECCIONA TU PERSONAJE"
         subtitle="Rota los hologramas con ◀ ▶ · el proyectado en el centro es tu héroe"
-        items={CARTAS}
+        items={cartas}
         index={index}
         selected
         onMove={onMove}
         onSelectCenter={onNext}
       />
 
-      <Roster
-        items={CARTAS}
-        index={index}
-        onPick={(j) => onMove(j - i)}
-        lockedSlots={2}
-      />
+      <Roster items={cartas} index={index} onPick={(j) => onMove(j - i)} lockedSlots={2} />
 
       <Console
         status={
           <>
-            HÉROE FIJADO: <b>{elegido.label}</b> · sector{" "}
-            {CATEGORIA_LABEL[elegido.categoria] ?? elegido.categoria}
+            HÉROE FIJADO: <b>{elegido.nombre}</b> · sector{" "}
+            {CATEGORIA_LABEL[elegido.categoria ?? ""] ?? elegido.categoria ?? "—"}
           </>
         }
         progress={0.33}

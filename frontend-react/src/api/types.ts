@@ -137,6 +137,55 @@ export interface ConfigResponse {
   secretos: ApiProviderStatus[];
 }
 
+/**
+ * Un personaje del catálogo (GET /api/personajes). Replica el dict de
+ * personajes_service: el `id` es el invariante `personaje_id`.
+ */
+export interface PersonajeDTO {
+  /** Id invariante (minúsculas, números, - y _). */
+  id: string;
+  /** Nombre con el que se presenta en el chat. */
+  nombre: string;
+  /** "prehistorico" | "historico" | "ficticio" (o null). */
+  categoria: string | null;
+  /** Emoji de la carta (miniatura), o null. */
+  emoji: string | null;
+  /** Descripción en inglés para generar su imagen. */
+  prompt_imagen: string;
+  /** Voz de ElevenLabs (voz_id), o null = responde solo en texto. */
+  voz_id: string | null;
+  /** Si aparece en el catálogo del niño. */
+  activo: boolean;
+  /** Prompt de sistema propio (opcional; si null, usa el general). */
+  prompt_sistema_override: string | null;
+}
+
+/** Datos para crear un personaje (POST /api/personajes). */
+export interface PersonajeCrear {
+  id: string;
+  nombre: string;
+  prompt_imagen: string;
+  categoria?: string | null;
+  emoji?: string | null;
+  voz_id?: string | null;
+  prompt_sistema_override?: string | null;
+  activo?: boolean;
+}
+
+/** Una voz de ElevenLabs (GET /api/voices). */
+export interface VozDTO {
+  voz_id: string;
+  nombre: string;
+  categoria: string | null;
+}
+
+/** Respuesta de GET /api/voices: lista de voces + aviso si no está disponible. */
+export interface VocesResponse {
+  disponible: boolean;
+  voces: VozDTO[];
+  mensaje: string;
+}
+
 /** Respuesta del endpoint PUT /api/config (guardar ajustes en caliente). */
 export interface ConfigSaveResult {
   ok: boolean;

@@ -19,8 +19,11 @@ import type {
   GenerateRequest,
   GenerateResponse,
   HealthResponse,
+  PersonajeCrear,
+  PersonajeDTO,
   SettingMeta,
   TranscribeResponse,
+  VocesResponse,
 } from "./types";
 
 // URL del backend. Vacía = mismo origen (en dev, el proxy de vite.config.ts
@@ -283,4 +286,61 @@ export async function saveConfig(
   );
   const body = (await response.json()) as ConfigSaveResult;
   return body.reindex_necesario;
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Personajes (Hito 4). Catálogo consumido por la pantalla del
+// niño y por la pestaña de configuración (CRUD).
+// ---------------------------------------------------------------------------
+
+/** Catálogo de personajes. Por defecto solo activos; `todos=true` incluye inactivos. */
+export async function getPersonajes(todos = false): Promise<PersonajeDTO[]> {
+  const query = todos ? "?todos=1" : "";
+  const response = await fetchBackend(`/api/personajes${query}`, { method: "GET" }, TIMEOUT_CONFIG);
+  const body = (await response.json()) as { personajes: PersonajeDTO[] };
+  return body.personajes;
+}
+
+/** Crea un personaje nuevo. POST /api/personajes. */
+export async function createPersonaje(datos: PersonajeCrear): Promise<PersonajeDTO> {
+  const response = await fetchBackend(
+    "/api/personajes",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { personaje: PersonajeDTO };
+  return body.personaje;
+}
+
+/** Edita campos de un personaje (solo los incluidos). PUT /api/personajes/{id}. */
+export async function updatePersonaje(
+  id: string,
+  cambios: Partial<Omit<PersonajeDTO, "id">>,
+): Promise<PersonajeDTO> {
+  const response = await fetchBackend(
+    `/api/personajes/${id}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cambios),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { personaje: PersonajeDTO };
+  return body.personaje;
+}
+
+/** Borra un personaje del catálogo. DELETE /api/personajes/{id}. */
+export async function deletePersonaje(id: string): Promise<void> {
+  await fetchBackend(`/api/personajes/${id}`, { method: "DELETE" }, TIMEOUT_CONFIG);
+}
+
+/** Voces disponibles en ElevenLabs para el desplegable. GET /api/voices. */
+export async function getVoices(): Promise<VocesResponse> {
+  const response = await fetchBackend("/api/voices", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as VocesResponse;
 }

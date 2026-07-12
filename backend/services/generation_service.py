@@ -42,7 +42,7 @@ from backend import config
 from backend import debug_log
 from backend import personajes as personajes_cfg
 from backend import ubicaciones as ubicaciones_cfg
-from backend.services import settings_service
+from backend.services import personajes_service, settings_service
 
 
 def _salida_a_base64(output) -> str:
@@ -93,7 +93,8 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     Lanza ValueError (→ 400 en el router) si el personaje/ubicación no existen o
     si falta el token de Replicate.
     """
-    if personaje_id not in personajes_cfg.PROMPTS:
+    ficha_personaje = personajes_service.obtener(personaje_id)
+    if ficha_personaje is None:
         raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
     if ubicacion_id not in ubicaciones_cfg.UBICACIONES:
         raise ValueError(f"Ubicación desconocida: '{ubicacion_id}'.")
@@ -103,7 +104,7 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     #   1) SUJETO     → personaje + ubicación (lo esencial, entra en CLIP).
     #   2) ENCUADRE   → FRAMING (cómo de lejos/grande sale el personaje).
     #   3) ESTILO     → STYLE_SUFFIX (look común; si CLIP lo recorta, T5 lo lee).
-    personaje = personajes_cfg.PROMPTS[personaje_id]["prompt"]
+    personaje = ficha_personaje["prompt_imagen"]
     ubicacion = ubicaciones_cfg.UBICACIONES[ubicacion_id]["prompt"]
     prompt = (
         f"{personaje}, {ubicacion}, "
@@ -148,11 +149,12 @@ def generar_en_foto(
 
     Lanza ValueError (→ 400) si el personaje no existe o falta el token.
     """
-    if personaje_id not in personajes_cfg.PROMPTS:
+    ficha_personaje = personajes_service.obtener(personaje_id)
+    if ficha_personaje is None:
         raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
     _exigir_token()
 
-    personaje = personajes_cfg.PROMPTS[personaje_id]["prompt"]
+    personaje = ficha_personaje["prompt_imagen"]
     # Instrucción de edición, también de MÁS a MENOS importante (CLIP vs T5):
     # primero QUÉ hacer y a QUIÉN añadir, y al final el estilo común (STYLE_SUFFIX),
     # que es lo que mejor tolera caer fuera de CLIP.

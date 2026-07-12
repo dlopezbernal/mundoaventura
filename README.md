@@ -583,9 +583,14 @@ compara directamente con la distancia real `d=...` que la app expone (en la resp
 
 ## 💡 Personalizar
 
-- **Añadir personajes:** edita `backend/personajes.py` (`PROMPTS`, `NOMBRES` y, si quieres que
-  hable, `VOCES` con su `voz_id` de ElevenLabs) y `frontend-react/src/data/personajes.ts` (la
-  tarjeta), usando el **mismo `id`** en todos. Un personaje sin `voz_id` responde solo en texto.
-- **Añadir ubicaciones:** igual, en `backend/ubicaciones.py` y `frontend-react/src/data/ubicaciones.ts`.
+- **Añadir personajes (sin tocar código):** ábrelo con el botón ⚙️ → pestaña **Personajes** y pulsa
+  **➕ Nuevo personaje**. Rellena nombre, categoría, emoji, la descripción para su imagen (en inglés)
+  y, si quieres que hable, elige una **voz** del desplegable de ElevenLabs (un personaje sin voz
+  responde solo en texto). Al guardarlo se crea también su carpeta `backend/documentos/<id>/` para
+  los documentos del RAG. El catálogo se guarda en la BBDD (tabla `personajes`) y lo consumen tanto
+  el backend como el frontend por API. Los personajes que trae la app de fábrica se siembran desde
+  `backend/personajes.py` en el primer arranque.
+- **Añadir ubicaciones:** de momento por código, en `backend/ubicaciones.py` y
+  `frontend-react/src/data/ubicaciones.ts` con el **mismo `id`** (su edición sin código llega en un hito posterior).
 - **Cambiar el modelo o el estilo:** `REPLICATE_MODEL` en el `.env` y el `STYLE_SUFFIX` en
   `backend/personajes.py`.
