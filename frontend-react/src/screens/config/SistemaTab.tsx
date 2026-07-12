@@ -3,6 +3,7 @@
  * =================================================================
  *
  * Zona de mantenimiento del adulto ya autenticado:
+ *   - Opciones generales de la aplicación (modo desarrollo/DEBUG).
  *   - Cambiar el PIN de adulto (pide el actual).
  *   - EXPORTAR la configuración a un archivo JSON (ajustes + personajes +
  *     ubicaciones; nunca las claves API).
@@ -19,6 +20,7 @@ import {
   BackendError,
 } from "../../api/client";
 import styles from "../Settings.module.css";
+import ConfigForm from "./ConfigForm";
 
 interface Props {
   /** Cierra la sesión de adulto (vuelve a la pantalla del PIN). */
@@ -105,6 +107,9 @@ export default function SistemaTab({ onLogout }: Props) {
     <div className={styles.cfgWrap}>
       {error && <p className={styles.testNo}>❌ {error}</p>}
       {okMsg && <p className={styles.testOk}>✅ {okMsg}</p>}
+
+      {/* Opciones generales */}
+      <ConfigForm categorias={["general"]} intro="Opciones generales de la aplicación." />
 
       {/* Cambiar PIN */}
       <div className={styles.pjForm}>

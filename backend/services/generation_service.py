@@ -16,8 +16,8 @@ Dos modos, ambos delegan la GPU a Replicate.com (no se genera nada en local):
      foto real) y el modelo "intuye" dónde colocarlo.
 
 Nota FLUX schnell: NO admite "negative prompt" ni "guidance"; la seguridad y el
-estilo van en el prompt POSITIVO (ver STYLE_SUFFIX/FRAMING en personajes.py) y se
-deja activo el safety checker de Replicate.
+estilo van en el prompt POSITIVO (ver STYLE_SUFFIX/FRAMING, ajustes editables desde
+la pestaña "General" de configuración) y se deja activo el safety checker de Replicate.
 
 Salida de replicate.run: FLUX schnell devuelve una LISTA de FileOutput; Kontext
 devuelve un único FileOutput. _salida_a_base64 maneja ambos casos.
@@ -40,7 +40,6 @@ import replicate
 
 from backend import config
 from backend import debug_log
-from backend import personajes as personajes_cfg
 from backend.services import personajes_service, settings_service, ubicaciones_service
 
 
@@ -108,7 +107,7 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     ubicacion = ficha_ubicacion["prompt_imagen"]
     prompt = (
         f"{personaje}, {ubicacion}, "
-        f"{personajes_cfg.FRAMING}, {personajes_cfg.STYLE_SUFFIX}"
+        f"{settings_service.get('FRAMING')}, {settings_service.get('STYLE_SUFFIX')}"
     )
     _avisar_si_prompt_largo(prompt)
     modelo = settings_service.get("REPLICATE_MODEL")
@@ -163,7 +162,7 @@ def generar_en_foto(
         f"Add {personaje} standing in the scene, placed naturally and a bit in the "
         "background so the surroundings stay clearly visible. "
         "Keep the room layout and main objects recognizable. "
-        f"{personajes_cfg.STYLE_SUFFIX}"
+        f"{settings_service.get('STYLE_SUFFIX')}"
     )
     _avisar_si_prompt_largo(instruccion)
     modelo_edicion = settings_service.get("REPLICATE_EDIT_MODEL")

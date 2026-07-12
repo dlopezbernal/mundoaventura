@@ -8,10 +8,10 @@
  *
  *   - APIs         → claves de los proveedores (Hito 2).
  *   - IA           → parámetros del motor: RAG, troceado, LLM y prompts (Hito 3).
- *   - General      → modo desarrollo/DEBUG (Hito 3).
+ *   - General      → estilo visual común de las imágenes (STYLE_SUFFIX/FRAMING).
  *   - Personajes   → CRUD de personajes + documentos del RAG (Hitos 4 y 5).
  *   - Ubicaciones  → CRUD de ubicaciones (Hito 6).
- *   - Sistema      → PIN, import/export y cerrar sesión (Hito 7).
+ *   - Sistema      → PIN, import/export, modo desarrollo/DEBUG y cerrar sesión (Hito 7).
  */
 
 import { useCallback, useState } from "react";
@@ -32,7 +32,7 @@ interface Props {
 const PESTANAS = [
   { id: "apis", label: "APIs", emoji: "🔑" },
   { id: "ia", label: "IA", emoji: "🧠" },
-  { id: "general", label: "General", emoji: "⚙️" },
+  { id: "general", label: "General", emoji: "🎨" },
   { id: "personajes", label: "Personajes", emoji: "🎭" },
   { id: "ubicaciones", label: "Ubicaciones", emoji: "🗺️" },
   { id: "sistema", label: "Sistema", emoji: "🛡️" },
@@ -88,7 +88,10 @@ export default function Settings({ onCerrar }: Props) {
             />
           )}
           {pestana === "general" && (
-            <ConfigForm categorias={["general"]} intro="Opciones generales de la aplicación." />
+            <ConfigForm
+              categorias={["estilo_imagen"]}
+              intro="Estilo visual común a TODAS las imágenes (personajes y ubicaciones), para que la escena final se vea coherente sea cual sea la combinación. Los cambios se aplican al instante, sin reiniciar."
+            />
           )}
           {pestana === "personajes" && <PersonajesTab />}
           {pestana === "ubicaciones" && <UbicacionesTab />}

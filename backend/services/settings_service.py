@@ -27,6 +27,7 @@ from typing import Any
 from sqlmodel import select
 
 from backend import config, db
+from backend import personajes as personajes_cfg
 from backend.models import Setting
 
 # Categorías (para agrupar los ajustes en la UI del Hito 3).
@@ -37,6 +38,9 @@ CAT_LLM = "llm"
 CAT_VOZ = "voz"
 CAT_PROMPTS = "prompts"
 CAT_GENERAL = "general"
+# Estilo visual COMÚN a personajes y ubicaciones (pestaña "General" de la UI):
+# antes constantes fijas en personajes.py, ahora editables sin tocar código.
+CAT_ESTILO_IMAGEN = "estilo_imagen"
 
 # Modos válidos del Evaluator (mismo criterio que config.py).
 _MODOS_EVALUATOR = ("umbral", "llm", "hibrido")
@@ -121,6 +125,23 @@ _SPEC: dict[str, dict[str, Any]] = {
         "categoria": CAT_IMAGEN, "tipo": "int", "default": config.CLIP_TOKEN_LIMIT,
         "min": 1, "max": 512,
         "ayuda": "Límite de tokens de CLIP; si el prompt lo supera, solo se avisa.",
+    },
+    # --- Estilo de imagen (pestaña "General"): común a TODOS los personajes y
+    # ubicaciones, para que la imagen final se vea coherente (ver generation_service).
+    "STYLE_SUFFIX": {
+        "categoria": CAT_ESTILO_IMAGEN, "tipo": "str", "default": personajes_cfg.STYLE_SUFFIX,
+        "multilinea": True,
+        "ayuda": "Estilo visual común a TODAS las imágenes (personaje + ubicación): "
+        "render 3D Pixar, colores, seguridad para niños. Va en POSITIVO al final del "
+        "prompt (FLUX schnell no admite negative prompt). Se usa en 'generar escena' "
+        "y en 'usar mi foto'.",
+    },
+    "FRAMING": {
+        "categoria": CAT_ESTILO_IMAGEN, "tipo": "str", "default": personajes_cfg.FRAMING,
+        "multilinea": True,
+        "ayuda": "Encuadre de la escena predefinida (qué tan cerca/lejos sale el "
+        "personaje). Solo se usa en 'generar escena' (personaje + ubicación); el modo "
+        "'usar mi foto' respeta el encuadre de la foto original.",
     },
     # --- RAG / Evaluator ---
     "EVALUATOR_MODE": {

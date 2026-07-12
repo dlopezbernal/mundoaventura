@@ -27,6 +27,11 @@ class VoiceError(ValueError):
     """
 
 
+# Frase fija para el botón "Probar voz" de la pestaña Personajes: la misma
+# para todos los personajes, así el adulto compara voces en igualdad de condiciones.
+FRASE_PRUEBA_VOZ = "¡Hola! Prueba de sonido, uno, dos, tres. El rápido zorro marrón salta sobre el perro perezoso."
+
+
 # Cliente de ElevenLabs, creado una sola vez (singleton perezoso).
 _client: ElevenLabs | None = None
 
@@ -154,7 +159,11 @@ def listar_voces() -> dict:
 
     Devuelve {disponible, voces, mensaje}, SIN lanzar excepción:
       - disponible: True si se pudo traer la lista.
-      - voces: lista de {voz_id, nombre, categoria} (vacía si no disponible).
+      - voces: lista de {voz_id, nombre, categoria, espanol} (vacía si no disponible).
+        `espanol` = True si ElevenLabs tiene el español ("es") verificado para esa voz
+        (campo `verified_languages`); es solo una etiqueta informativa para la UI, NO
+        se usa para ocultar voces: cualquier voz multilingüe puede sintetizar español
+        igualmente, verificado o no.
       - mensaje: aviso para la UI cuando no se pudo (falta clave / permisos / error).
 
     Degradación elegante: si falta la clave, o la clave es "scoped" y no tiene el
@@ -188,6 +197,7 @@ def listar_voces() -> dict:
             "voz_id": v.voice_id,
             "nombre": getattr(v, "name", None) or v.voice_id,
             "categoria": getattr(v, "category", None),
+            "espanol": any(idioma.language == "es" for idioma in (v.verified_languages or [])),
         }
         for v in (respuesta.voices or [])
     ]

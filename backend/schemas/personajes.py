@@ -43,3 +43,9 @@ class PersonajeEditar(BaseModel):
     voz_id: str | None = None
     prompt_sistema_override: str | None = None
     activo: bool | None = None
+
+
+class VozProbar(BaseModel):
+    """Petición de POST /api/voices/probar: qué voz sintetizar."""
+
+    voz_id: str = Field(description="Id de la voz de ElevenLabs a probar.")

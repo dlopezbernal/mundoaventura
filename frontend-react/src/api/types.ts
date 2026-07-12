@@ -177,6 +177,8 @@ export interface VozDTO {
   voz_id: string;
   nombre: string;
   categoria: string | null;
+  /** True si ElevenLabs tiene el español verificado para esta voz (solo informativo). */
+  espanol: boolean;
 }
 
 /** Respuesta de GET /api/voices: lista de voces + aviso si no está disponible. */

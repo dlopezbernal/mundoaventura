@@ -46,6 +46,7 @@ const TIMEOUT_ASK = 120_000;
 const TIMEOUT_TRANSCRIBE = 60_000;
 const TIMEOUT_CONFIG = 30_000; // config: lecturas rápidas y "probar conexión"
 const TIMEOUT_DOCS = 180_000; // subir/URL/reindex: traducción DeepL + embeddings
+const TIMEOUT_VOZ_PROBAR = 30_000; // TTS de una frase corta
 
 /** Error al comunicarnos con el backend (lo mostramos al usuario). */
 export class BackendError extends Error {
@@ -382,6 +383,24 @@ export async function deletePersonaje(id: string): Promise<void> {
 export async function getVoices(): Promise<VocesResponse> {
   const response = await fetchBackend("/api/voices", { method: "GET" }, TIMEOUT_CONFIG);
   return (await response.json()) as VocesResponse;
+}
+
+/**
+ * Sintetiza la frase de prueba con `vozId` (botón "🔊 Probar voz"). Devuelve el
+ * audio en base64 (mp3), listo para `new Audio("data:audio/mpeg;base64,...")`.
+ */
+export async function probarVoz(vozId: string): Promise<string> {
+  const response = await fetchBackend(
+    "/api/voices/probar",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voz_id: vozId }),
+    },
+    TIMEOUT_VOZ_PROBAR,
+  );
+  const body = (await response.json()) as { audio_base64: string };
+  return body.audio_base64;
 }
 
 // ---------------------------------------------------------------------------

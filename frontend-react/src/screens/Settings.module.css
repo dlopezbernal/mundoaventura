@@ -499,6 +499,21 @@
   gap: 10px;
   align-items: center;
 }
+/* Selector/input de voz + botón "Probar voz" en la misma fila. */
+.pjFilaControlBtn {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.pjFilaControlBtn .input,
+.pjFilaControlBtn .select {
+  flex: 1;
+  width: auto;
+}
+.pjFilaControlBtn .testBtn {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
 
 /* --- Panel de documentos del RAG (dentro de la edición de un personaje) --- */
 .docsPanel {

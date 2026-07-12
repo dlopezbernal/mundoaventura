@@ -10,14 +10,18 @@ voces de ElevenLabs para el desplegable de la pantalla de configuración:
   PUT    /api/personajes/{id}    → editar campos de un personaje.
   DELETE /api/personajes/{id}    → borrar un personaje del catálogo.
   GET    /api/voices             → voces disponibles en ElevenLabs (para elegir voz_id).
+  POST   /api/voices/probar      → sintetiza una frase fija con la voz indicada (botón
+                                    "Probar voz" de la pestaña Personajes).
 
 Lo consumen tanto la pantalla del niño (elegir personaje) como la pestaña de
 configuración. El control de acceso admin a la edición llega en el Hito 7.
 """
 
+import base64
+
 from fastapi import APIRouter, Depends, HTTPException
 
-from backend.schemas.personajes import PersonajeCrear, PersonajeEditar
+from backend.schemas.personajes import PersonajeCrear, PersonajeEditar, VozProbar
 from backend.services import admin_service, personajes_service, voice_service
 
 router = APIRouter(prefix="/api", tags=["Configuración · Personajes"])
@@ -69,3 +73,13 @@ def borrar_personaje(personaje_id: str):
 def listar_voces():
     """Voces de ElevenLabs para el desplegable: {disponible, voces, mensaje}."""
     return voice_service.listar_voces()
+
+
+@router.post("/voices/probar", dependencies=_admin)
+def probar_voz(req: VozProbar):
+    """Sintetiza la frase de prueba con `voz_id` y la devuelve en base64 (mp3)."""
+    try:
+        audio_bytes = voice_service.sintetizar(voice_service.FRASE_PRUEBA_VOZ, req.voz_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"audio_base64": base64.b64encode(audio_bytes).decode("ascii")}

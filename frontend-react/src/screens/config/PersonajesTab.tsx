@@ -14,13 +14,14 @@
  * Un personaje sin voz responde solo en texto (degradación válida).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   BackendError,
   createPersonaje,
   deletePersonaje,
   getPersonajes,
   getVoices,
+  probarVoz,
   reindexGlobal,
   updatePersonaje,
 } from "../../api/client";
@@ -295,6 +296,9 @@ interface FormProps {
 function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuardar }: FormProps) {
   const [form, setForm] = useState<FormState>(inicial);
   const [guardando, setGuardando] = useState(false);
+  const [probandoVoz, setProbandoVoz] = useState(false);
+  const [errorVoz, setErrorVoz] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   function set<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -306,6 +310,23 @@ function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuarda
       await onGuardar(form);
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function onProbarVoz() {
+    if (!form.voz_id.trim()) return;
+    setErrorVoz(null);
+    setProbandoVoz(true);
+    try {
+      const audioBase64 = await probarVoz(form.voz_id.trim());
+      audioRef.current?.pause();
+      const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
+      audioRef.current = audio;
+      await audio.play();
+    } catch (exc) {
+      setErrorVoz(exc instanceof BackendError ? exc.message : String(exc));
+    } finally {
+      setProbandoVoz(false);
     }
   }
 
@@ -379,35 +400,61 @@ function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuarda
           onChange={(e) => set("prompt_imagen", e.target.value)}
         />
         <span className={styles.filaAyuda}>
-          Sin datos personales; describe su aspecto amable para un render 3D estilo Pixar.
+          Sin datos personales; describe su aspecto para un render 3D estilo Pixar (colorido y amable).
         </span>
       </label>
 
       <label className={styles.pjLabel}>
         Voz (ElevenLabs)
-        {hayVoces ? (
-          <select
-            className={styles.select}
-            value={form.voz_id}
-            onChange={(e) => set("voz_id", e.target.value)}
+        <div className={styles.pjFilaControlBtn}>
+          {hayVoces ? (
+            <select
+              className={styles.select}
+              value={form.voz_id}
+              onChange={(e) => {
+                setErrorVoz(null);
+                set("voz_id", e.target.value);
+              }}
+            >
+              <option value="">Sin voz (solo texto)</option>
+              {voces.map((v) => (
+                <option key={v.voz_id} value={v.voz_id}>
+                  {v.espanol ? "🇪🇸 " : ""}
+                  {v.nombre}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              className={styles.input}
+              value={form.voz_id}
+              placeholder="ID de la voz (opcional)"
+              spellCheck={false}
+              onChange={(e) => {
+                setErrorVoz(null);
+                set("voz_id", e.target.value);
+              }}
+            />
+          )}
+          <button
+            type="button"
+            className={styles.testBtn}
+            onClick={() => void onProbarVoz()}
+            disabled={!form.voz_id.trim() || probandoVoz}
+            title="Reproduce una frase de prueba con esta voz"
           >
-            <option value="">Sin voz (solo texto)</option>
-            {voces.map((v) => (
-              <option key={v.voz_id} value={v.voz_id}>
-                {v.nombre}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <input
-            className={styles.input}
-            value={form.voz_id}
-            placeholder="ID de la voz (opcional)"
-            spellCheck={false}
-            onChange={(e) => set("voz_id", e.target.value)}
-          />
+            {probandoVoz ? "🔊 Sonando…" : "🔊 Probar voz"}
+          </button>
+        </div>
+        {hayVoces && (
+          <span className={styles.filaAyuda}>
+            🇪🇸 = ElevenLabs tiene el español verificado para esa voz. Las demás también
+            pueden hablar español (el modelo es multilingüe), solo que ElevenLabs no lo
+            ha verificado explícitamente.
+          </span>
         )}
         {!hayVoces && vocesMsg && <span className={styles.filaAyuda}>{vocesMsg}</span>}
+        {errorVoz && <span className={styles.testNo}>❌ {errorVoz}</span>}
       </label>
 
       <label className={styles.pjToggleFila}>

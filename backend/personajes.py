@@ -9,6 +9,12 @@ y con el STYLE_SUFFIX común, y lo manda a Replicate como un único prompt.
 
 Ya NO usamos IP-Adapter ni imágenes base: con texto-a-imagen en la nube basta
 con describir bien al personaje y el estilo deseado.
+
+STYLE_SUFFIX y FRAMING son ahora solo el VALOR POR DEFECTO (seed): el ajuste
+editable en caliente vive en `settings_service` (categoría "estilo_imagen",
+pestaña "General" de configuración) y `generation_service` lee de ahí, nunca de
+estas constantes directamente. Igual que con PROMPTS/NOMBRES/VOCES: este
+fichero es la fuente de semilla, no el valor vigente.
 """
 
 # Estilo visual común a TODAS las imágenes. Es lo que da coherencia entre
