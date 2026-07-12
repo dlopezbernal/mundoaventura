@@ -41,8 +41,7 @@ import replicate
 from backend import config
 from backend import debug_log
 from backend import personajes as personajes_cfg
-from backend import ubicaciones as ubicaciones_cfg
-from backend.services import personajes_service, settings_service
+from backend.services import personajes_service, settings_service, ubicaciones_service
 
 
 def _salida_a_base64(output) -> str:
@@ -96,7 +95,8 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     ficha_personaje = personajes_service.obtener(personaje_id)
     if ficha_personaje is None:
         raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
-    if ubicacion_id not in ubicaciones_cfg.UBICACIONES:
+    ficha_ubicacion = ubicaciones_service.obtener(ubicacion_id)
+    if ficha_ubicacion is None:
         raise ValueError(f"Ubicación desconocida: '{ubicacion_id}'.")
     _exigir_token()
 
@@ -105,7 +105,7 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     #   2) ENCUADRE   → FRAMING (cómo de lejos/grande sale el personaje).
     #   3) ESTILO     → STYLE_SUFFIX (look común; si CLIP lo recorta, T5 lo lee).
     personaje = ficha_personaje["prompt_imagen"]
-    ubicacion = ubicaciones_cfg.UBICACIONES[ubicacion_id]["prompt"]
+    ubicacion = ficha_ubicacion["prompt_imagen"]
     prompt = (
         f"{personaje}, {ubicacion}, "
         f"{personajes_cfg.FRAMING}, {personajes_cfg.STYLE_SUFFIX}"

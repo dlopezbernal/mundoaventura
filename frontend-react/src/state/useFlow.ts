@@ -14,17 +14,10 @@
 
 import { useMemo, useReducer, useRef } from "react";
 import { BackendError, generate, generateOnPhoto } from "../api/client";
-import type { PersonajeDTO } from "../api/types";
-import { UBICACIONES } from "../data/ubicaciones";
+import type { PersonajeDTO, UbicacionDTO } from "../api/types";
 
 /** Id especial (no es una ubicación real) para el modo "Usar mi foto". */
 export const FOTO_ID = "__foto__";
-
-/**
- * Lugares como lista ordenada para el carrusel (con vuelta circular). Las
- * ubicaciones siguen siendo estáticas hasta el Hito 6; "Mi foto" va primera.
- */
-export const LUGAR_KEYS = [FOTO_ID, ...Object.keys(UBICACIONES)];
 
 interface Estado {
   paso: 1 | 2 | 3;
@@ -66,10 +59,11 @@ type Accion =
   | { type: "REINICIAR" };
 
 /**
- * Fábrica del reducer: recibe las claves del catálogo (que ahora llegan por API,
- * no de un módulo estático) y devuelve el reducer que las usa para el carrusel.
+ * Fábrica del reducer: recibe las claves de los catálogos (que ahora llegan por
+ * API, no de módulos estáticos) y devuelve el reducer que las usa para los
+ * carruseles de personaje y de lugar.
  */
-function crearReducer(personajeKeys: string[]) {
+function crearReducer(personajeKeys: string[], lugarKeys: string[]) {
   return function reducer(estado: Estado, accion: Accion): Estado {
   switch (accion.type) {
     case "MOVER_PERSONAJE": {
@@ -78,9 +72,9 @@ function crearReducer(personajeKeys: string[]) {
       return { ...estado, personajeIdx: idx, personajeId: personajeKeys[idx] };
     }
     case "MOVER_LUGAR": {
-      const n = LUGAR_KEYS.length;
+      const n = lugarKeys.length;
       const idx = (((estado.ubicacionIdx + accion.delta) % n) + n) % n;
-      const key = LUGAR_KEYS[idx];
+      const key = lugarKeys[idx];
       if (key === FOTO_ID) {
         // "Mi foto" sólo queda seleccionada si ya hay un archivo elegido.
         return {
@@ -124,12 +118,23 @@ function claveSeleccion(pid: string, uid: string, foto: File | null): string {
 }
 
 /**
- * Máquina de estados del asistente. Recibe el CATÁLOGO de personajes (cargado por
- * API en App), del que salen las claves del carrusel y el personaje inicial.
+ * Máquina de estados del asistente. Recibe los CATÁLOGOS de personajes y de
+ * ubicaciones (cargados por API en App), de los que salen las claves de los
+ * carruseles, el personaje inicial y el nombre del lugar elegido.
  */
-export function useFlow(personajes: PersonajeDTO[]) {
+export function useFlow(personajes: PersonajeDTO[], ubicaciones: UbicacionDTO[]) {
   const personajeKeys = useMemo(() => personajes.map((p) => p.id), [personajes]);
-  const reducer = useMemo(() => crearReducer(personajeKeys), [personajeKeys]);
+  // "Mi foto" va primera, luego las ubicaciones del catálogo.
+  const lugarKeys = useMemo(() => [FOTO_ID, ...ubicaciones.map((u) => u.id)], [ubicaciones]);
+  // Nombre visible por id de ubicación (para el mensaje "MUNDO FIJADO: …").
+  const nombrePorLugar = useMemo(
+    () => Object.fromEntries(ubicaciones.map((u) => [u.id, u.nombre])),
+    [ubicaciones],
+  );
+  const reducer = useMemo(
+    () => crearReducer(personajeKeys, lugarKeys),
+    [personajeKeys, lugarKeys],
+  );
   const [estado, dispatch] = useReducer(reducer, personajeKeys, estadoInicial);
   // Guard anti doble clic: evita lanzar dos generaciones (dos cobros) seguidas.
   const generandoRef = useRef(false);
@@ -142,7 +147,7 @@ export function useFlow(personajes: PersonajeDTO[]) {
 
   function nombreLugar(): string {
     if (ubicacionId === FOTO_ID) return "tu foto";
-    if (ubicacionId) return UBICACIONES[ubicacionId].label;
+    if (ubicacionId) return nombrePorLugar[ubicacionId] ?? "";
     return "";
   }
 

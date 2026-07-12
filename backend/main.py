@@ -25,6 +25,7 @@ from backend.routers import apis as apis_router
 from backend.routers import config as config_router
 from backend.routers import personajes as personajes_router
 from backend.routers import documentos as documentos_router
+from backend.routers import ubicaciones as ubicaciones_router
 from backend.routers import conversacion, generation, transcription
 from backend.services import translation_service, voice_service
 
@@ -129,6 +130,8 @@ app.include_router(apis_router.router)
 app.include_router(personajes_router.router)
 # Configuración · Documentos: base de conocimiento del RAG (subir/URL/reindex).
 app.include_router(documentos_router.router)
+# Configuración · Ubicaciones: catálogo de lugares (CRUD).
+app.include_router(ubicaciones_router.router)
 
 
 # ---------------------------------------------------------------------------

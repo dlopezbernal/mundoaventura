@@ -59,11 +59,28 @@ def sembrar_todo() -> dict[str, int]:
                     fila.emoji = personajes_cfg.EMOJIS.get(pid)
                 sesion.add(fila)
 
-        # Ubicaciones: id + prompt (el nombre visible vive en el frontend; Hito 6).
+        # Ubicaciones: id + nombre + emoji + prompt. Desde el Hito 6 el catálogo se
+        # lee de esta tabla (ubicaciones_service) y el frontend lo consume por API.
         for uid, datos in ubicaciones_cfg.UBICACIONES.items():
-            if sesion.get(Ubicacion, uid) is None:
-                sesion.add(Ubicacion(id=uid, prompt=datos["prompt"], activo=True))
+            fila = sesion.get(Ubicacion, uid)
+            if fila is None:
+                sesion.add(
+                    Ubicacion(
+                        id=uid,
+                        nombre=ubicaciones_cfg.NOMBRES.get(uid),
+                        emoji=ubicaciones_cfg.EMOJIS.get(uid),
+                        prompt=datos["prompt"],
+                        activo=True,
+                    )
+                )
                 ubicaciones_nuevas += 1
+            else:
+                # Backfill: BBDD sembradas antes del Hito 6 no tienen nombre/emoji.
+                if fila.nombre is None:
+                    fila.nombre = ubicaciones_cfg.NOMBRES.get(uid)
+                if fila.emoji is None:
+                    fila.emoji = ubicaciones_cfg.EMOJIS.get(uid)
+                sesion.add(fila)
 
         sesion.commit()
 

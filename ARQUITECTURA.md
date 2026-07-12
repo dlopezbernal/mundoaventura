@@ -74,8 +74,12 @@ lo consumen por API (`GET /api/personajes`). Así, el `personaje_id` conecta:
 forma idempotente y con backfill de las columnas nuevas). Crear un personaje desde
 la UI (`POST /api/personajes`) genera de golpe la fila y su carpeta de documentos.
 
-Las **ubicaciones** siguen de momento el patrón antiguo (código): `backend/ubicaciones.py`
-y `frontend-react/src/data/ubicaciones.ts` con el mismo id (su migración es el Hito 6).
+Las **ubicaciones** (Hito 6) siguen el MISMO patrón: viven en la tabla `ubicaciones`
+(`nombre`, `emoji`, `prompt`, `activo`), vía `ubicaciones_service`, y las consumen el
+backend (generación) y el frontend por `GET /api/ubicaciones` (CRUD en
+`POST/PUT/DELETE /api/ubicaciones`). `backend/ubicaciones.py` queda como fuente de
+"seeding" (`UBICACIONES`/`NOMBRES`/`EMOJIS`); el antiguo catálogo estático del frontend
+se ha eliminado.
 
 ## Capa de configuración (SQLite + `settings_service`)
 
@@ -89,9 +93,10 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
 - **Qué vive en SQLite:** ajustes de IA (umbrales/modo del Evaluator, `RAG_TOP_K`),
   chunking, modelo/`max_tokens`/`temperature` del LLM, los **prompts de sistema**
   (externalizados desde `rag_service.py`, con variables `{nombre}`/`{fichas}`/`{pregunta}`),
-  opciones generales como `DEBUG`, el **catálogo de personajes** (tabla `personajes`,
-  vía `personajes_service`; CRUD por `GET/POST/PUT/DELETE /api/personajes` y las voces
-  de ElevenLabs por `GET /api/voices`) y los **metadatos de los documentos del RAG**
+  opciones generales como `DEBUG`, los **catálogos de personajes y ubicaciones** (tablas
+  `personajes`/`ubicaciones`, vía `personajes_service`/`ubicaciones_service`; CRUD por
+  `GET/POST/PUT/DELETE /api/personajes` y `/api/ubicaciones`, y las voces de ElevenLabs
+  por `GET /api/voices`) y los **metadatos de los documentos del RAG**
   (tabla `documentos`, vía `documentos_service`; subir/URL/borrar/reindexar por
   `.../documentos` y `.../reindex`). Los ficheros del RAG siguen en disco
   (`backend/documentos/<id>/`) y ChromaDB en su carpeta; el reindexado es incremental

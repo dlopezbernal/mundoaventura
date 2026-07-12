@@ -215,6 +215,31 @@ export interface ReindexResult {
   chunks: number;
 }
 
+/**
+ * Una ubicación del catálogo (GET /api/ubicaciones). Replica el dict de
+ * ubicaciones_service: el `id` es el invariante de la ubicación.
+ */
+export interface UbicacionDTO {
+  id: string;
+  /** Nombre visible en la carta. */
+  nombre: string;
+  /** Emoji de la carta (miniatura), o null. */
+  emoji: string | null;
+  /** Descripción en inglés del fondo de la escena. */
+  prompt_imagen: string;
+  /** Si aparece en el catálogo del niño. */
+  activo: boolean;
+}
+
+/** Datos para crear una ubicación (POST /api/ubicaciones). */
+export interface UbicacionCrear {
+  id: string;
+  nombre: string;
+  prompt_imagen: string;
+  emoji?: string | null;
+  activo?: boolean;
+}
+
 /** Respuesta del endpoint PUT /api/config (guardar ajustes en caliente). */
 export interface ConfigSaveResult {
   ok: boolean;

@@ -6,11 +6,11 @@
  * paso actual de la máquina de estados (useFlow), muestra una de las tres
  * pantallas: elegir personaje → elegir mundo → escena + chat.
  *
- * Desde el Hito 4, el catálogo de personajes se CARGA POR API (no de un módulo
- * estático): App lo trae al arrancar, muestra un estado de carga mientras tanto
- * y, una vez disponible, monta el flujo (useFlow vive en <Asistente/>, que solo
- * se renderiza con el catálogo ya cargado). Al cerrar la configuración se recarga
- * el catálogo por si se crearon/borraron personajes.
+ * Desde el Hito 4/6, los catálogos de personajes y ubicaciones se CARGAN POR API
+ * (no de módulos estáticos): App los trae al arrancar, muestra un estado de carga
+ * mientras tanto y, una vez disponibles, monta el flujo (useFlow vive en
+ * <Asistente/>, que solo se renderiza con los catálogos ya cargados). Al cerrar la
+ * configuración se recargan por si se crearon/borraron personajes o ubicaciones.
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -21,8 +21,8 @@ import CharacterSelect from "./screens/CharacterSelect";
 import PlaceSelect from "./screens/PlaceSelect";
 import SceneChat from "./screens/SceneChat";
 import Settings from "./screens/Settings";
-import { BackendError, checkHealth, getPersonajes } from "./api/client";
-import type { PersonajeDTO } from "./api/types";
+import { BackendError, checkHealth, getPersonajes, getUbicaciones } from "./api/client";
+import type { PersonajeDTO, UbicacionDTO } from "./api/types";
 import { useFlow } from "./state/useFlow";
 
 // Modo desarrollo: muestra el botón "Probar conexión" en el HUD (como el DEBUG
@@ -39,30 +39,33 @@ async function probarConexion() {
 }
 
 export default function App() {
-  // Catálogo de personajes cargado por API: null = cargando, [] = aún sin datos.
+  // Catálogos cargados por API: null = cargando todavía.
   const [personajes, setPersonajes] = useState<PersonajeDTO[] | null>(null);
+  const [ubicaciones, setUbicaciones] = useState<UbicacionDTO[] | null>(null);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
   // Página de configuración: se abre desde el botón ⚙️ del HUD y sustituye al
   // flujo principal mientras está activa.
   const [mostrarConfig, setMostrarConfig] = useState(false);
 
-  const cargarPersonajes = useCallback(async () => {
+  const cargarCatalogos = useCallback(async () => {
     setErrorCarga(null);
     try {
-      setPersonajes(await getPersonajes());
+      const [pers, ubis] = await Promise.all([getPersonajes(), getUbicaciones()]);
+      setPersonajes(pers);
+      setUbicaciones(ubis);
     } catch (exc) {
       setErrorCarga(exc instanceof BackendError ? exc.message : String(exc));
     }
   }, []);
 
   useEffect(() => {
-    void cargarPersonajes();
-  }, [cargarPersonajes]);
+    void cargarCatalogos();
+  }, [cargarCatalogos]);
 
-  /** Al cerrar la config, recargamos el catálogo (pudo cambiar) y volvemos al flujo. */
+  /** Al cerrar la config, recargamos los catálogos (pudieron cambiar) y volvemos al flujo. */
   function cerrarConfig() {
     setMostrarConfig(false);
-    void cargarPersonajes();
+    void cargarCatalogos();
   }
 
   return (
@@ -78,18 +81,18 @@ export default function App() {
           <Settings onCerrar={cerrarConfig} />
         ) : errorCarga ? (
           <section className="holo-cargando" role="alert">
-            <p>😢 No pude cargar los personajes.</p>
+            <p>😢 No pude cargar el catálogo.</p>
             <p className="holo-cargando-detalle">{errorCarga}</p>
-            <button type="button" className="btn btn-primario" onClick={() => void cargarPersonajes()}>
+            <button type="button" className="btn btn-primario" onClick={() => void cargarCatalogos()}>
               Reintentar
             </button>
           </section>
-        ) : !personajes ? (
+        ) : !personajes || !ubicaciones ? (
           <section className="holo-cargando" role="status">
             <span className="holo-cargando-emoji" aria-hidden="true">
               ⏳
             </span>
-            <p>Cargando personajes…</p>
+            <p>Cargando…</p>
           </section>
         ) : personajes.length === 0 ? (
           <section className="holo-cargando" role="alert">
@@ -99,9 +102,13 @@ export default function App() {
             </p>
           </section>
         ) : (
-          // key por el conjunto de ids: si el catálogo cambia (alta/baja de
-          // personaje), el flujo se reinicia limpio; si no, conserva el progreso.
-          <Asistente key={personajes.map((p) => p.id).join(",")} personajes={personajes} />
+          // key por el conjunto de ids: si un catálogo cambia (alta/baja de
+          // personaje o ubicación), el flujo se reinicia limpio; si no, conserva el progreso.
+          <Asistente
+            key={[...personajes.map((p) => p.id), "|", ...ubicaciones.map((u) => u.id)].join(",")}
+            personajes={personajes}
+            ubicaciones={ubicaciones}
+          />
         )}
 
         {/* Scanlines CRT: dentro de .holo-wrap (mismo contexto de apilado que
@@ -113,11 +120,17 @@ export default function App() {
 }
 
 /**
- * Asistente — el flujo del niño en 3 pasos. Solo se monta con el catálogo ya
- * cargado, así useFlow siempre recibe una lista no vacía de personajes.
+ * Asistente — el flujo del niño en 3 pasos. Solo se monta con los catálogos ya
+ * cargados, así useFlow siempre recibe una lista no vacía de personajes.
  */
-function Asistente({ personajes }: { personajes: PersonajeDTO[] }) {
-  const flow = useFlow(personajes);
+function Asistente({
+  personajes,
+  ubicaciones,
+}: {
+  personajes: PersonajeDTO[];
+  ubicaciones: UbicacionDTO[];
+}) {
+  const flow = useFlow(personajes, ubicaciones);
   const { estado, ubicacionLista, nombreLugar } = flow;
   const { paso } = estado;
 
@@ -139,6 +152,7 @@ function Asistente({ personajes }: { personajes: PersonajeDTO[] }) {
 
       {paso === 2 && (
         <PlaceSelect
+          ubicaciones={ubicaciones}
           index={estado.ubicacionIdx}
           fotoFile={estado.fotoFile}
           ubicacionLista={ubicacionLista}

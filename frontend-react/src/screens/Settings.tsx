@@ -9,11 +9,10 @@
  *   - IA           → parámetros del motor: RAG, troceado, LLM y prompts (Hito 3).
  *   - General      → modo desarrollo/DEBUG (Hito 3).
  *   - Personajes   → CRUD de personajes (Hito 4, funcional).
- *   - Ubicaciones  → CRUD de ubicaciones (Hito 6).
+ *   - Ubicaciones  → CRUD de ubicaciones (Hito 6, funcional).
  *
- * "APIs", "IA", "General" y "Personajes" ya son operativas; "Ubicaciones" muestra
- * un aviso de "próximo hito". La antigua plantilla presentacional (volumen, brillo…)
- * se ha retirado: se reaprovecha el estilo, no aquel contenido.
+ * Todas las pestañas son operativas. La antigua plantilla presentacional (volumen,
+ * brillo…) se ha retirado: se reaprovecha el estilo, no aquel contenido.
  */
 
 import { useState } from "react";
@@ -21,6 +20,7 @@ import styles from "./Settings.module.css";
 import ApisTab from "./config/ApisTab";
 import ConfigForm from "./config/ConfigForm";
 import PersonajesTab from "./config/PersonajesTab";
+import UbicacionesTab from "./config/UbicacionesTab";
 
 interface Props {
   /** Vuelve al flujo principal cerrando la configuración. */
@@ -80,14 +80,7 @@ export default function Settings({ onCerrar }: Props) {
         />
       )}
       {pestana === "personajes" && <PersonajesTab />}
-      {pestana === "ubicaciones" && (
-        <div className={styles.panel}>
-          <h2 className={styles.panelTitle}>Próximamente</h2>
-          <p className={styles.filaAyuda}>
-            Esta sección se habilita en un próximo hito del menú de configuración.
-          </p>
-        </div>
-      )}
+      {pestana === "ubicaciones" && <UbicacionesTab />}
 
       <footer className={styles.footer}>
         <button type="button" className="btn btn-secundario" onClick={onCerrar}>

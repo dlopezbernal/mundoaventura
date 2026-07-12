@@ -598,7 +598,9 @@ compara directamente con la distancia real `d=...` que la app expone (en la resp
   los documentos del RAG. El catálogo se guarda en la BBDD (tabla `personajes`) y lo consumen tanto
   el backend como el frontend por API. Los personajes que trae la app de fábrica se siembran desde
   `backend/personajes.py` en el primer arranque.
-- **Añadir ubicaciones:** de momento por código, en `backend/ubicaciones.py` y
-  `frontend-react/src/data/ubicaciones.ts` con el **mismo `id`** (su edición sin código llega en un hito posterior).
+- **Añadir ubicaciones (sin tocar código):** ⚙️ → pestaña **Ubicaciones** → **➕ Nueva ubicación**.
+  Rellena nombre, emoji y la descripción del fondo (en inglés). El catálogo se guarda en la BBDD
+  (tabla `ubicaciones`) y lo consumen backend y frontend por API. Las ubicaciones de fábrica se
+  siembran desde `backend/ubicaciones.py` en el primer arranque.
 - **Cambiar el modelo o el estilo:** `REPLICATE_MODEL` en el `.env` y el `STYLE_SUFFIX` en
   `backend/personajes.py`.

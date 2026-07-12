@@ -25,6 +25,8 @@ import type {
   ReindexResult,
   SettingMeta,
   TranscribeResponse,
+  UbicacionCrear,
+  UbicacionDTO,
   VocesResponse,
 } from "./types";
 
@@ -428,4 +430,55 @@ export async function reindexGlobal(): Promise<ReindexResult> {
   const response = await fetchBackend("/api/reindex", { method: "POST" }, TIMEOUT_DOCS);
   const body = (await response.json()) as { resultado: ReindexResult };
   return body.resultado;
+}
+
+// ---------------------------------------------------------------------------
+// Configuración · Ubicaciones (Hito 6). Catálogo consumido por la pantalla del
+// niño (elegir mundo) y por la pestaña de configuración (CRUD).
+// ---------------------------------------------------------------------------
+
+/** Catálogo de ubicaciones. Por defecto solo activas; `todos=true` incluye inactivas. */
+export async function getUbicaciones(todos = false): Promise<UbicacionDTO[]> {
+  const query = todos ? "?todos=1" : "";
+  const response = await fetchBackend(`/api/ubicaciones${query}`, { method: "GET" }, TIMEOUT_CONFIG);
+  const body = (await response.json()) as { ubicaciones: UbicacionDTO[] };
+  return body.ubicaciones;
+}
+
+/** Crea una ubicación nueva. POST /api/ubicaciones. */
+export async function createUbicacion(datos: UbicacionCrear): Promise<UbicacionDTO> {
+  const response = await fetchBackend(
+    "/api/ubicaciones",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(datos),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { ubicacion: UbicacionDTO };
+  return body.ubicacion;
+}
+
+/** Edita campos de una ubicación (solo los incluidos). PUT /api/ubicaciones/{id}. */
+export async function updateUbicacion(
+  id: string,
+  cambios: Partial<Omit<UbicacionDTO, "id">>,
+): Promise<UbicacionDTO> {
+  const response = await fetchBackend(
+    `/api/ubicaciones/${id}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cambios),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { ubicacion: UbicacionDTO };
+  return body.ubicacion;
+}
+
+/** Borra una ubicación del catálogo. DELETE /api/ubicaciones/{id}. */
+export async function deleteUbicacion(id: string): Promise<void> {
+  await fetchBackend(`/api/ubicaciones/${id}`, { method: "DELETE" }, TIMEOUT_CONFIG);
 }
