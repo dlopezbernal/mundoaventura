@@ -90,9 +90,10 @@ través de `backend/services/settings_service.py`, que devuelve el valor **vigen
 menú de configuración surte efecto en la **siguiente petición sin reiniciar**, y con la
 BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atrás).
 
-- **Qué vive en SQLite:** ajustes de IA (umbrales/modo del Evaluator, `RAG_TOP_K`),
-  chunking, modelo/`max_tokens`/`temperature` del LLM, los **prompts de sistema**
-  (externalizados desde `rag_service.py`, con variables `{nombre}`/`{fichas}`/`{pregunta}`),
+- **Qué vive en SQLite:** ajustes de IA (umbrales/modo del Evaluator, `RAG_TOP_K`,
+  `PERMITIR_CONOCIMIENTO_GENERAL`), chunking, modelo/`max_tokens`/`temperature` del LLM,
+  los **prompts de sistema** (externalizados desde `rag_service.py`, con variables
+  `{nombre}`/`{fichas}`/`{pregunta}`, incluyendo el mensaje fijo `MENSAJE_SIN_INFORMACION`),
   opciones generales como `DEBUG`, los **catálogos de personajes y ubicaciones** (tablas
   `personajes`/`ubicaciones`, vía `personajes_service`/`ubicaciones_service`; CRUD por
   `GET/POST/PUT/DELETE /api/personajes` y `/api/ubicaciones`, y las voces de ElevenLabs
@@ -101,8 +102,9 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
   `.../documentos` y `.../reindex`). Los ficheros del RAG siguen en disco
   (`backend/documentos/<id>/`) y ChromaDB en su carpeta; el reindexado es incremental
   por personaje (solo se reconstruyen sus chunks) con opción de reindexado global.
-- **Qué vive en el `.env`:** solo los **secretos** (claves API). La UI los lee/escribe de
-  forma atómica pero **nunca** devuelve la clave completa al frontend (solo enmascarada).
+- **Qué vive en el `.env`:** solo los **secretos** (claves API). `secrets_service.py`
+  los lee/escribe de forma atómica (fichero temporal + backup) pero **nunca** devuelve
+  la clave completa al frontend (solo enmascarada); revelarla es una petición aparte.
 - **Endpoints:** `GET /api/config` (ajustes + secretos enmascarados) y `PUT /api/config`
   (guarda y aplica en caliente; informa de qué cambios exigen reindexar ChromaDB).
 - **Umbral del RAG:** se expone como **distancia coseno directa (0–2), sin conversión a
@@ -123,7 +125,17 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
   traducción es obligatoria para el RAG). En el frontend, si no hay `getUserMedia`
   (contexto no seguro), micrófono o permiso, el micro se deshabilita y el chat de
   texto sigue disponible igualmente (la voz es un añadido, no un requisito del flujo).
+- **Tercer camino del Evaluator (`SIN_INFO`):** cuando las fichas no sirven, el
+  comportamiento por defecto es caer a GENERAL (conocimiento propio del LLM). Con
+  `PERMITIR_CONOCIMIENTO_GENERAL` desactivado, `rag_service.responder` no llama a
+  ningún LLM: devuelve el mensaje fijo `MENSAJE_SIN_INFORMACION` (`origen: SIN_INFO`).
+  No es degradación por fallo, es una elección deliberada para un chat anclado
+  estrictamente a los documentos subidos, sin coste de LLM en los huecos.
 - **DEBUG:** ajuste editable (`settings_service`, con valor inicial de `config.DEBUG`), por
   lo que se puede activar/desactivar en caliente desde el menú. Enciende trazas en la
-  consola del backend: prompts al LLM/DeepL, origen RAG/GENERAL (`[CHAT] ...`) y voz
-  (`[VOZ] 🎙️ STT ...`, `[VOZ] 🔊 TTS ...`).
+  consola del backend: prompts al LLM/DeepL, origen RAG/GENERAL/SIN_INFO (`[CHAT] ...`) y
+  voz (`[VOZ] 🎙️ STT ...`, `[VOZ] 🔊 TTS ...`). **Único efecto visible al niño:** también
+  activa, en el chat mismo, el desplegable "📚 ¿De dónde lo he sacado?" con las fichas de
+  cada respuesta RAG (`rag_service.responder` solo incluye `fuentes` en la respuesta si
+  `DEBUG` está activo) — por eso debe quedar en `false` en la build final, no solo por
+  las trazas de consola.

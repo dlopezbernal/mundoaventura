@@ -66,43 +66,60 @@ El backend ya no necesita GPU: la generación de imagen y el LLM corren en Repli
 ```
 capston/
 ├── backend/                  # Servidor de IA (FastAPI)
-│   ├── main.py               # Arranque de la app y rutas globales
+│   ├── main.py               # Arranque de la app, CORS y enchufado de routers
 │   ├── config.py             # Configuración (Replicate, LLM, ChromaDB) desde .env
+│   ├── db.py                 # Motor SQLite + migración idempotente de columnas nuevas
+│   ├── models.py             # Tablas SQLModel: Setting, Personaje, Ubicacion, Documento
+│   ├── seed.py                # Vuelca personajes.py/ubicaciones.py a la BBDD (idempotente)
 │   ├── debug_log.py          # Traza en consola de los prompts enviados (solo con DEBUG)
-│   ├── personajes.py         # Prompts + NOMBRES + VOCES (voz_id ElevenLabs) de cada personaje
-│   ├── ubicaciones.py        # Prompts de cada ubicación
-│   ├── ingest.py             # Ingesta: trocea (chunking) e indexa los documentos
+│   ├── personajes.py         # Prompts + NOMBRES + VOCES: solo "seed" inicial (la BBDD manda)
+│   ├── ubicaciones.py        # Prompts de cada ubicación: solo "seed" inicial (la BBDD manda)
+│   ├── ingest.py             # CLI de reindexado global (delega en documentos_service)
 │   ├── fetch_wikipedia.py    # Descarga un artículo de Wikipedia limpio a documentos/
 │   ├── documentos/           # 📚 Base de conocimiento: una carpeta por personaje
 │   │   ├── triceratops/      #   · documentos (.pdf/.txt/.md, en inglés) del personaje
 │   │   ├── t-rex/
 │   │   └── ...
-│   ├── schemas/              # Forma de los datos de entrada/salida
-│   │   ├── generation.py     #   · datos de /api/generate
-│   │   └── conversacion.py   #   · datos de /api/ask
-│   ├── services/             # Lógica de IA
+│   ├── schemas/              # Forma de los datos de entrada/salida (uno por router)
+│   ├── services/             # Lógica de negocio
 │   │   ├── generation_service.py   #   · generación de imagen → Replicate
 │   │   ├── rag_service.py          #   · conversación → ChromaDB + Evaluator + LLM
-│   │   ├── translation_service.py  #   · traducción ES→EN de la pregunta (DeepL)
-│   │   └── voice_service.py        #   · voz → texto (Scribe) y texto → voz (Flash): ElevenLabs
-│   ├── routers/              # Endpoints HTTP
+│   │   ├── translation_service.py  #   · traducción ES↔EN (DeepL)
+│   │   ├── voice_service.py        #   · voz → texto (Scribe) y texto → voz (Flash): ElevenLabs
+│   │   ├── documentos_service.py   #   · CRUD de documentos del RAG (subir, URL, borrar, reindexar)
+│   │   ├── personajes_service.py   #   · catálogo de personajes (BBDD)
+│   │   ├── ubicaciones_service.py  #   · catálogo de ubicaciones (BBDD)
+│   │   ├── settings_service.py     #   · ajustes editables en caliente (BBDD, con fallback a config.py)
+│   │   ├── secrets_service.py      #   · claves API: leer/escribir el .env de forma atómica
+│   │   └── admin_service.py        #   · PIN de adulto (hash + sesión) y backup del SQLite
+│   ├── routers/               # Endpoints HTTP (finos: validan, llaman al service, mapean errores)
 │   │   ├── generation.py     #   · POST /api/generate, /api/generate-on-photo
 │   │   ├── conversacion.py   #   · POST /api/ask
-│   │   └── transcription.py  #   · POST /api/transcribe (voz → texto, ElevenLabs Scribe)
-│   └── chroma_db/            # Índice vectorial de ChromaDB (lo crea ingest.py; no se versiona)
+│   │   ├── transcription.py  #   · POST /api/transcribe (voz → texto, ElevenLabs Scribe)
+│   │   ├── personajes.py     #   · CRUD de personajes + voces de ElevenLabs
+│   │   ├── ubicaciones.py    #   · CRUD de ubicaciones
+│   │   ├── documentos.py     #   · CRUD de documentos del RAG + reindexado
+│   │   ├── config.py         #   · GET/PUT /api/config (ajustes en caliente)
+│   │   ├── apis.py           #   · claves de los proveedores (pestaña "APIs")
+│   │   └── admin.py          #   · login/PIN, import/export, backup
+│   └── chroma_db/            # Índice vectorial de ChromaDB (se reconstruye; no se versiona)
 ├── frontend-react/           # Interfaz de usuario (SPA: Vite + React 18 + TypeScript)
 │   ├── src/
 │   │   ├── App.tsx           # Orquesta el asistente por pasos (monta fondo, HUD y pantallas)
 │   │   ├── main.tsx          # Punto de entrada de React (monta App)
 │   │   ├── state/useFlow.ts  # Máquina de estados del flujo (useReducer: personaje→mundo→escena)
 │   │   ├── api/              # Contrato tipado (types.ts) + cliente fetch (client.ts)
-│   │   ├── data/             # Catálogos: personajes.ts, ubicaciones.ts (+ holo.ts, textos del tema)
-│   │   ├── screens/          # Pantallas: CharacterSelect, PlaceSelect, SceneChat, Settings
+│   │   ├── data/              # Solo presentación: agrupación por categorías (holo.ts, personajes.ts);
+│   │   │                      #   los catálogos en sí ya no viven en el frontend, se leen por API
+│   │   ├── screens/           # CharacterSelect, PlaceSelect, SceneChat, Settings
+│   │   │   └── config/        #   · menú ⚙️: ApisTab, ConfigForm (IA/General), PersonajesTab,
+│   │   │                      #     UbicacionesTab, SistemaTab, AdminGate, DocumentosPanel
 │   │   ├── components/        # Background, Hud, Steps, Coverflow, HoloCard, Roster,
 │   │   │                      #   Console, SceneView, Chat, QuickChips (tema "Arcade Holo")
-│   │   └── styles/           # tokens.css (tokens de diseño) + global.css
+│   │   └── styles/            # tokens.css (tokens de diseño) + global.css
 │   ├── vite.config.ts        # Proxy /api y /health → backend local (dev y preview)
 │   └── .env.example          # VITE_BACKEND_URL (backend) y VITE_DEBUG (botón de diagnóstico)
+├── docs/                     # Guías puntuales (p. ej. Playwright MCP) y planes históricos (feats/)
 ├── requirements-backend.txt
 └── .env.example              # Plantilla de configuración (backend)
 ```
@@ -313,8 +330,13 @@ ChromaDB, etiquetando cada fragmento con su personaje. Verás un resumen por arc
      calidad/coste.
 5. **Bifurcación según la decisión:**
    - **RAG** → el LLM responde fundamentándose en los fragmentos (`origen: RAG`).
-   - **GENERAL** → el personaje responde con su conocimiento propio (`origen: GENERAL`).
-     *(Aquí, más adelante, se podría enrutar a una búsqueda web.)*
+   - Si las fichas no sirven, hay dos comportamientos posibles según el ajuste
+     **`PERMITIR_CONOCIMIENTO_GENERAL`** (pestaña IA, activado por defecto):
+     - **GENERAL** → el personaje responde con su conocimiento propio del LLM (`origen: GENERAL`).
+       *(Aquí, más adelante, se podría enrutar a una búsqueda web.)*
+     - **SIN_INFO** *(si está desactivado)* → **no se llama a ningún LLM**: se devuelve un mensaje
+       fijo y editable (`MENSAJE_SIN_INFORMACION`, pestaña IA) del tipo "no tengo esa información".
+       Coste cero y respuesta anclada estrictamente a tus documentos.
 
 ### ⚖️ Comparativa de los tres modos
 
@@ -330,10 +352,16 @@ ChromaDB, etiquetando cada fragmento con su personaje. Verás un resumen por arc
 ### 🏷️ Origen de la respuesta (modo desarrollo, consola del backend)
 
 Para saber si una respuesta vino del **RAG** o del conocimiento **GENERAL** del modelo, con
-`DEBUG=true` en el `.env` el **backend lo imprime en SU consola** (la del `uvicorn`), no en el
-chat ni en el frontend. Se hace en el backend porque ahí ya se calcula todo: así el frontend **no
-recibe ni procesa** datos de depuración (más ligero) y la interfaz que ve el niño queda **siempre
-limpia**. En la consola del backend verás líneas como:
+`DEBUG=true` en el `.env` el **backend lo imprime en SU consola** (la del `uvicorn`). Se hace en
+el backend porque ahí ya se calcula todo: así el frontend, con `DEBUG=false`, **no recibe ni
+procesa** datos de depuración (más ligero) y la interfaz que ve el niño queda **siempre limpia**.
+
+> ⚠️ **`DEBUG` deja de ser "solo consola" en un punto:** cuando está activo, el chat **también**
+> muestra al niño el desplegable **"📚 ¿De dónde lo he sacado?"** con los fragmentos usados en
+> cada respuesta RAG (`Chat.tsx`). Es el único efecto de `DEBUG` visible fuera de la consola —
+> por eso hay que dejarlo en `false` para la versión final, no solo por las trazas.
+
+En la consola del backend verás líneas como:
 
 ```
 [CHAT] 🟢 Evaluator → origen=RAG: respuesta FUNDAMENTADA en las fichas recuperadas de este personaje
@@ -358,10 +386,13 @@ distancia** `d=...` con los umbrales activos, y la **pregunta traducida** a ingl
 |----------|-------|---------------|
 | **RAG** | 🟢 | La respuesta está **fundamentada en las fichas** recuperadas de los documentos del personaje (ChromaDB). El LLM responde usando **solo** esa información → fiable y verificable. |
 | **GENERAL** | 🟡 | Las fichas **no servían**, así que el personaje responde con el **conocimiento propio del modelo** (lo que Llama 3 ya sabe). Útil para lo que está fuera de los documentos (p. ej. "¿cuánto es 2+2?"), pero **no respaldado por tus fuentes**. |
+| **SIN_INFO** | 🔴 | Las fichas **no servían** y `PERMITIR_CONOCIMIENTO_GENERAL` está **desactivado**: se devuelve el mensaje fijo `MENSAJE_SIN_INFORMACION` **sin llamar a ningún LLM** (coste cero). No aparece con la configuración de fábrica (ese ajuste viene activado). |
 
 Se decide en `_decidir_origen` ([backend/services/rag_service.py](backend/services/rag_service.py)):
-si las fichas recuperadas se consideran relevantes → **RAG**; si no → **GENERAL**. Internamente, cada
-camino usa un prompt distinto (`_construir_prompt` para RAG, `_construir_prompt_general` para GENERAL).
+si las fichas recuperadas se consideran relevantes → **RAG**; si no, y `PERMITIR_CONOCIMIENTO_GENERAL`
+está activo → **GENERAL**; si no, → **SIN_INFO**. Internamente, cada camino usa una vía distinta:
+`_construir_prompt` (RAG) y `_construir_prompt_general` (GENERAL) llaman al LLM; SIN_INFO solo
+rellena la plantilla `MENSAJE_SIN_INFORMACION` con `settings_service.rellenar`, sin llamada alguna.
 
 #### Eje 2 — `metodo`: CÓMO se tomó esa decisión
 
@@ -385,13 +416,16 @@ claros, llm solo para desempatar los dudosos).
 
 > En modo `hibrido` verás las **4**; en modo `umbral` solo las dos `· umbral`; en modo `llm` solo
 > las dos `· llm`. La distancia `d=...` aparece siempre que haya fichas candidatas (sirve para
-> calibrar los umbrales).
+> calibrar los umbrales). Con `PERMITIR_CONOCIMIENTO_GENERAL` desactivado, cambia `GENERAL` por
+> `SIN_INFO` en esas mismas combinaciones (`SIN_INFO · umbral` / `SIN_INFO · llm`).
 
-**En una frase:** `origen` = **qué fuente respondió** (documentos vs. modelo) · `metodo` = **quién
-tomó la decisión** (un número gratis vs. una llamada al LLM-juez).
+**En una frase:** `origen` = **qué fuente respondió** (documentos, modelo, o ninguno) · `metodo` =
+**quién tomó la decisión** (un número gratis vs. una llamada al LLM-juez).
 
-Con `DEBUG=false` (versión final para el usuario) no se imprime nada. El JSON de `/api/ask` sigue
-incluyendo `origen`/`metodo`/`distancia` (por si los necesitas), pero el frontend ya no los usa.
+Con `DEBUG=false` (versión final para el usuario) no se imprime nada en consola. El JSON de
+`/api/ask` sigue incluyendo `origen`/`metodo`/`distancia` (por si los necesitas), y el frontend
+no los usa para nada visual — **excepto `fuentes`**, que solo viaja no-vacío cuando `DEBUG=true`
+(ver el aviso más arriba sobre el desplegable "¿De dónde lo he sacado?").
 
 ### 🔎 Traza de prompts (modo desarrollo, consola del backend)
 
@@ -595,6 +629,19 @@ primera vez se crea un **PIN** y a partir de ahí se pide para entrar (⚙️). 
 puede cambiar el PIN, **exportar/importar** la configuración en JSON (ajustes + catálogos, nunca las
 claves API) y cerrar sesión; antes de importar se hace una **copia de seguridad** automática del
 fichero SQLite.
+
+### 8. Evaluator con un tercer camino: `PERMITIR_CONOCIMIENTO_GENERAL` (RAG estricto, opcional)
+
+**Decisión:** separar **cómo se decide** si las fichas sirven (`EVALUATOR_MODE`) de **qué se hace
+cuando no sirven**. Por defecto, sigue cayendo a GENERAL (conocimiento propio del LLM, como
+siempre); con `PERMITIR_CONOCIMIENTO_GENERAL` desactivado, cae a un tercer camino, `SIN_INFO`, que
+devuelve un mensaje fijo y editable (`MENSAJE_SIN_INFORMACION`) **sin llamar a ningún LLM**.
+
+**Por qué:** surgió al calibrar el modo `umbral` — su coste "0" solo se refiere a que no hay
+llamada extra del juez, pero la llamada de **generación** de la respuesta (RAG o GENERAL) se hace
+siempre, en los tres modos del Evaluator. No había forma de tener un chat que respondiera
+**exclusivamente** con lo que hay en los documentos, sin ninguna llamada a un LLM cuando no hay
+nada relevante que fundamentar. Este ajuste lo permite, ortogonal a `EVALUATOR_MODE`.
 
 ---
 
