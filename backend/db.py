@@ -39,14 +39,46 @@ def get_engine():
 
 
 def init_db() -> None:
-    """Crea las tablas si no existen (idempotente).
+    """Crea las tablas si no existen (idempotente) y migra columnas nuevas.
 
     Importa backend.models para que las tablas queden registradas en el metadata
     de SQLModel antes de crearlas.
     """
     from backend import models  # noqa: F401  (registra los modelos en el metadata)
 
-    SQLModel.metadata.create_all(get_engine())
+    engine = get_engine()
+    SQLModel.metadata.create_all(engine)
+    _migrar_columnas_faltantes(engine)
+
+
+# Columnas añadidas a tablas YA EXISTENTES después de su creación inicial.
+# `create_all` solo crea tablas que faltan; no altera las que ya existen, así que
+# un cambio de modelo que añade una columna necesita entrar aquí también, o las
+# instalaciones con una BBDD previa se quedarán con el esquema viejo.
+_COLUMNAS_NUEVAS: dict[str, list[tuple[str, str]]] = {
+    "documentos": [("actualizado_en", "TEXT"), ("copiado_de_id", "INTEGER")],
+}
+
+
+def _migrar_columnas_faltantes(engine) -> None:
+    """Añade a tablas existentes las columnas de `_COLUMNAS_NUEVAS` que falten.
+
+    Idempotente vía `PRAGMA table_info`: no falla al re-ejecutarse ni en
+    instalaciones nuevas (donde `create_all` ya trajo la columna de fábrica).
+    """
+    with engine.connect() as con:
+        for tabla, columnas in _COLUMNAS_NUEVAS.items():
+            existentes = {fila[1] for fila in con.exec_driver_sql(f"PRAGMA table_info({tabla})")}
+            for nombre, tipo_sql in columnas:
+                if nombre in existentes:
+                    continue
+                con.exec_driver_sql(f"ALTER TABLE {tabla} ADD COLUMN {nombre} {tipo_sql}")
+                if nombre == "actualizado_en":
+                    # Backfill: filas de antes de esta columna toman la fecha de alta.
+                    con.exec_driver_sql(
+                        f"UPDATE {tabla} SET actualizado_en = creado_en WHERE actualizado_en IS NULL"
+                    )
+                con.commit()
 
 
 def get_session() -> Session:

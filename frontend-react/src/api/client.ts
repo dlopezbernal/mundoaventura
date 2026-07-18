@@ -18,6 +18,8 @@ import type {
   ConfigExport,
   ConfigResponse,
   ConfigSaveResult,
+  CopiaResult,
+  DocumentoContenido,
   DocumentoDTO,
   GenerateRequest,
   GenerateResponse,
@@ -25,8 +27,11 @@ import type {
   ImportResult,
   PersonajeCrear,
   PersonajeDTO,
+  PersonajesInfo,
+  ReindexEstado,
   ReindexResult,
   SettingMeta,
+  SubidaMultipleResult,
   TranscribeResponse,
   UbicacionCrear,
   UbicacionDTO,
@@ -50,9 +55,13 @@ const TIMEOUT_VOZ_PROBAR = 30_000; // TTS de una frase corta
 
 /** Error al comunicarnos con el backend (lo mostramos al usuario). */
 export class BackendError extends Error {
-  constructor(message: string) {
+  /** Código HTTP de la respuesta, si la hubo (p. ej. 409 = conflicto de nombre). */
+  status?: number;
+
+  constructor(message: string, status?: number) {
     super(message);
     this.name = "BackendError";
+    this.status = status;
   }
 }
 
@@ -135,6 +144,7 @@ async function fetchBackend(
     }
     throw new BackendError(
       `Algo ha salido mal: ${detail || `error ${response.status}`}`,
+      response.status,
     );
   }
 
@@ -341,6 +351,16 @@ export async function getPersonajes(todos = false): Promise<PersonajeDTO[]> {
   return body.personajes;
 }
 
+/**
+ * Igual que `getPersonajes`, pero incluye `limite` (MAX_PERSONAJES): lo usa la
+ * pestaña de configuración para deshabilitar "Nuevo personaje" al llegar al tope.
+ */
+export async function getPersonajesInfo(todos = false): Promise<PersonajesInfo> {
+  const query = todos ? "?todos=1" : "";
+  const response = await fetchBackend(`/api/personajes${query}`, { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as PersonajesInfo;
+}
+
 /** Crea un personaje nuevo. POST /api/personajes. */
 export async function createPersonaje(datos: PersonajeCrear): Promise<PersonajeDTO> {
   const response = await fetchBackend(
@@ -418,44 +438,145 @@ export async function getDocumentos(personajeId: string): Promise<DocumentoDTO[]
   return body.documentos;
 }
 
+/** ¿Este error es un conflicto de "ya existe un documento con ese nombre" (409)? */
+export function esConflictoDocumento(exc: unknown): boolean {
+  return exc instanceof BackendError && exc.status === 409;
+}
+
+/** Respuesta mixta de subir 1 o varios documentos (ver uploadDocumentos). */
+export type SubidaResult = { documento?: DocumentoDTO } & Partial<SubidaMultipleResult>;
+
 /**
- * Sube un fichero (.pdf/.txt/.md) al RAG de un personaje (multipart). Si
- * `yaEnIngles` es false, el backend lo traduce con DeepL antes de indexar.
+ * Sube uno o varios ficheros (.pdf/.txt/.md) al RAG de un personaje (multipart).
+ * El idioma se detecta automáticamente (DeepL) y se traduce a inglés si hace
+ * falta — no hay que indicarlo. Con un solo fichero, `documento` viene poblado;
+ * con varios, `documentos`/`errores` (mejor esfuerzo: un fichero inválido no
+ * aborta el resto). Si algún nombre ya existe y `sobrescribir` es false, lanza
+ * BackendError con status 409 (usar `esConflictoDocumento` para detectarlo y
+ * ofrecer reintentar).
  */
-export async function uploadDocumento(
+export async function uploadDocumentos(
   personajeId: string,
-  archivo: File,
-  yaEnIngles: boolean,
-): Promise<DocumentoDTO> {
+  archivos: File[],
+  sobrescribir = false,
+): Promise<SubidaResult> {
   const formData = new FormData();
-  formData.append("archivo", archivo, archivo.name);
-  formData.append("ya_en_ingles", String(yaEnIngles));
+  for (const archivo of archivos) formData.append("archivos", archivo, archivo.name);
+  formData.append("sobrescribir", String(sobrescribir));
   const response = await fetchBackend(
     `/api/personajes/${personajeId}/documentos`,
     { method: "POST", body: formData },
     TIMEOUT_DOCS,
   );
-  const body = (await response.json()) as { documento: DocumentoDTO };
-  return body.documento;
+  return (await response.json()) as SubidaResult;
 }
 
-/** Ingesta un artículo de Wikipedia por URL. POST .../documentos/url. */
+/**
+ * Ingesta un artículo de Wikipedia por URL. POST .../documentos/url. El idioma
+ * se detecta automáticamente y se traduce si hace falta.
+ * Lanza BackendError (status 409) si ya existe un documento con ese nombre y
+ * `sobrescribir` es false.
+ */
 export async function addDocumentoUrl(
   personajeId: string,
   url: string,
-  yaEnIngles: boolean,
+  sobrescribir = false,
 ): Promise<DocumentoDTO> {
   const response = await fetchBackend(
     `/api/personajes/${personajeId}/documentos/url`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, ya_en_ingles: yaEnIngles }),
+      body: JSON.stringify({ url, sobrescribir }),
     },
     TIMEOUT_DOCS,
   );
   const body = (await response.json()) as { documento: DocumentoDTO };
   return body.documento;
+}
+
+/** Texto actual de un documento (para el visor). GET .../documentos/{id}/contenido. */
+export async function getDocumentoContenido(
+  personajeId: string,
+  documentoId: number,
+): Promise<DocumentoContenido> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos/${documentoId}/contenido`,
+    { method: "GET" },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as DocumentoContenido;
+}
+
+/**
+ * Edita el texto de un documento .txt/.md existente (no PDF). PUT .../contenido.
+ * El idioma se detecta automáticamente (DeepL) y se traduce si hace falta.
+ */
+export async function updateDocumentoContenido(
+  personajeId: string,
+  documentoId: number,
+  contenido: string,
+): Promise<DocumentoDTO> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos/${documentoId}/contenido`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contenido }),
+    },
+    TIMEOUT_DOCS,
+  );
+  const body = (await response.json()) as { documento: DocumentoDTO };
+  return body.documento;
+}
+
+/**
+ * Descarga el fichero original de un documento. GET .../documentos/{id}/descargar.
+ * Va por `fetchBackend` (fetch + blob), no un `<a href>` plano: el token admin
+ * viaja como cabecera X-Admin-Token, que una navegación directa de <a> no envía
+ * (el endpoint gated respondería 401).
+ */
+export async function descargarDocumento(
+  personajeId: string,
+  documentoId: number,
+  nombreArchivo: string,
+): Promise<void> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos/${documentoId}/descargar`,
+    { method: "GET" },
+    TIMEOUT_CONFIG,
+  );
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const enlace = document.createElement("a");
+  enlace.href = url;
+  enlace.download = nombreArchivo;
+  enlace.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Copia (de forma independiente) un documento a uno o varios personajes destino.
+ * POST .../documentos/{id}/copiar. Mejor esfuerzo por destino: un destino que
+ * falle (no existe, o conflicto de nombre sin `sobrescribir`) va a `errores` sin
+ * abortar los demás.
+ */
+export async function copiarDocumento(
+  personajeId: string,
+  documentoId: number,
+  personajesDestino: string[],
+  sobrescribir = false,
+): Promise<CopiaResult> {
+  const response = await fetchBackend(
+    `/api/personajes/${personajeId}/documentos/${documentoId}/copiar`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ personajes_destino: personajesDestino, sobrescribir }),
+    },
+    TIMEOUT_DOCS,
+  );
+  return (await response.json()) as CopiaResult;
 }
 
 /** Borra un documento. DELETE /api/personajes/{id}/documentos/{docId}. */
@@ -483,6 +604,15 @@ export async function reindexGlobal(): Promise<ReindexResult> {
   const response = await fetchBackend("/api/reindex", { method: "POST" }, TIMEOUT_DOCS);
   const body = (await response.json()) as { resultado: ReindexResult };
   return body.resultado;
+}
+
+/**
+ * Progreso del reindexado global en curso (GET /api/reindex/estado). Se sondea
+ * mientras dura `reindexGlobal()` para pintar una barra de progreso real.
+ */
+export async function getReindexEstado(): Promise<ReindexEstado> {
+  const response = await fetchBackend("/api/reindex/estado", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as ReindexEstado;
 }
 
 // ---------------------------------------------------------------------------

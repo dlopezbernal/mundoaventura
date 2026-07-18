@@ -73,3 +73,5 @@ class Documento(SQLModel, table=True):
     idioma_original: str | None = None
     traducido: bool = False
     creado_en: datetime = Field(default_factory=datetime.utcnow)
+    actualizado_en: datetime = Field(default_factory=datetime.utcnow)
+    copiado_de_id: int | None = None  # id del documento origen si se creó con "copiar a"; solo informativo

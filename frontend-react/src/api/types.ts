@@ -160,6 +160,12 @@ export interface PersonajeDTO {
   prompt_sistema_override: string | null;
 }
 
+/** Respuesta de GET /api/personajes: catálogo + tope MAX_PERSONAJES (fijo, no editable desde la UI). */
+export interface PersonajesInfo {
+  personajes: PersonajeDTO[];
+  limite: number;
+}
+
 /** Datos para crear un personaje (POST /api/personajes). */
 export interface PersonajeCrear {
   id: string;
@@ -207,6 +213,29 @@ export interface DocumentoDTO {
   traducido: boolean;
   /** Fecha de alta (ISO). */
   creado_en: string;
+  /** Fecha de la última edición de contenido (ISO). Igual a creado_en si nunca se editó. */
+  actualizado_en: string;
+  /** Si es una copia, el id del documento del que se copió (solo informativo). */
+  copiado_de_id: number | null;
+}
+
+/** Contenido de un documento (GET .../documentos/{id}/contenido, para el visor). */
+export interface DocumentoContenido {
+  contenido: string;
+  /** false para PDF: se muestra el texto extraído pero no se puede reescribir in-place. */
+  editable: boolean;
+}
+
+/** Resultado de subir varios documentos a la vez (mejor esfuerzo por fichero). */
+export interface SubidaMultipleResult {
+  documentos: DocumentoDTO[];
+  errores: { nombre: string; detalle: string }[];
+}
+
+/** Resultado de copiar un documento a uno o varios personajes (mejor esfuerzo por destino). */
+export interface CopiaResult {
+  copiados: DocumentoDTO[];
+  errores: { personaje_id: string; detalle: string }[];
 }
 
 /** Resultado de un reindexado (por personaje o global). */
@@ -215,6 +244,15 @@ export interface ReindexResult {
   personajes?: number;
   archivos: number;
   chunks: number;
+}
+
+/** Progreso del reindexado GLOBAL en curso (GET /api/reindex/estado, sondeo). */
+export interface ReindexEstado {
+  en_curso: boolean;
+  total: number;
+  hecho: number;
+  personaje_actual: string | null;
+  porcentaje: number;
 }
 
 /**

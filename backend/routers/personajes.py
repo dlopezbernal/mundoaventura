@@ -21,6 +21,7 @@ import base64
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from backend import config
 from backend.schemas.personajes import PersonajeCrear, PersonajeEditar, VozProbar
 from backend.services import admin_service, personajes_service, voice_service
 
@@ -33,8 +34,15 @@ _admin = [Depends(admin_service.requiere_admin)]
 
 @router.get("/personajes")
 def listar_personajes(todos: bool = False):
-    """Catálogo de personajes. Por defecto solo los activos; `?todos=1` incluye inactivos."""
-    return {"personajes": personajes_service.listar(incluir_inactivos=todos)}
+    """Catálogo de personajes. Por defecto solo los activos; `?todos=1` incluye inactivos.
+
+    Incluye `limite` (MAX_PERSONAJES) para que la pestaña de configuración pueda
+    deshabilitar "Nuevo personaje" sin necesidad de otro endpoint.
+    """
+    return {
+        "personajes": personajes_service.listar(incluir_inactivos=todos),
+        "limite": config.MAX_PERSONAJES,
+    }
 
 
 @router.post("/personajes", dependencies=_admin)
