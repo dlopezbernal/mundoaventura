@@ -613,3 +613,12 @@ fichero SQLite.
   siembran desde `backend/ubicaciones.py` en el primer arranque.
 - **Cambiar el modelo o el estilo:** `REPLICATE_MODEL` en el `.env` y el `STYLE_SUFFIX` en
   `backend/personajes.py`.
+
+---
+
+## 🛠️ Herramientas de desarrollo
+
+- **Playwright MCP (Claude Code):** para que Claude Code pueda navegar y probar la SPA
+  (`http://localhost:5173`) directamente — clics, lectura de la consola del navegador,
+  capturas — sin permisos de administrador. Guía paso a paso en
+  [docs/playwright-mcp.md](docs/playwright-mcp.md).
