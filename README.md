@@ -86,8 +86,9 @@ capston/
 │   │   ├── rag_service.py          #   · conversación → ChromaDB + Evaluator + LLM
 │   │   ├── translation_service.py  #   · traducción ES↔EN (DeepL)
 │   │   ├── voice_service.py        #   · voz → texto (Scribe) y texto → voz (Flash): ElevenLabs
-│   │   ├── documentos_service.py   #   · CRUD de documentos del RAG (subir, URL, borrar, reindexar)
-│   │   ├── personajes_service.py   #   · catálogo de personajes (BBDD)
+│   │   ├── documentos_service.py   #   · CRUD de documentos del RAG (visor: ver/editar/descargar/
+│   │   │                          #     copiar, subida múltiple, detección automática de idioma)
+│   │   ├── personajes_service.py   #   · catálogo de personajes (BBDD) + límite MAX_PERSONAJES
 │   │   ├── ubicaciones_service.py  #   · catálogo de ubicaciones (BBDD)
 │   │   ├── settings_service.py     #   · ajustes editables en caliente (BBDD, con fallback a config.py)
 │   │   ├── secrets_service.py      #   · claves API: leer/escribir el .env de forma atómica
@@ -98,7 +99,7 @@ capston/
 │   │   ├── transcription.py  #   · POST /api/transcribe (voz → texto, ElevenLabs Scribe)
 │   │   ├── personajes.py     #   · CRUD de personajes + voces de ElevenLabs
 │   │   ├── ubicaciones.py    #   · CRUD de ubicaciones
-│   │   ├── documentos.py     #   · CRUD de documentos del RAG + reindexado
+│   │   ├── documentos.py     #   · CRUD de documentos del RAG (visor + copiar) + reindexado
 │   │   ├── config.py         #   · GET/PUT /api/config (ajustes en caliente)
 │   │   ├── apis.py           #   · claves de los proveedores (pestaña "APIs")
 │   │   └── admin.py          #   · login/PIN, import/export, backup
@@ -113,8 +114,8 @@ capston/
 │   │   │                      #   los catálogos en sí ya no viven en el frontend, se leen por API
 │   │   ├── screens/           # CharacterSelect, PlaceSelect, SceneChat, Settings
 │   │   │   └── config/        #   · menú ⚙️: ApisTab, ConfigForm (IA/General), PersonajesTab,
-│   │   │                      #     UbicacionesTab, SistemaTab, AdminGate, DocumentosPanel
-│   │   ├── components/        # Background, Hud, Steps, Coverflow, HoloCard, Roster,
+│   │   │                      #     UbicacionesTab, SistemaTab, AdminGate, DocumentosPanel (visor RAG)
+│   │   ├── components/        # Background, Hud, Steps, Coverflow, HoloCard, Roster, Modal,
 │   │   │                      #   Console, SceneView, Chat, QuickChips (tema "Arcade Holo")
 │   │   └── styles/            # tokens.css (tokens de diseño) + global.css
 │   ├── vite.config.ts        # Proxy /api y /health → backend local (dev y preview)
@@ -230,13 +231,21 @@ compila la SPA con `VITE_BACKEND_URL` apuntando al backend.
 El conocimiento del chat **ya no está en el código**: viene de documentos que tú aportas. La
 fase de preparación (cargar → trocear → indexar) la hace `backend/ingest.py` con **LangChain**.
 
-> **Sin terminal:** desde el botón ⚙️ → pestaña **Personajes** → editar un personaje → sección
-> **📄 Documentos** puedes **subir** un `.pdf/.txt/.md`, **ingerir un artículo de Wikipedia por
-> URL** y **borrar** documentos. Cada cambio **reindexa automáticamente solo a ese personaje**
-> (reindexado incremental), y hay un botón **♻️ Reindexar todo** para reconstruir el índice
-> completo. Si el material está en español, se **traduce a inglés con DeepL** al guardarlo (marca
-> "ya está en inglés" para no gastar cuota). Los pasos por terminal de abajo siguen disponibles
-> como alternativa y para cargas masivas.
+> **Sin terminal:** desde el botón ⚙️ → pestaña **Personajes** → editar un personaje (se abre en
+> un **modal** a pantalla completa) → sección **📄 Documentos**, un visor completo: **subir uno o
+> varios** `.pdf/.txt/.md` a la vez, **ingerir un artículo de Wikipedia por URL**, **ver/editar el
+> texto** de un documento ya subido (excepto PDF, que no se reescribe in-place), **descargarlo**
+> tal cual, **copiarlo** de forma independiente a otro(s) personaje(s) (editar la copia nunca toca
+> al original) y **borrarlo**. El idioma se **detecta automáticamente con DeepL** en cada subida,
+> URL o edición — ya no hay que marcar "ya está en inglés": cualquier idioma se traduce solo si
+> hace falta, y el nombre del fichero guardado indica el idioma detectado (`_en`, `_es`, `_fr`…).
+> Si subes o copias un documento con un nombre que ya existe para ese personaje, la app avisa del
+> conflicto y deja elegir sobrescribir en vez de pisarlo en silencio. Cada cambio **reindexa
+> automáticamente solo a ese personaje** (reindexado incremental), y hay un botón **♻️ Reindexar
+> todo** para reconstruir el índice completo, con una barra de progreso real mientras dura.
+> Mientras se procesa algo (subida, traducción, reindexado) el modal se bloquea para no
+> interrumpir la operación a medias. Los pasos por terminal de abajo siguen disponibles como
+> alternativa y para cargas masivas.
 
 ### Paso 0 (opcional) — Descarga contenido de Wikipedia
 
@@ -643,6 +652,23 @@ siempre, en los tres modos del Evaluator. No había forma de tener un chat que r
 **exclusivamente** con lo que hay en los documentos, sin ninguna llamada a un LLM cuando no hay
 nada relevante que fundamentar. Este ajuste lo permite, ortogonal a `EVALUATOR_MODE`.
 
+### 9. Detección automática de idioma en los documentos del RAG (sin checkbox)
+
+**Decisión:** eliminar el checkbox manual "ya está en inglés" del visor de documentos.
+Cada subida, ingesta por URL o edición de contenido llama **siempre** a DeepL, que
+además de traducir devuelve `detected_source_lang`; si el idioma detectado ya es
+inglés se conserva el texto **original** (no el eco de la traducción) para no
+arriesgarse a alterar sutilmente un documento que no lo necesitaba.
+
+**Por qué:** el checkbox era un punto de fallo humano — un documento en español sin
+marcar se indexaba tal cual y arruinaba la recuperación para ese personaje, sin
+ningún aviso. DeepL ya hacía la detección como efecto colateral de traducir (no hace
+falta una llamada aparte), así que automatizarlo elimina el error sin coste extra.
+Como contrapartida, DeepL pasa a ser **obligatorio** también para gestionar
+documentos (antes solo lo era para el chat): sin clave configurada, no se puede
+subir/editar ni un documento ya en inglés, porque la detección en sí depende de la
+llamada a la API.
+
 ---
 
 ## 💡 Personalizar
@@ -653,7 +679,8 @@ nada relevante que fundamentar. Este ajuste lo permite, ortogonal a `EVALUATOR_M
   responde solo en texto). Al guardarlo se crea también su carpeta `backend/documentos/<id>/` para
   los documentos del RAG. El catálogo se guarda en la BBDD (tabla `personajes`) y lo consumen tanto
   el backend como el frontend por API. Los personajes que trae la app de fábrica se siembran desde
-  `backend/personajes.py` en el primer arranque.
+  `backend/personajes.py` en el primer arranque. Hay un tope de `MAX_PERSONAJES` (10 por defecto,
+  `.env`, no editable desde el menú): al alcanzarlo, "➕ Nuevo personaje" se deshabilita solo.
 - **Añadir ubicaciones (sin tocar código):** ⚙️ → pestaña **Ubicaciones** → **➕ Nueva ubicación**.
   Rellena nombre, emoji y la descripción del fondo (en inglés). El catálogo se guarda en la BBDD
   (tabla `ubicaciones`) y lo consumen backend y frontend por API. Las ubicaciones de fábrica se

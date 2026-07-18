@@ -72,7 +72,12 @@ lo consumen por API (`GET /api/personajes`). Así, el `personaje_id` conecta:
 `NOMBRES`, `VOCES`, `CATEGORIAS`, `EMOJIS`, más el estilo global `STYLE_SUFFIX`/
 `FRAMING`): en el primer arranque `seed.py` vuelca esos valores a la tabla (de
 forma idempotente y con backfill de las columnas nuevas). Crear un personaje desde
-la UI (`POST /api/personajes`) genera de golpe la fila y su carpeta de documentos.
+la UI (`POST /api/personajes`) genera de golpe la fila y su carpeta de documentos,
+hasta el tope `MAX_PERSONAJES` (`config.py`, 10 por defecto) — un límite de
+despliegue fijo por `.env`, deliberadamente **fuera** de `settings_service` (no se
+edita desde el menú); `personajes_service.crear` lo aplica y `GET /api/personajes`
+lo expone como `limite` para que el frontend deshabilite el alta sin necesidad de
+otra llamada.
 
 Las **ubicaciones** (Hito 6) siguen el MISMO patrón: viven en la tabla `ubicaciones`
 (`nombre`, `emoji`, `prompt`, `activo`), vía `ubicaciones_service`, y las consumen el
@@ -98,10 +103,14 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
   `personajes`/`ubicaciones`, vía `personajes_service`/`ubicaciones_service`; CRUD por
   `GET/POST/PUT/DELETE /api/personajes` y `/api/ubicaciones`, y las voces de ElevenLabs
   por `GET /api/voices`) y los **metadatos de los documentos del RAG**
-  (tabla `documentos`, vía `documentos_service`; subir/URL/borrar/reindexar por
-  `.../documentos` y `.../reindex`). Los ficheros del RAG siguen en disco
-  (`backend/documentos/<id>/`) y ChromaDB en su carpeta; el reindexado es incremental
-  por personaje (solo se reconstruyen sus chunks) con opción de reindexado global.
+  (tabla `documentos`, vía `documentos_service`; subir uno o varios/URL/**ver/editar
+  contenido**/**descargar**/**copiar a otro personaje**/borrar por `.../documentos`,
+  reindexar por `.../reindex`, y el progreso del reindexado global sondeable en
+  `GET /api/reindex/estado`). El idioma de cada documento se **detecta con DeepL**
+  (auto, cualquier idioma) en vez de marcarlo a mano. Los ficheros del RAG siguen en
+  disco (`backend/documentos/<id>/`) y ChromaDB en su carpeta; el reindexado es
+  incremental por personaje (solo se reconstruyen sus chunks) con opción de
+  reindexado global.
 - **Qué vive en el `.env`:** solo los **secretos** (claves API). `secrets_service.py`
   los lee/escribe de forma atómica (fichero temporal + backup) pero **nunca** devuelve
   la clave completa al frontend (solo enmascarada); revelarla es una petición aparte.
@@ -122,7 +131,8 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
 
 - **Degradación:** sin ElevenLabs (o si el TTS falla), `audio_base64` es `null` y el
   chat de texto sigue vivo. Sin DeepL, el chat responde con un error claro (la
-  traducción es obligatoria para el RAG). En el frontend, si no hay `getUserMedia`
+  traducción es obligatoria para el RAG **y** para gestionar documentos: la detección
+  de idioma también pasa por DeepL). En el frontend, si no hay `getUserMedia`
   (contexto no seguro), micrófono o permiso, el micro se deshabilita y el chat de
   texto sigue disponible igualmente (la voz es un añadido, no un requisito del flujo).
 - **Tercer camino del Evaluator (`SIN_INFO`):** cuando las fichas no sirven, el
