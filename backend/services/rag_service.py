@@ -42,7 +42,7 @@ _client: chromadb.ClientAPI | None = None
 _collection = None
 
 # Icono por origen, solo para la traza de consola en modo DEBUG.
-_ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡"}
+_ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡", "SIN_INFO": "🔴"}
 
 
 def _trazar_origen(
@@ -61,6 +61,8 @@ def _trazar_origen(
     explica_origen = {
         "RAG": "respuesta FUNDAMENTADA en las fichas recuperadas de este personaje",
         "GENERAL": "las fichas no servían → responde con el conocimiento propio del LLM",
+        "SIN_INFO": "las fichas no servían y PERMITIR_CONOCIMIENTO_GENERAL está "
+        "desactivado → mensaje fijo, SIN llamar a ningún modelo",
     }.get(origen, "origen desconocido")
     # Cómo se tomó la decisión RAG vs GENERAL (ver EVALUATOR_MODE).
     explica_metodo = {
@@ -411,8 +413,12 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         # mejor en inglés. La respuesta, eso sí, se genera en español (lo pide el prompt).
         system, user = _construir_prompt(nombre, contexto, pregunta_en)
         respuesta = _llamar_llm(system, user, etiqueta="RAG")
-        fuentes = contexto
-    else:
+        # DEBUG decide si el niño VE el desplegable "¿De dónde lo he sacado?" en el
+        # chat (Chat.tsx lo pinta si `fuentes` no viene vacío) — igual que decide si
+        # se imprimen trazas en la consola del backend. No afecta a que la respuesta
+        # siga fundamentada en el RAG, solo a si se enseña el porqué.
+        fuentes = contexto if settings_service.get("DEBUG") else []
+    elif settings_service.get("PERMITIR_CONOCIMIENTO_GENERAL"):
         # --- Camino GENERAL: las fichas no sirven; el personaje responde con su
         # conocimiento propio (aquí, en el futuro, podría enrutarse a búsqueda web).
         origen = "GENERAL"
@@ -420,6 +426,16 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         system, user = _construir_prompt_general(nombre, pregunta_en)
         respuesta = _llamar_llm(system, user, etiqueta="GENERAL")
         fuentes = []  # no hay fichas detrás de esta respuesta
+    else:
+        # --- Camino SIN_INFO: las fichas no sirven y el conocimiento propio del LLM
+        # está desactivado (PERMITIR_CONOCIMIENTO_GENERAL=false). Mensaje FIJO, sin
+        # llamar a ningún modelo (ni el LLM del personaje ni el juez): coste cero y
+        # respuesta anclada estrictamente a los documentos subidos.
+        origen = "SIN_INFO"
+        respuesta = settings_service.rellenar(
+            settings_service.get("MENSAJE_SIN_INFORMACION"), nombre=nombre
+        )
+        fuentes = []
 
     # Traza de depuración (solo si DEBUG): en la consola del BACKEND, no del cliente.
     _trazar_origen(origen, metodo, distancia, pregunta_en)
