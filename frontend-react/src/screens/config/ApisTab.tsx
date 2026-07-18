@@ -127,8 +127,8 @@ export default function ApisTab() {
   return (
     <div className={styles.apisWrap}>
       <p className={styles.apisIntro}>
-        Pega aquí las claves de las plataformas de IA. Se guardan solo en este
-        equipo (en el archivo <code>.env</code>) y nunca se muestran completas.
+        Introduce aquí las claves de las plataformas de IA. Son necesarias para que la
+        aplicación funcione.
       </p>
 
       {proveedores.map((p) => {

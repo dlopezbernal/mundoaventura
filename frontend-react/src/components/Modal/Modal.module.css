@@ -1,0 +1,132 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(2, 4, 16, 0.78);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 5vh 16px;
+  overflow-y: auto;
+}
+
+.panel {
+  width: min(720px, 100%);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: rgba(6, 10, 32, 0.97);
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  box-shadow: 0 0 40px rgba(62, 242, 255, 0.18);
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  background: rgba(6, 10, 32, 0.97);
+  border-bottom: 1px solid var(--edge);
+}
+
+.titulo {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--txt);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cerrar {
+  flex-shrink: 0;
+  font-family: var(--font-disp);
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--pink);
+  border: 1px solid rgba(255, 46, 151, 0.5);
+  background: rgba(255, 46, 151, 0.08);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.cerrar:hover:not(:disabled) {
+  background: rgba(255, 46, 151, 0.18);
+}
+.cerrar:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cuerpo {
+  position: relative;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* Para modales sin children reales (p. ej. solo un aviso "procesando"), deja
+     hueco suficiente para que el overlay (position: absolute; inset: 0) no
+     colapse a un rectángulo minúsculo. */
+  min-height: 160px;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: rgba(4, 8, 28, 0.88);
+  border-radius: 0 0 16px 16px;
+  text-align: center;
+  padding: 20px;
+}
+.overlay p {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--txt);
+  margin: 0;
+  max-width: 32ch;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(62, 242, 255, 0.25);
+  border-top-color: var(--holo);
+  animation: modal-girar 0.8s linear infinite;
+}
+
+@keyframes modal-girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.barraProgreso {
+  width: 100%;
+  max-width: 240px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(62, 242, 255, 0.15);
+  border: 1px solid var(--edge);
+  overflow: hidden;
+}
+.barraProgresoRelleno {
+  height: 100%;
+  background: linear-gradient(90deg, var(--holo), var(--lime));
+  transition: width 0.3s ease;
+}

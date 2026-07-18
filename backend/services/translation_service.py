@@ -118,13 +118,20 @@ def _trocear_para_traducir(texto: str) -> list[str]:
     return lotes
 
 
-def traducir_a_ingles(texto: str) -> str:
-    """Traduce un DOCUMENTO a inglés (auto-detectando el idioma de origen).
+def traducir_a_ingles(texto: str) -> tuple[str, str]:
+    """Traduce un DOCUMENTO a inglés, AUTO-DETECTANDO el idioma de origen.
 
-    Se usa al guardar un documento del RAG cuando el adulto NO ha marcado que ya
-    está en inglés: los embeddings rinden mucho mejor en inglés. A diferencia de
-    `traducir_es_en` (pregunta corta, ES fijo), aquí el origen se autodetecta
-    (source_lang=None) y el texto puede ser largo, así que lo troceamos por lotes.
+    Se llama SIEMPRE al guardar un documento del RAG (subida, URL o edición): ya
+    no hay checkbox "ya está en inglés" — se detecta solas. DeepL no ofrece un
+    endpoint de detección aparte del de traducir, así que la propia llamada de
+    traducción sirve también para detectar (`detected_source_lang` de la
+    respuesta). A diferencia de `traducir_es_en` (pregunta corta, ES fijo), aquí
+    el origen se autodetecta (source_lang=None) y el texto puede ser largo, así
+    que lo troceamos por lotes.
+
+    Devuelve (texto_traducido, idioma_detectado en minúsculas, p. ej. "en"/"es"/
+    "fr"). El idioma detectado se toma del primer lote (un documento es una sola
+    fuente; no debería variar entre lotes del mismo texto).
 
     Lanza TranslationError si DeepL no está disponible.
     """
@@ -139,7 +146,9 @@ def traducir_a_ingles(texto: str) -> str:
         resultados = translator.translate_text(lotes, target_lang="EN-US")
         if not isinstance(resultados, list):
             resultados = [resultados]
-        return "\n\n".join(r.text for r in resultados)
+        texto_traducido = "\n\n".join(r.text for r in resultados)
+        idioma_detectado = resultados[0].detected_source_lang.lower()
+        return texto_traducido, idioma_detectado
     except Exception as exc:
         raise TranslationError(f"Error al traducir el documento con DeepL: {exc}")
 

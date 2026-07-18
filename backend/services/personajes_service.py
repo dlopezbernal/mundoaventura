@@ -118,6 +118,11 @@ def crear(datos: dict[str, Any]) -> dict[str, Any]:
     _validar_id(personaje_id)
     if existe(personaje_id):
         raise ValueError(f"Ya existe un personaje con el id '{personaje_id}'.")
+    if len(_ensure_cache()) >= config.MAX_PERSONAJES:
+        raise ValueError(
+            f"Se alcanzó el máximo de {config.MAX_PERSONAJES} personajes. "
+            "Borra alguno antes de crear uno nuevo."
+        )
 
     nombre = str(datos.get("nombre", "")).strip()
     prompt_imagen = str(datos.get("prompt_imagen", "")).strip()

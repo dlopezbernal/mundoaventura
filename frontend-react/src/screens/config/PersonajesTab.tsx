@@ -19,13 +19,15 @@ import {
   BackendError,
   createPersonaje,
   deletePersonaje,
-  getPersonajes,
+  getPersonajesInfo,
+  getReindexEstado,
   getVoices,
   probarVoz,
   reindexGlobal,
   updatePersonaje,
 } from "../../api/client";
-import type { PersonajeDTO, VozDTO } from "../../api/types";
+import type { PersonajeDTO, ReindexEstado, VozDTO } from "../../api/types";
+import Modal from "../../components/Modal/Modal";
 import styles from "../Settings.module.css";
 import DocumentosPanel from "./DocumentosPanel";
 
@@ -70,17 +72,25 @@ function aForm(p: PersonajeDTO): FormState {
 
 export default function PersonajesTab() {
   const [personajes, setPersonajes] = useState<PersonajeDTO[] | null>(null);
+  const [limite, setLimite] = useState<number | null>(null);
   const [voces, setVoces] = useState<VozDTO[]>([]);
   const [vocesMsg, setVocesMsg] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   // "__nuevo__" = formulario de alta; un id = editando ese personaje; null = nada.
   const [editando, setEditando] = useState<string | null>(null);
+  // Bloquea el modal (cierre + campos) mientras se procesa un documento o se guarda.
+  const [bloqueado, setBloqueado] = useState(false);
+  // Reindexado GLOBAL: null = inactivo; con valor = modal bloqueante abierto,
+  // sondeando /api/reindex/estado para la barra de progreso.
+  const [progresoReindex, setProgresoReindex] = useState<ReindexEstado | null>(null);
 
   async function cargar() {
     setError(null);
     try {
-      setPersonajes(await getPersonajes(true)); // incluye inactivos (vista admin)
+      const info = await getPersonajesInfo(true); // incluye inactivos (vista admin)
+      setPersonajes(info.personajes);
+      setLimite(info.limite);
     } catch (exc) {
       setError(exc instanceof BackendError ? exc.message : String(exc));
     }
@@ -142,6 +152,22 @@ export default function PersonajesTab() {
   async function onReindexTodo() {
     setError(null);
     setOkMsg(null);
+    setProgresoReindex({ en_curso: true, total: 0, hecho: 0, personaje_actual: null, porcentaje: 0 });
+
+    // Sondea el progreso mientras dura la petición de reindexado (que no se
+    // resuelve hasta que TODO termina). `activo` evita una carrera real: un
+    // sondeo ya en vuelo puede resolver DESPUÉS de que el `finally` de abajo
+    // cierre el modal (clearInterval solo detiene sondeos FUTUROS), lo que
+    // reabriría el modal atascado en el último progreso visto.
+    let activo = true;
+    const sondeo = window.setInterval(() => {
+      void getReindexEstado()
+        .then((estado) => {
+          if (activo) setProgresoReindex(estado);
+        })
+        .catch(() => {});
+    }, 400);
+
     try {
       const r = await reindexGlobal();
       setOkMsg(
@@ -149,6 +175,10 @@ export default function PersonajesTab() {
       );
     } catch (exc) {
       setError(exc instanceof BackendError ? exc.message : String(exc));
+    } finally {
+      activo = false;
+      window.clearInterval(sondeo);
+      setProgresoReindex(null);
     }
   }
 
@@ -164,6 +194,20 @@ export default function PersonajesTab() {
     } catch (exc) {
       setError(exc instanceof BackendError ? exc.message : String(exc));
     }
+  }
+
+  /** Abre el modal de edición/alta (id de personaje, o "__nuevo__"). */
+  function abrirEdicion(id: string) {
+    setOkMsg(null);
+    setError(null);
+    setBloqueado(false);
+    setEditando(id);
+  }
+
+  /** Cierra el modal, salvo que haya una operación en curso (guardado/documentos). */
+  function cerrarModal() {
+    if (bloqueado) return;
+    setEditando(null);
   }
 
   if (error && !personajes) {
@@ -185,100 +229,106 @@ export default function PersonajesTab() {
     );
   }
 
+  const personajeEnEdicion = editando && editando !== "__nuevo__" ? personajes.find((p) => p.id === editando) : null;
+  const alLimite = limite !== null && personajes.length >= limite;
+
   return (
     <div className={styles.cfgWrap}>
       <p className={styles.apisIntro}>
-        Crea y personaliza los personajes con los que chatea el niño. Al crear uno se
-        prepara también su carpeta de documentos para el RAG (podrás subirlos en un
-        próximo hito).
+        Crea y personaliza los personajes. Al crear uno se prepara también su carpeta de
+        documentos para el RAG
       </p>
 
       {error && <p className={styles.testNo}>❌ {error}</p>}
       {okMsg && <p className={styles.testOk}>✅ {okMsg}</p>}
 
-      {editando === "__nuevo__" ? (
-        <PersonajeForm
-          inicial={FORM_VACIO}
-          esNuevo
-          voces={voces}
-          vocesMsg={vocesMsg}
-          onCancelar={() => setEditando(null)}
-          onGuardar={(f) => onSubmit(f, true)}
-        />
-      ) : (
-        <div className={styles.pjBarra}>
-          <button
-            type="button"
-            className="btn btn-primario"
-            onClick={() => {
-              setOkMsg(null);
-              setError(null);
-              setEditando("__nuevo__");
-            }}
-          >
-            ➕ Nuevo personaje
-          </button>
-          <button
-            type="button"
-            className="btn btn-secundario"
-            onClick={() => void onReindexTodo()}
-            title="Reconstruye el índice del RAG para TODOS los personajes"
-          >
-            ♻️ Reindexar todo
-          </button>
-        </div>
+      <div className={styles.pjBarra}>
+        <button
+          type="button"
+          className="btn btn-primario"
+          onClick={() => abrirEdicion("__nuevo__")}
+          disabled={alLimite || !!progresoReindex}
+          title={alLimite ? `Límite de ${limite} personajes alcanzado` : undefined}
+        >
+          ➕ Nuevo personaje
+        </button>
+        <button
+          type="button"
+          className="btn btn-secundario"
+          onClick={() => void onReindexTodo()}
+          disabled={!!progresoReindex}
+          title="Reconstruye el índice del RAG para TODOS los personajes"
+        >
+          {progresoReindex ? "♻️ Reindexando…" : "♻️ Reindexar todo"}
+        </button>
+      </div>
+      {alLimite && !progresoReindex && (
+        <p className={styles.filaAyuda}>
+          Límite de {limite} personajes alcanzado. Borra alguno para poder crear uno nuevo.
+        </p>
       )}
 
       <div className={styles.pjLista}>
-        {personajes.map((p) =>
-          editando === p.id ? (
-            <PersonajeForm
-              key={p.id}
-              inicial={aForm(p)}
-              esNuevo={false}
-              voces={voces}
-              vocesMsg={vocesMsg}
-              onCancelar={() => setEditando(null)}
-              onGuardar={(f) => onSubmit(f, false)}
-            />
-          ) : (
-            <div key={p.id} className={styles.pjCard}>
-              <span className={styles.pjEmoji} aria-hidden="true">
-                {p.emoji ?? "🎭"}
+        {personajes.map((p) => (
+          <div key={p.id} className={styles.pjCard}>
+            <span className={styles.pjEmoji} aria-hidden="true">
+              {p.emoji ?? "🎭"}
+            </span>
+            <div className={styles.pjInfo}>
+              <span className={styles.pjNombre}>
+                {p.nombre}
+                {!p.activo && <span className={styles.pjInactivo}> · oculto</span>}
               </span>
-              <div className={styles.pjInfo}>
-                <span className={styles.pjNombre}>
-                  {p.nombre}
-                  {!p.activo && <span className={styles.pjInactivo}> · oculto</span>}
-                </span>
-                <span className={styles.pjMeta}>
-                  <code>{p.id}</code>
-                  {p.categoria ? ` · ${p.categoria}` : ""}
-                  {p.voz_id ? " · 🔊 con voz" : " · 🔇 solo texto"}
-                </span>
-              </div>
-              <div className={styles.pjAcciones}>
-                <button
-                  type="button"
-                  className={styles.testBtn}
-                  onClick={() => {
-                    setOkMsg(null);
-                    setError(null);
-                    setEditando(p.id);
-                  }}
-                >
-                  ✏️ Editar
-                </button>
-                <button type="button" className={styles.pjBorrar} onClick={() => void onBorrar(p)}>
-                  🗑
-                </button>
-              </div>
+              <span className={styles.pjMeta}>
+                <code>{p.id}</code>
+                {p.categoria ? ` · ${p.categoria}` : ""}
+                {p.voz_id ? " · 🔊 con voz" : " · 🔇 solo texto"}
+              </span>
             </div>
-          ),
-        )}
+            <div className={styles.pjAcciones}>
+              <button type="button" className={styles.testBtn} onClick={() => abrirEdicion(p.id)}>
+                ✏️ Editar
+              </button>
+              <button type="button" className={styles.pjBorrar} onClick={() => void onBorrar(p)}>
+                🗑
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
+
+      {editando && (
+        <Modal
+          titulo={editando === "__nuevo__" ? "Nuevo personaje" : `Editando: ${personajeEnEdicion?.nombre ?? editando}`}
+          onCerrar={cerrarModal}
+          bloqueado={bloqueado}
+        >
+          <PersonajeForm
+            inicial={editando === "__nuevo__" ? FORM_VACIO : aForm(personajeEnEdicion!)}
+            esNuevo={editando === "__nuevo__"}
+            voces={voces}
+            vocesMsg={vocesMsg}
+            onCancelar={cerrarModal}
+            onGuardar={(f) => onSubmit(f, editando === "__nuevo__")}
+            onBloqueadoChange={setBloqueado}
+          />
+        </Modal>
+      )}
+
+      {progresoReindex && (
+        <Modal titulo="Reindexando el catálogo" onCerrar={() => {}} bloqueado mensajeBloqueo={mensajeReindex(progresoReindex)} progreso={progresoReindex.porcentaje}>
+          {null}
+        </Modal>
+      )}
     </div>
   );
+}
+
+/** Texto del overlay de reindexado global, según lo que va reportando el sondeo. */
+function mensajeReindex(p: ReindexEstado): string {
+  if (p.total === 0) return "Preparando el reindexado…";
+  const quien = p.personaje_actual ? ` (${p.personaje_actual})` : "";
+  return `Reindexando… ${p.hecho} de ${p.total} personajes${quien} — ${Math.round(p.porcentaje)}%`;
 }
 
 // ---------------------------------------------------------------------------
@@ -291,14 +341,22 @@ interface FormProps {
   vocesMsg: string;
   onCancelar: () => void;
   onGuardar: (form: FormState) => void | Promise<void>;
+  /** Notifica al Modal contenedor si hay algo en curso (guardando, o el panel
+   * de documentos procesando algo) para que bloquee el cierre y los campos. */
+  onBloqueadoChange: (bloqueado: boolean) => void;
 }
 
-function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuardar }: FormProps) {
+function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuardar, onBloqueadoChange }: FormProps) {
   const [form, setForm] = useState<FormState>(inicial);
   const [guardando, setGuardando] = useState(false);
   const [probandoVoz, setProbandoVoz] = useState(false);
   const [errorVoz, setErrorVoz] = useState<string | null>(null);
+  const [docsOcupado, setDocsOcupado] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    onBloqueadoChange(guardando || docsOcupado);
+  }, [guardando, docsOcupado, onBloqueadoChange]);
 
   function set<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -334,10 +392,6 @@ function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuarda
 
   return (
     <div className={styles.pjForm}>
-      <h3 className={styles.pjFormTitulo}>
-        {esNuevo ? "Nuevo personaje" : `Editando: ${inicial.nombre}`}
-      </h3>
-
       {esNuevo && (
         <label className={styles.pjLabel}>
           Id (no se puede cambiar luego)
@@ -472,16 +526,26 @@ function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuarda
       </label>
 
       <div className={styles.footer}>
-        <button type="button" className="btn btn-secundario" onClick={onCancelar} disabled={guardando}>
+        <button
+          type="button"
+          className="btn btn-secundario"
+          onClick={onCancelar}
+          disabled={guardando || docsOcupado}
+        >
           Cancelar
         </button>
-        <button type="button" className="btn btn-primario" onClick={() => void submit()} disabled={guardando}>
+        <button
+          type="button"
+          className="btn btn-primario"
+          onClick={() => void submit()}
+          disabled={guardando || docsOcupado}
+        >
           {guardando ? "Guardando…" : esNuevo ? "Crear personaje" : "Guardar cambios"}
         </button>
       </div>
 
       {/* Los documentos del RAG solo existen para un personaje ya creado. */}
-      {!esNuevo && <DocumentosPanel personajeId={inicial.id} />}
+      {!esNuevo && <DocumentosPanel personajeId={inicial.id} onOcupadoChange={setDocsOcupado} />}
     </div>
   );
 }

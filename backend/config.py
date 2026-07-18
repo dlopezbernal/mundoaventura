@@ -173,6 +173,16 @@ TTS_OUTPUT_FORMAT: str = os.getenv("TTS_OUTPUT_FORMAT", "mp3_44100_128").strip()
 STT_LANG: str = os.getenv("STT_LANG", "es").strip()
 
 
+# ---------------------------------------------------------------------------
+# 3c) Personajes: límite del catálogo
+# ---------------------------------------------------------------------------
+# Tope fijo de personajes (activos + inactivos). A diferencia de los ajustes de
+# settings_service, esto NO es editable desde el menú de configuración: es una
+# decisión de despliegue (control de costes/alcance), fijada por quien instala
+# la app, no por el adulto que la usa día a día.
+MAX_PERSONAJES: int = int(os.getenv("MAX_PERSONAJES", "10"))
+
+
 def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
     """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""
     return os.getenv(nombre, por_defecto).strip().lower() in ("1", "true", "yes", "on")
