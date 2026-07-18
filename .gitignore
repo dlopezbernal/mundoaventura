@@ -42,3 +42,7 @@ outputs/
 Thumbs.db
 .idea/
 .vscode/
+
+# ─── Claude Code / Playwright MCP ────────────────────────────────
+# Snapshots y logs de consola que deja cada navegación del MCP de Playwright.
+.playwright-mcp/

@@ -43,6 +43,16 @@ Get-ChildItem $env:LOCALAPPDATA\ms-playwright
 Si ya existe, salta al paso 2. A diferencia de Linux, en Windows **no existe** el paso
 de `install-deps` (librerías del sistema tipo `libnss3`): Chromium trae lo que necesita.
 
+> **Ojo:** este Chromium es el que descarga el paquete `playwright` (usado por su CLI,
+> `npx playwright screenshot...`). El **MCP** (`@playwright/mcp`) puede pedir internamente
+> otro canal — en la práctica, `chrome-for-testing` — aunque lo hayas arrancado con
+> `--browser chromium`. Si al navegar sale `Error: Browser "chrome-for-testing" is not
+> installed`, instálalo igual sin admin con:
+> ```powershell
+> npx @playwright/mcp install-browser chrome-for-testing
+> ```
+> Se guarda también en `%LOCALAPPDATA%\ms-playwright`, junto al anterior.
+
 ## Paso 2 — Copia de seguridad de `~/.claude.json`
 
 No te lo saltes. Ese fichero guarda mucho estado de Claude Code (no solo los MCP); un
@@ -101,6 +111,7 @@ Sirve para capturas puntuales; para navegar e interactuar hace falta el MCP.
 | `/mcp` puede pisarlo | Si en el futuro tocas los MCP con `/mcp` o `claude mcp`, puedes perder el `--browser chromium`. Si vuelve el error de Chrome, mira ahí primero. |
 | Reinicio | Un cambio manual en `~/.claude.json` requiere sesión nueva para aplicarse. |
 | Capturas y git | Las imágenes en `docs/img/` quedan sin seguimiento salvo que las añadas tú; decide si las commiteas o las metes en `.gitignore`. |
+| Navegar deja rastro | Cada `browser_navigate`/`browser_take_screenshot` del MCP escribe snapshots y logs de consola en `.playwright-mcp/` (raíz del proyecto). Va en `.gitignore`; no es código, es basura de sesión. |
 | Entorno apuntado | Si apuntas a `localhost:5173` estás mirando tu sesión de dev levantada (`npm run dev`), con cambios sin commitear — no es el build de producción. |
 
 ## Restaurar si algo va mal
