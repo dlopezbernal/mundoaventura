@@ -109,6 +109,15 @@ if EVALUATOR_MODE not in ("umbral", "llm", "hibrido"):
 EVALUATOR_UMBRAL_BAJO: float = float(os.getenv("EVALUATOR_UMBRAL_BAJO", "0.75"))
 EVALUATOR_UMBRAL_ALTO: float = float(os.getenv("EVALUATOR_UMBRAL_ALTO", "0.95"))
 
+# Si el Evaluator decide GENERAL (las fichas no sirven), ¿el personaje responde con
+# su conocimiento propio (una llamada MÁS al LLM, la que genera la respuesta) o con
+# un mensaje FIJO de "no lo sé" sin llamar a ningún modelo? True = comportamiento de
+# siempre (fallback a conocimiento general). False = chat estrictamente anclado a
+# los documentos: fuera de ellos, respuesta fija y sin coste de LLM.
+PERMITIR_CONOCIMIENTO_GENERAL: bool = (
+    os.getenv("PERMITIR_CONOCIMIENTO_GENERAL", "true").strip().lower() in ("1", "true", "yes", "on")
+)
+
 # --- Traducción (DeepL) ---
 # Los documentos están en INGLÉS (mejora la calidad de los embeddings). Para
 # buscar bien, traducimos la pregunta del niño ES→EN con DeepL antes del retrieval.

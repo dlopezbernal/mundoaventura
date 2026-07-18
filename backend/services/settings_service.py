@@ -91,6 +91,13 @@ _PROMPT_EVALUATOR_USER = (
     "Question: {pregunta}\n\n"
     "Are the cards relevant to answer it? Reply only YES or NO:"
 )
+# A diferencia de los PROMPT_* de arriba (instrucciones EN INGLÉS para el LLM), este
+# es el texto FINAL que lee el niño: va directamente en español, sin pasar por
+# ningún modelo. Solo se usa si PERMITIR_CONOCIMIENTO_GENERAL está desactivado.
+_MENSAJE_SIN_INFORMACION = (
+    "No tengo esa información entre mis documentos. ¡Pregúntame otra cosa, "
+    "seguro que sé algo interesante!"
+)
 
 
 # ---------------------------------------------------------------------------
@@ -148,6 +155,13 @@ _SPEC: dict[str, dict[str, Any]] = {
         "categoria": CAT_RAG, "tipo": "str", "default": config.EVALUATOR_MODE,
         "opciones": list(_MODOS_EVALUATOR),
         "ayuda": "Cómo se decide RAG vs GENERAL: umbral (gratis), llm (juez) o hibrido.",
+    },
+    "PERMITIR_CONOCIMIENTO_GENERAL": {
+        "categoria": CAT_RAG, "tipo": "bool", "default": config.PERMITIR_CONOCIMIENTO_GENERAL,
+        "ayuda": "Si las fichas no sirven (origen GENERAL), ¿el personaje responde con "
+        "su conocimiento propio (llamada extra al LLM) o con un mensaje fijo de \"no lo "
+        "sé\" sin llamar a ningún modelo? Desactívalo para un chat anclado solo a tus "
+        "documentos (MENSAJE_SIN_INFORMACION, más abajo).",
     },
     "EVALUATOR_UMBRAL_BAJO": {
         "categoria": CAT_RAG, "tipo": "float", "default": config.EVALUATOR_UMBRAL_BAJO,
@@ -247,11 +261,21 @@ _SPEC: dict[str, dict[str, Any]] = {
         "multilinea": True,
         "ayuda": "Mensaje del juez con fichas y pregunta. Variables: {fichas}, {pregunta}.",
     },
+    "MENSAJE_SIN_INFORMACION": {
+        "categoria": CAT_PROMPTS, "tipo": "str", "default": _MENSAJE_SIN_INFORMACION,
+        "multilinea": True,
+        "ayuda": "Mensaje FIJO en ESPAÑOL (no una instrucción al LLM) que dice el "
+        "personaje cuando no tiene información y PERMITIR_CONOCIMIENTO_GENERAL está "
+        "desactivado. No se llama a ningún modelo para generarlo. Variable opcional: "
+        "{nombre}.",
+    },
     # --- General ---
     "DEBUG": {
         "categoria": CAT_GENERAL, "tipo": "bool", "default": config.DEBUG,
         "ayuda": "Modo desarrollo: imprime trazas en la consola del backend "
-        "(origen de la respuesta y prompts). Déjalo desactivado para el niño.",
+        "(origen de la respuesta y prompts) Y, en el chat, muestra el desplegable "
+        "'📚 ¿De dónde lo he sacado?' con las fichas cuando la respuesta es RAG. "
+        "Déjalo desactivado para el niño.",
     },
 }
 
