@@ -22,6 +22,7 @@ SIEMPRE la misma configuración.
 """
 
 import io
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -36,6 +37,8 @@ from backend.services import (
     settings_service,
     translation_service,
 )
+
+logger = logging.getLogger(__name__)
 
 # Extensiones de archivo soportadas (mismas que ingest.py).
 EXTENSIONES = {".pdf", ".txt", ".md"}
@@ -140,7 +143,15 @@ def reindexar_personaje(personaje_id: str) -> dict:
     try:
         collection.delete(where={"personaje_id": personaje_id})
     except Exception:
-        pass  # aún no había chunks de este personaje: nada que borrar
+        # Lo normal aquí es que aún no hubiera chunks de este personaje (nada que
+        # borrar). Se registra con la traza por si fuese un fallo real de ChromaDB:
+        # así no se pierde sin rastro, pero el reindexado continúa igualmente.
+        logger.warning(
+            "No se pudieron borrar los chunks previos de '%s' antes de reindexar "
+            "(normalmente porque aún no había ninguno).",
+            personaje_id,
+            exc_info=True,
+        )
     n_archivos, n_chunks = _indexar_personaje(collection, personaje_id)
     return {"personaje_id": personaje_id, "archivos": n_archivos, "chunks": n_chunks}
 
@@ -176,15 +187,22 @@ def reindexar_todo() -> dict:
     try:
         client.delete_collection(coleccion)
     except Exception:
-        pass  # no existía todavía
-    collection = client.get_or_create_collection(
-        name=coleccion, metadata={"hnsw:space": "cosine"}
-    )
+        # Lo normal es que la colección no existiera todavía (primer indexado). Se
+        # registra con la traza por si fuese otro fallo, sin cortar el reindexado.
+        logger.warning(
+            "No se pudo borrar la colección '%s' antes del reindexado global "
+            "(normalmente porque aún no existía).",
+            coleccion,
+            exc_info=True,
+        )
+    collection = client.get_or_create_collection(name=coleccion, metadata={"hnsw:space": "cosine"})
 
     base = config.DOCUMENTOS_DIR
     carpetas = sorted(d for d in base.iterdir() if d.is_dir()) if base.is_dir() else []
 
-    _progreso_reindex_todo.update(en_curso=True, total=len(carpetas), hecho=0, personaje_actual=None)
+    _progreso_reindex_todo.update(
+        en_curso=True, total=len(carpetas), hecho=0, personaje_actual=None
+    )
     total_archivos = 0
     total_chunks = 0
     try:
@@ -225,9 +243,7 @@ def listar(personaje_id: str) -> list[dict]:
     """Documentos de un personaje (metadatos), más recientes primero."""
     db.init_db()
     with db.get_session() as sesion:
-        filas = sesion.exec(
-            select(Documento).where(Documento.personaje_id == personaje_id)
-        ).all()
+        filas = sesion.exec(select(Documento).where(Documento.personaje_id == personaje_id)).all()
     filas.sort(key=lambda f: f.creado_en, reverse=True)
     return [_a_dict(f) for f in filas]
 
@@ -350,9 +366,7 @@ def subir(
         raise ValueError("Nombre de archivo vacío.")
     ext = Path(nombre).suffix.lower()
     if ext not in EXTENSIONES:
-        raise ValueError(
-            f"Formato no soportado: '{ext or nombre}'. Sube un .pdf, .txt o .md."
-        )
+        raise ValueError(f"Formato no soportado: '{ext or nombre}'. Sube un .pdf, .txt o .md.")
     if not contenido:
         raise ValueError("El archivo está vacío.")
 
@@ -372,8 +386,13 @@ def subir(
         _guardar_fichero(personaje_id, nombre_guardado, texto_final)
 
     return _registrar(
-        personaje_id, nombre_guardado, origen="subido", traducido=traducido, idioma_original=idioma,
-        sobrescribir=sobrescribir, reindexar=reindexar,
+        personaje_id,
+        nombre_guardado,
+        origen="subido",
+        traducido=traducido,
+        idioma_original=idioma,
+        sobrescribir=sobrescribir,
+        reindexar=reindexar,
     )
 
 
@@ -394,7 +413,13 @@ def subir_varios(
     for nombre_archivo, contenido in archivos:
         try:
             documentos.append(
-                subir(personaje_id, nombre_archivo, contenido, sobrescribir=sobrescribir, reindexar=False)
+                subir(
+                    personaje_id,
+                    nombre_archivo,
+                    contenido,
+                    sobrescribir=sobrescribir,
+                    reindexar=False,
+                )
             )
         except ValueError as exc:
             errores.append({"nombre": nombre_archivo, "detalle": str(exc)})
@@ -427,8 +452,13 @@ def ingesta_url(personaje_id: str, url: str, sobrescribir: bool = False) -> dict
     nombre = _nombre_con_idioma(titulo_slug.lower(), ".md", idioma, traducido)
     _guardar_fichero(personaje_id, nombre, texto)
     return _registrar(
-        personaje_id, nombre, origen="url", traducido=traducido, idioma_original=idioma,
-        url_origen=url, sobrescribir=sobrescribir,
+        personaje_id,
+        nombre,
+        origen="url",
+        traducido=traducido,
+        idioma_original=idioma,
+        url_origen=url,
+        sobrescribir=sobrescribir,
     )
 
 
@@ -446,11 +476,19 @@ def eliminar(personaje_id: str, documento_id: int) -> None:
         sesion.delete(fila)
         sesion.commit()
 
-    # Borrar el fichero de disco (best-effort).
+    # Borrar el fichero de disco (best-effort): la fila ya se borró de la BBDD. Si
+    # el fichero no se puede eliminar (permisos, bloqueo), se registra con la traza
+    # en vez de tragarse el error, porque quedaría un fichero huérfano en disco.
     try:
         (config.DOCUMENTOS_DIR / personaje_id / nombre).unlink(missing_ok=True)
     except OSError:
-        pass
+        logger.warning(
+            "No se pudo borrar el fichero de disco '%s' del personaje '%s' (la fila "
+            "de la BBDD sí se borró; puede quedar un fichero huérfano).",
+            nombre,
+            personaje_id,
+            exc_info=True,
+        )
 
     reindexar_personaje(personaje_id)
 
@@ -558,9 +596,13 @@ def copiar_a(
             (carpeta / fila.nombre_archivo).write_bytes(contenido)
             copiados.append(
                 _registrar(
-                    destino, fila.nombre_archivo, origen=fila.origen,
-                    traducido=fila.traducido, idioma_original=fila.idioma_original,
-                    url_origen=fila.url_origen, sobrescribir=sobrescribir,
+                    destino,
+                    fila.nombre_archivo,
+                    origen=fila.origen,
+                    traducido=fila.traducido,
+                    idioma_original=fila.idioma_original,
+                    url_origen=fila.url_origen,
+                    sobrescribir=sobrescribir,
                     copiado_de_id=documento_id,
                 )
             )

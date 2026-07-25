@@ -13,6 +13,7 @@ Este archivo crea la aplicación FastAPI y la pone en marcha. Para arrancarla:
 Luego abre la documentación interactiva en:  http://127.0.0.1:8000/docs
 """
 
+import logging
 import os
 import sys
 from contextlib import asynccontextmanager
@@ -20,29 +21,35 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend import config, seed
+from backend import config, logging_config, seed
 from backend.routers import admin as admin_router
 from backend.routers import apis as apis_router
 from backend.routers import config as config_router
-from backend.routers import personajes as personajes_router
-from backend.routers import documentos as documentos_router
-from backend.routers import ubicaciones as ubicaciones_router
 from backend.routers import conversacion, generation, transcription
+from backend.routers import documentos as documentos_router
+from backend.routers import personajes as personajes_router
+from backend.routers import ubicaciones as ubicaciones_router
 from backend.services import admin_service, translation_service, voice_service
+
+# Configurar el logging ANTES que nada, para que cualquier mensaje del arranque
+# (incluido el fallo del apaño de encoding de abajo) salga ya con formato.
+logging_config.configurar_logging()
+logger = logging.getLogger(__name__)
 
 # Dependencia que exige el PIN de adulto (token de sesión) en los endpoints
 # sensibles del área de configuración. Los del flujo del niño no la llevan.
 _admin = [Depends(admin_service.requiere_admin)]
 
-# En Windows la consola puede usar cp1252 y romper al imprimir emojis (✅, ⚠️...),
-# lo que llegaría a tumbar el arranque (el hook de startup imprime "DeepL conectado ✅").
-# Forzamos UTF-8 en la salida para que ningún print falle según el terminal.
-# (Mismo apaño que backend/ingest.py.)
+# En Windows la consola puede usar cp1252 y romper al emitir emojis (✅, ⚠️...) en
+# los logs de arranque. Forzamos UTF-8 en la salida para que ningún mensaje falle
+# según el terminal. (Mismo apaño que backend/ingest.py.) El mensaje de fallo es
+# ASCII a propósito: si el propio stream no admite UTF-8, loguearlo no debe fallar.
 for _flujo in (sys.stdout, sys.stderr):
     try:
         _flujo.reconfigure(encoding="utf-8")
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.debug("No se pudo forzar UTF-8 en %s: %s", getattr(_flujo, "name", _flujo), exc)
+
 
 # ---------------------------------------------------------------------------
 # 1) Ciclo de vida de la app (arranque) + creación
@@ -60,28 +67,38 @@ async def lifespan(app: FastAPI):
     # Configuración: crear tablas + seeding "código → BBDD" (no pisa lo ya guardado).
     try:
         creados = seed.sembrar_todo()
-        print(
-            f"[Arranque] BBDD de configuración lista. Sembrados nuevos → "
-            f"ajustes={creados['ajustes']}, personajes={creados['personajes']}, "
-            f"ubicaciones={creados['ubicaciones']}. ✅"
+        logger.info(
+            "BBDD de configuración lista. Sembrados nuevos → ajustes=%s, personajes=%s, "
+            "ubicaciones=%s. ✅",
+            creados["ajustes"],
+            creados["personajes"],
+            creados["ubicaciones"],
         )
-    except Exception as exc:
+    except Exception:
         # Si el seeding falla, la app sigue: settings_service cae a los defaults.
-        print(f"[Arranque] ⚠️  No se pudo preparar/sembrar la BBDD de configuración: {exc}")
+        # exc_info=True registra la traza completa para poder diagnosticarlo.
+        logger.warning(
+            "No se pudo preparar/sembrar la BBDD de configuración; se usarán los "
+            "valores por defecto de config.py. ⚠️",
+            exc_info=True,
+        )
+
+    # Con la BBDD ya lista, ajustar el nivel de log al ajuste DEBUG vigente.
+    logging_config.aplicar_nivel_debug()
 
     est = translation_service.estado()
     if est["deepl_ok"]:
-        print("[Arranque] DeepL conectado. ✅")
+        logger.info("DeepL conectado. ✅")
     else:
-        print("[Arranque] ⚠️  DeepL NO disponible (OBLIGATORIO para el chat):")
-        print(f"[Arranque]     {est['deepl_mensaje']}")
+        logger.warning("DeepL NO disponible (OBLIGATORIO para el chat): %s", est["deepl_mensaje"])
 
     est_voz = voice_service.estado()
     if est_voz["elevenlabs_ok"]:
-        print("[Arranque] ElevenLabs (voz) configurado. ✅")
+        logger.info("ElevenLabs (voz) configurado. ✅")
     else:
-        print("[Arranque] ⚠️  ElevenLabs NO configurado (voz desactivada):")
-        print(f"[Arranque]     {est_voz['elevenlabs_mensaje']}")
+        logger.warning(
+            "ElevenLabs NO configurado (voz desactivada): %s", est_voz["elevenlabs_mensaje"]
+        )
 
     yield
 
@@ -106,15 +123,13 @@ app = FastAPI(
 # allow_credentials=False a propósito: la app no usa cookies ni sesiones, y los
 # navegadores RECHAZAN la combinación allow_origins=["*"] + credenciales.
 _cors_origins = [
-    origen.strip()
-    for origen in os.getenv("CORS_ORIGINS", "").split(",")
-    if origen.strip()
+    origen.strip() for origen in os.getenv("CORS_ORIGINS", "").split(",") if origen.strip()
 ] or ["*"]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
     allow_credentials=False,
-    allow_methods=["*"],      # GET, POST, etc.
+    allow_methods=["*"],  # GET, POST, etc.
     allow_headers=["*"],
 )
 

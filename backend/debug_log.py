@@ -18,14 +18,24 @@ un vistazo y poder depurarlos/ajustarlos rápido:
 Si DEBUG está desactivado no hace absolutamente nada (coste cero en producción).
 """
 
+import logging
+
 from backend.services import settings_service
+
+logger = logging.getLogger(__name__)
 
 # Longitud de las líneas separadoras (solo estético).
 _ANCHO = 72
 
 
 def trazar_prompt(destino: str, **secciones: str | None) -> None:
-    """Imprime en consola los prompts enviados a `destino` (SOLO si DEBUG).
+    """Emite por el log (nivel DEBUG) los prompts enviados a `destino` (SOLO si DEBUG).
+
+    Mantiene la API pública de siempre (`trazar_prompt`), pero en vez de `print`
+    construye el bloque formateado y lo emite con `logger.debug`, de modo que se
+    integra con el resto del logging (formato, nivel, redirección). El ajuste DEBUG
+    de settings_service sigue siendo la puerta: si está desactivado, no hace nada
+    (coste cero en producción).
 
     Parámetros
     ----------
@@ -44,11 +54,12 @@ def trazar_prompt(destino: str, **secciones: str | None) -> None:
     if not settings_service.get("DEBUG"):
         return
 
-    print(f"\n┌─ PROMPT → {destino} " + "─" * _ANCHO)
+    lineas = [f"┌─ PROMPT → {destino} " + "─" * _ANCHO]
     for nombre, texto in secciones.items():
         if texto is None:
             continue
-        print(f"│ [{nombre.upper()}]")
+        lineas.append(f"│ [{nombre.upper()}]")
         for linea in str(texto).splitlines() or [""]:
-            print(f"│   {linea}")
-    print("└" + "─" * (_ANCHO + 12) + "\n")
+            lineas.append(f"│   {linea}")
+    lineas.append("└" + "─" * (_ANCHO + 12))
+    logger.debug("\n%s", "\n".join(lineas))

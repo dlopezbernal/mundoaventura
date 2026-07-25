@@ -77,8 +77,7 @@ _PROMPT_GENERAL_SYSTEM = (
     "(no 'Hola', no 'Como [name]'); answer directly as if continuing a conversation."
 )
 _PROMPT_GENERAL_USER = (
-    "Child's question: {pregunta}\n\n"
-    "Your answer (in the first person, in Spanish):"
+    "Child's question: {pregunta}\n\nYour answer (in the first person, in Spanish):"
 )
 _PROMPT_EVALUATOR_SYSTEM = (
     "You are a strict evaluator for a RAG system. Your only task is to decide "
@@ -106,37 +105,53 @@ _MENSAJE_SIN_INFORMACION = (
 _SPEC: dict[str, dict[str, Any]] = {
     # --- Imagen / generación ---
     "REPLICATE_MODEL": {
-        "categoria": CAT_IMAGEN, "tipo": "str", "default": config.REPLICATE_MODEL,
+        "categoria": CAT_IMAGEN,
+        "tipo": "str",
+        "default": config.REPLICATE_MODEL,
         "ayuda": "Modelo de texto-a-imagen de Replicate para la escena.",
     },
     "REPLICATE_EDIT_MODEL": {
-        "categoria": CAT_IMAGEN, "tipo": "str", "default": config.REPLICATE_EDIT_MODEL,
+        "categoria": CAT_IMAGEN,
+        "tipo": "str",
+        "default": config.REPLICATE_EDIT_MODEL,
         "ayuda": "Modelo de edición para el modo 'Usar mi foto'.",
     },
     "IMG_ASPECT_RATIO": {
-        "categoria": CAT_IMAGEN, "tipo": "str", "default": config.IMG_ASPECT_RATIO,
+        "categoria": CAT_IMAGEN,
+        "tipo": "str",
+        "default": config.IMG_ASPECT_RATIO,
         "opciones": ["1:1", "16:9", "9:16", "4:3", "3:4"],
         "ayuda": "Proporción de la imagen generada.",
     },
     "IMG_OUTPUT_FORMAT": {
-        "categoria": CAT_IMAGEN, "tipo": "str", "default": config.IMG_OUTPUT_FORMAT,
+        "categoria": CAT_IMAGEN,
+        "tipo": "str",
+        "default": config.IMG_OUTPUT_FORMAT,
         "opciones": ["png", "jpg", "webp"],
         "ayuda": "Formato del archivo de imagen.",
     },
     "IMG_NUM_STEPS": {
-        "categoria": CAT_IMAGEN, "tipo": "int", "default": config.IMG_NUM_STEPS,
-        "min": 1, "max": 50,
+        "categoria": CAT_IMAGEN,
+        "tipo": "int",
+        "default": config.IMG_NUM_STEPS,
+        "min": 1,
+        "max": 50,
         "ayuda": "Pasos de difusión. FLUX schnell rinde óptimo con 4 (su máximo).",
     },
     "CLIP_TOKEN_LIMIT": {
-        "categoria": CAT_IMAGEN, "tipo": "int", "default": config.CLIP_TOKEN_LIMIT,
-        "min": 1, "max": 512,
+        "categoria": CAT_IMAGEN,
+        "tipo": "int",
+        "default": config.CLIP_TOKEN_LIMIT,
+        "min": 1,
+        "max": 512,
         "ayuda": "Límite de tokens de CLIP; si el prompt lo supera, solo se avisa.",
     },
     # --- Estilo de imagen (pestaña "General"): común a TODOS los personajes y
     # ubicaciones, para que la imagen final se vea coherente (ver generation_service).
     "STYLE_SUFFIX": {
-        "categoria": CAT_ESTILO_IMAGEN, "tipo": "str", "default": personajes_cfg.STYLE_SUFFIX,
+        "categoria": CAT_ESTILO_IMAGEN,
+        "tipo": "str",
+        "default": personajes_cfg.STYLE_SUFFIX,
         "multilinea": True,
         "ayuda": "Estilo visual común a TODAS las imágenes (personaje + ubicación): "
         "render 3D Pixar, colores, seguridad para niños. Va en POSITIVO al final del "
@@ -144,7 +159,9 @@ _SPEC: dict[str, dict[str, Any]] = {
         "y en 'usar mi foto'.",
     },
     "FRAMING": {
-        "categoria": CAT_ESTILO_IMAGEN, "tipo": "str", "default": personajes_cfg.FRAMING,
+        "categoria": CAT_ESTILO_IMAGEN,
+        "tipo": "str",
+        "default": personajes_cfg.FRAMING,
         "multilinea": True,
         "ayuda": "Encuadre de la escena predefinida (qué tan cerca/lejos sale el "
         "personaje). Solo se usa en 'generar escena' (personaje + ubicación); el modo "
@@ -152,79 +169,121 @@ _SPEC: dict[str, dict[str, Any]] = {
     },
     # --- RAG / Evaluator ---
     "EVALUATOR_MODE": {
-        "categoria": CAT_RAG, "tipo": "str", "default": config.EVALUATOR_MODE,
+        "categoria": CAT_RAG,
+        "tipo": "str",
+        "default": config.EVALUATOR_MODE,
         "opciones": list(_MODOS_EVALUATOR),
         "ayuda": "Cómo se decide RAG vs GENERAL: umbral (gratis), llm (juez) o hibrido.",
     },
     "PERMITIR_CONOCIMIENTO_GENERAL": {
-        "categoria": CAT_RAG, "tipo": "bool", "default": config.PERMITIR_CONOCIMIENTO_GENERAL,
+        "categoria": CAT_RAG,
+        "tipo": "bool",
+        "default": config.PERMITIR_CONOCIMIENTO_GENERAL,
         "ayuda": "Si las fichas no sirven (origen GENERAL), ¿el personaje responde con "
-        "su conocimiento propio (llamada extra al LLM) o con un mensaje fijo de \"no lo "
-        "sé\" sin llamar a ningún modelo? Desactívalo para un chat anclado solo a tus "
+        'su conocimiento propio (llamada extra al LLM) o con un mensaje fijo de "no lo '
+        'sé" sin llamar a ningún modelo? Desactívalo para un chat anclado solo a tus '
         "documentos (MENSAJE_SIN_INFORMACION, más abajo).",
     },
     "EVALUATOR_UMBRAL_BAJO": {
-        "categoria": CAT_RAG, "tipo": "float", "default": config.EVALUATOR_UMBRAL_BAJO,
-        "min": 0.0, "max": 2.0, "paso": 0.01,
+        "categoria": CAT_RAG,
+        "tipo": "float",
+        "default": config.EVALUATOR_UMBRAL_BAJO,
+        "min": 0.0,
+        "max": 2.0,
+        "paso": 0.01,
         "ayuda": "Distancia coseno (0=idéntico, 2=opuesto). ≤ BAJO ⇒ RAG seguro.",
     },
     "EVALUATOR_UMBRAL_ALTO": {
-        "categoria": CAT_RAG, "tipo": "float", "default": config.EVALUATOR_UMBRAL_ALTO,
-        "min": 0.0, "max": 2.0, "paso": 0.01,
+        "categoria": CAT_RAG,
+        "tipo": "float",
+        "default": config.EVALUATOR_UMBRAL_ALTO,
+        "min": 0.0,
+        "max": 2.0,
+        "paso": 0.01,
         "ayuda": "Distancia coseno (0=idéntico, 2=opuesto). ≥ ALTO ⇒ GENERAL.",
     },
     "RAG_TOP_K": {
-        "categoria": CAT_RAG, "tipo": "int", "default": config.RAG_TOP_K,
-        "min": 1, "max": 20,
+        "categoria": CAT_RAG,
+        "tipo": "int",
+        "default": config.RAG_TOP_K,
+        "min": 1,
+        "max": 20,
         "ayuda": "Cuántas fichas recupera ChromaDB por pregunta.",
     },
     # --- Chunking (cambiarlo obliga a REINDEXAR) ---
     "CHUNK_SIZE": {
-        "categoria": CAT_CHUNKING, "tipo": "int", "default": config.CHUNK_SIZE,
-        "min": 100, "max": 4000, "requires_reindex": True,
+        "categoria": CAT_CHUNKING,
+        "tipo": "int",
+        "default": config.CHUNK_SIZE,
+        "min": 100,
+        "max": 4000,
+        "requires_reindex": True,
         "ayuda": "Tamaño de cada fragmento (caracteres). Cambiarlo exige reindexar.",
     },
     "CHUNK_OVERLAP": {
-        "categoria": CAT_CHUNKING, "tipo": "int", "default": config.CHUNK_OVERLAP,
-        "min": 0, "max": 1000, "requires_reindex": True,
+        "categoria": CAT_CHUNKING,
+        "tipo": "int",
+        "default": config.CHUNK_OVERLAP,
+        "min": 0,
+        "max": 1000,
+        "requires_reindex": True,
         "ayuda": "Caracteres que se repiten entre fragmentos. Cambiarlo exige reindexar.",
     },
     "CHROMA_COLLECTION": {
-        "categoria": CAT_CHUNKING, "tipo": "str", "default": config.CHROMA_COLLECTION,
+        "categoria": CAT_CHUNKING,
+        "tipo": "str",
+        "default": config.CHROMA_COLLECTION,
         "requires_reindex": True,
         "ayuda": "Nombre de la colección de ChromaDB. Cambiarlo exige reindexar.",
     },
     # --- LLM ---
     "REPLICATE_LLM_MODEL": {
-        "categoria": CAT_LLM, "tipo": "str", "default": config.REPLICATE_LLM_MODEL,
+        "categoria": CAT_LLM,
+        "tipo": "str",
+        "default": config.REPLICATE_LLM_MODEL,
         "ayuda": "Modelo de lenguaje (Replicate) que responde como el personaje.",
     },
     "LLM_MAX_TOKENS": {
-        "categoria": CAT_LLM, "tipo": "int", "default": config.LLM_MAX_TOKENS,
-        "min": 16, "max": 2000,
+        "categoria": CAT_LLM,
+        "tipo": "int",
+        "default": config.LLM_MAX_TOKENS,
+        "min": 16,
+        "max": 2000,
         "ayuda": "Longitud máxima de la respuesta del LLM (en tokens).",
     },
     "LLM_TEMPERATURE": {
-        "categoria": CAT_LLM, "tipo": "float", "default": 0.3,
-        "min": 0.0, "max": 1.0, "paso": 0.05,
+        "categoria": CAT_LLM,
+        "tipo": "float",
+        "default": 0.3,
+        "min": 0.0,
+        "max": 1.0,
+        "paso": 0.05,
         "ayuda": "Creatividad de la respuesta (0=predecible, 1=creativa). El juez "
         "del Evaluator siempre usa 0.",
     },
     # --- Voz ---
     "ELEVENLABS_STT_MODEL": {
-        "categoria": CAT_VOZ, "tipo": "str", "default": config.ELEVENLABS_STT_MODEL,
+        "categoria": CAT_VOZ,
+        "tipo": "str",
+        "default": config.ELEVENLABS_STT_MODEL,
         "ayuda": "Modelo de transcripción (voz→texto) de ElevenLabs.",
     },
     "ELEVENLABS_TTS_MODEL": {
-        "categoria": CAT_VOZ, "tipo": "str", "default": config.ELEVENLABS_TTS_MODEL,
+        "categoria": CAT_VOZ,
+        "tipo": "str",
+        "default": config.ELEVENLABS_TTS_MODEL,
         "ayuda": "Modelo de síntesis (texto→voz) de ElevenLabs.",
     },
     "TTS_OUTPUT_FORMAT": {
-        "categoria": CAT_VOZ, "tipo": "str", "default": config.TTS_OUTPUT_FORMAT,
+        "categoria": CAT_VOZ,
+        "tipo": "str",
+        "default": config.TTS_OUTPUT_FORMAT,
         "ayuda": "Formato del audio de la respuesta (mp3).",
     },
     "STT_LANG": {
-        "categoria": CAT_VOZ, "tipo": "str", "default": config.STT_LANG,
+        "categoria": CAT_VOZ,
+        "tipo": "str",
+        "default": config.STT_LANG,
         "ayuda": "Idioma de la transcripción (la pregunta del niño).",
     },
     # --- Prompts de sistema (editables sin tocar código) ---
@@ -232,37 +291,51 @@ _SPEC: dict[str, dict[str, Any]] = {
     # del propio texto. Variables: {nombre}, {fichas}, {pregunta}. multilinea → la UI
     # los pinta como área de texto grande.
     "PROMPT_RAG_SYSTEM": {
-        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_RAG_SYSTEM,
+        "categoria": CAT_PROMPTS,
+        "tipo": "str",
+        "default": _PROMPT_RAG_SYSTEM,
         "multilinea": True,
         "ayuda": "Reglas del personaje cuando responde CON documentos (RAG). Variable: {nombre}.",
     },
     "PROMPT_RAG_USER": {
-        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_RAG_USER,
+        "categoria": CAT_PROMPTS,
+        "tipo": "str",
+        "default": _PROMPT_RAG_USER,
         "multilinea": True,
         "ayuda": "Mensaje con las fichas y la pregunta (RAG). Variables: {fichas}, {pregunta}.",
     },
     "PROMPT_GENERAL_SYSTEM": {
-        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_GENERAL_SYSTEM,
+        "categoria": CAT_PROMPTS,
+        "tipo": "str",
+        "default": _PROMPT_GENERAL_SYSTEM,
         "multilinea": True,
         "ayuda": "Reglas del personaje cuando responde SIN documentos (conocimiento propio). Variable: {nombre}.",
     },
     "PROMPT_GENERAL_USER": {
-        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_GENERAL_USER,
+        "categoria": CAT_PROMPTS,
+        "tipo": "str",
+        "default": _PROMPT_GENERAL_USER,
         "multilinea": True,
         "ayuda": "Mensaje con la pregunta (sin fichas). Variable: {pregunta}.",
     },
     "PROMPT_EVALUATOR_SYSTEM": {
-        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_EVALUATOR_SYSTEM,
+        "categoria": CAT_PROMPTS,
+        "tipo": "str",
+        "default": _PROMPT_EVALUATOR_SYSTEM,
         "multilinea": True,
         "ayuda": "Reglas del juez que decide si las fichas sirven (responde YES/NO).",
     },
     "PROMPT_EVALUATOR_USER": {
-        "categoria": CAT_PROMPTS, "tipo": "str", "default": _PROMPT_EVALUATOR_USER,
+        "categoria": CAT_PROMPTS,
+        "tipo": "str",
+        "default": _PROMPT_EVALUATOR_USER,
         "multilinea": True,
         "ayuda": "Mensaje del juez con fichas y pregunta. Variables: {fichas}, {pregunta}.",
     },
     "MENSAJE_SIN_INFORMACION": {
-        "categoria": CAT_PROMPTS, "tipo": "str", "default": _MENSAJE_SIN_INFORMACION,
+        "categoria": CAT_PROMPTS,
+        "tipo": "str",
+        "default": _MENSAJE_SIN_INFORMACION,
         "multilinea": True,
         "ayuda": "Mensaje FIJO en ESPAÑOL (no una instrucción al LLM) que dice el "
         "personaje cuando no tiene información y PERMITIR_CONOCIMIENTO_GENERAL está "
@@ -271,7 +344,9 @@ _SPEC: dict[str, dict[str, Any]] = {
     },
     # --- General ---
     "DEBUG": {
-        "categoria": CAT_GENERAL, "tipo": "bool", "default": config.DEBUG,
+        "categoria": CAT_GENERAL,
+        "tipo": "bool",
+        "default": config.DEBUG,
         "ayuda": "Modo desarrollo: imprime trazas en la consola del backend "
         "(origen de la respuesta y prompts) Y, en el chat, muestra el desplegable "
         "'📚 ¿De dónde lo he sacado?' con las fichas cuando la respuesta es RAG. "
@@ -335,8 +410,10 @@ def _coerce_y_validar(clave: str, spec: dict[str, Any], valor: Any) -> Any:
     """Convierte al tipo del ajuste y valida rango/opciones. Lanza ValueError."""
     try:
         val = _coerce(spec["tipo"], valor)
-    except (TypeError, ValueError):
-        raise ValueError(f"'{clave}' debe ser de tipo {spec['tipo']} (recibido: {valor!r}).")
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"'{clave}' debe ser de tipo {spec['tipo']} (recibido: {valor!r})."
+        ) from exc
 
     if "opciones" in spec and val not in spec["opciones"]:
         raise ValueError(f"'{clave}' debe ser uno de {spec['opciones']} (recibido: {val!r}).")
@@ -401,6 +478,15 @@ def set_many(cambios: dict[str, Any]) -> list[str]:
     # 3) Aplicar en caliente: refrescar la caché en memoria.
     cache = _ensure_cache()
     cache.update(limpios)
+
+    # Si cambió DEBUG, resincronizar el nivel del logger `backend` para que el
+    # toggle en caliente encienda/apague también las trazas por consola sin
+    # reiniciar (import perezoso para no crear un ciclo con logging_config).
+    if "DEBUG" in limpios:
+        from backend import logging_config
+
+        logging_config.aplicar_nivel_debug()
+
     return reindex
 
 

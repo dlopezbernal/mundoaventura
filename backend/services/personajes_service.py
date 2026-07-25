@@ -16,6 +16,7 @@ Los valores por defecto (los personajes de siempre) se vuelcan a la BBDD en el
 "seeding" del arranque (ver seed.py); aquí solo se lee y edita esa tabla.
 """
 
+import logging
 import re
 import shutil
 from typing import Any
@@ -24,6 +25,8 @@ from sqlmodel import select
 
 from backend import config, db
 from backend.models import Personaje
+
+logger = logging.getLogger(__name__)
 
 # Categorías válidas de la carta (agrupan el catálogo en la UI del niño).
 CATEGORIAS_VALIDAS = ("prehistorico", "historico", "ficticio")
@@ -224,7 +227,13 @@ def eliminar(personaje_id: str) -> None:
         if carpeta.is_dir() and not any(carpeta.iterdir()):
             shutil.rmtree(carpeta)
     except OSError:
-        pass  # best-effort: si no se puede borrar, no es crítico
+        # Best-effort: si no se puede borrar, no es crítico, pero se registra con la
+        # traza para no perder el fallo sin rastro (podría quedar una carpeta vacía).
+        logger.warning(
+            "No se pudo borrar la carpeta de documentos de '%s'.",
+            personaje_id,
+            exc_info=True,
+        )
 
     _invalidar()
 
