@@ -26,8 +26,8 @@ class Setting(SQLModel, table=True):
     __tablename__ = "settings"
 
     clave: str = Field(primary_key=True)
-    valor: str                       # siempre texto; el tipo real se guarda aparte
-    tipo: str                        # "str" | "int" | "float" | "bool"
+    valor: str  # siempre texto; el tipo real se guarda aparte
+    tipo: str  # "str" | "int" | "float" | "bool"
     actualizado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
@@ -41,7 +41,7 @@ class Personaje(SQLModel, table=True):
     categoria: str | None = None
     emoji: str | None = None
     prompt_imagen: str = ""
-    voz_id: str | None = None        # voz de ElevenLabs; None = solo texto
+    voz_id: str | None = None  # voz de ElevenLabs; None = solo texto
     activo: bool = True
     prompt_sistema_override: str | None = None
     creado_en: datetime = Field(default_factory=datetime.utcnow)
@@ -68,10 +68,12 @@ class Documento(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     personaje_id: str = Field(index=True)
     nombre_archivo: str
-    origen: str = "subido"           # "subido" | "url"
+    origen: str = "subido"  # "subido" | "url"
     url_origen: str | None = None
     idioma_original: str | None = None
     traducido: bool = False
     creado_en: datetime = Field(default_factory=datetime.utcnow)
     actualizado_en: datetime = Field(default_factory=datetime.utcnow)
-    copiado_de_id: int | None = None  # id del documento origen si se creó con "copiar a"; solo informativo
+    copiado_de_id: int | None = (
+        None  # id del documento origen si se creó con "copiar a"; solo informativo
+    )

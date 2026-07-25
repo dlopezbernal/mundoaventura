@@ -27,14 +27,12 @@ UBICACIONES = {
     },
     "renacimiento": {
         "prompt": (
-            "in a Renaissance artist workshop with paintings, sketches "
-            "and wooden inventions"
+            "in a Renaissance artist workshop with paintings, sketches and wooden inventions"
         ),
     },
     "epoca_victoriana": {
         "prompt": (
-            "on a foggy Victorian London street at night with glowing gas lamps "
-            "and cobblestones"
+            "on a foggy Victorian London street at night with glowing gas lamps and cobblestones"
         ),
     },
     # Extensible: añade aquí más lugares (espacio, antiguo Egipto, fondo marino,
@@ -47,14 +45,14 @@ UBICACIONES = {
 # a la BBDD deje el catálogo COMPLETO: a partir del Hito 6 el catálogo se lee de
 # la tabla `ubicaciones` (vía ubicaciones_service) y el frontend lo consume por API.
 NOMBRES = {
-    "laboratorio":      "Laboratorio",
-    "bosque_jurasico":  "Bosque del Jurásico",
-    "renacimiento":     "Renacimiento",
+    "laboratorio": "Laboratorio",
+    "bosque_jurasico": "Bosque del Jurásico",
+    "renacimiento": "Renacimiento",
     "epoca_victoriana": "Época Victoriana",
 }
 EMOJIS = {
-    "laboratorio":      "🧪",
-    "bosque_jurasico":  "🌋",
-    "renacimiento":     "🎨",
+    "laboratorio": "🧪",
+    "bosque_jurasico": "🌋",
+    "renacimiento": "🎨",
     "epoca_victoriana": "🎩",
 }

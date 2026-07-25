@@ -28,9 +28,7 @@ async def generate(req: GenerateRequest):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(
-            status_code=500, detail=f"Error al generar la imagen: {exc}"
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"Error al generar la imagen: {exc}") from exc
 
     return result
 
@@ -51,8 +49,6 @@ async def generate_on_photo(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(
-            status_code=500, detail=f"Error al generar la imagen: {exc}"
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"Error al generar la imagen: {exc}") from exc
 
     return result
