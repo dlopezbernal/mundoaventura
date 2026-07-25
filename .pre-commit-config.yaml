@@ -1,0 +1,27 @@
+# Pre-commit: lint y formato antes de cada commit.
+#   Instalar (una vez):  uv run pre-commit install
+#   Pasar a mano:        uv run pre-commit run --all-files
+default_language_version:
+  python: python3.12
+
+repos:
+  # Ruff: lint (con auto-fix) + formato del backend Python.
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.14
+    hooks:
+      - id: ruff
+        name: ruff (lint + auto-fix)
+        args: [--fix]
+      - id: ruff-format
+        name: ruff (formato)
+
+  # oxlint para el frontend React (el mismo `npm run lint` del proyecto). Hook
+  # local: se salta si no cambian ficheros del frontend.
+  - repo: local
+    hooks:
+      - id: oxlint
+        name: oxlint (frontend)
+        entry: bash -c 'cd frontend-react && npm run lint'
+        language: system
+        files: ^frontend-react/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false

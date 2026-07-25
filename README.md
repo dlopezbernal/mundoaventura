@@ -1,5 +1,7 @@
 # 🕰️ Máquina del Tiempo en tu Habitación
 
+[![CI](https://github.com/dlopezbernal/maquina-del-tiempo/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/dlopezbernal/maquina-del-tiempo/actions/workflows/ci.yml)
+
 Herramienta educativa (para niños de 8 a 12 años) que **genera escenas divertidas combinando
 un lugar y un personaje histórico o prehistórico** (¡un T-Rex en un laboratorio!) y te deja
 **conversar con ellos por texto o por voz**. Combina varias tecnologías de

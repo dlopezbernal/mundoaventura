@@ -1,0 +1,59 @@
+name: CI
+
+# Corre en cada push y en cada pull request contra dev (y main).
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+jobs:
+  backend:
+    name: Backend (ruff + pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Instalar Python (según .python-version) y dependencias
+        # --frozen: instala EXACTAMENTE lo del uv.lock (falla si el lock está
+        # desincronizado con pyproject.toml). Es la garantía de reproducibilidad.
+        run: uv sync --frozen
+
+      - name: Ruff · lint
+        run: uv run ruff check backend/ tests/
+
+      - name: Ruff · formato
+        run: uv run ruff format --check backend/ tests/
+
+      - name: Pytest · con cobertura
+        run: uv run pytest --cov=backend --cov-report=term-missing
+
+  frontend:
+    name: Frontend (oxlint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend-react
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: frontend-react/package-lock.json
+
+      - name: Instalar dependencias (npm ci)
+        run: npm ci
+
+      - name: Lint (oxlint)
+        run: npm run lint
+
+      - name: Build (tsc + vite)
+        run: npm run build
