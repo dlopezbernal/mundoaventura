@@ -150,6 +150,11 @@ async function fetchBackend(
         detail = "";
       }
     }
+    // 429 (rate limit / cupo diario agotado): el backend manda un mensaje amable y
+    // en personaje. Se muestra TAL CUAL, sin el prefijo "Algo ha salido mal".
+    if (response.status === 429 && detail) {
+      throw new BackendError(detail, 429);
+    }
     throw new BackendError(
       `Algo ha salido mal: ${detail || `error ${response.status}`}`,
       response.status,

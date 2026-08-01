@@ -8,8 +8,10 @@ Una puerta de entrada (la lógica vive en services/rag_service.py):
                    del personaje, fundamentada en la enciclopedia.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
+from backend import config
+from backend.ratelimit import limiter
 from backend.schemas.conversacion import AskRequest, AskResponse
 from backend.services import rag_service
 
@@ -21,8 +23,13 @@ router = APIRouter(prefix="/api", tags=["Conversación (RAG)"])
 # ejecuta en su threadpool y el event loop queda LIBRE para atender otras peticiones;
 # como `async def` bloquearía el servidor entero durante todo el pipeline (medido en
 # scripts/bench_concurrencia.py y docs/mediciones/H2-concurrencia.md).
+#
+# Rate limit por IP (slowapi): al superarlo, el personaje responde "en personaje"
+# (ver ratelimit.manejar_rate_limit), no un 429 crudo. `request` es obligatorio
+# para que slowapi identifique al cliente.
 @router.post("/ask", response_model=AskResponse)
-def ask(req: AskRequest):
+@limiter.limit(lambda: config.RATE_LIMIT_ASK)
+def ask(request: Request, req: AskRequest):
     """Responde a la pregunta del niño como el personaje elegido (RAG)."""
     try:
         result = rag_service.responder(

@@ -60,6 +60,19 @@ class Ubicacion(SQLModel, table=True):
     creado_en: datetime = Field(default_factory=datetime.utcnow)
 
 
+class UsoDiario(SQLModel, table=True):
+    """Contador de generaciones de imagen por día natural (tope de coste, Hito 2).
+
+    `fecha` es la clave (formato ISO 'YYYY-MM-DD'); `imagenes` cuenta las escenas
+    generadas ese día. Lo usa cuota_service para frenar el gasto en el túnel público.
+    """
+
+    __tablename__ = "uso_diario"
+
+    fecha: str = Field(primary_key=True)  # 'YYYY-MM-DD'
+    imagenes: int = 0
+
+
 class Documento(SQLModel, table=True):
     """Metadato de un documento del RAG (el fichero vive en documentos/<id>/)."""
 

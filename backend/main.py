@@ -20,8 +20,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 
-from backend import config, logging_config, seed
+from backend import config, logging_config, ratelimit, seed
 from backend.routers import admin as admin_router
 from backend.routers import apis as apis_router
 from backend.routers import config as config_router
@@ -118,6 +119,11 @@ app = FastAPI(
     version="0.3.0",
     lifespan=lifespan,
 )
+
+# Rate limit por IP (slowapi): el limiter va en app.state y el handler traduce el
+# RateLimitExceeded a una respuesta amable (en personaje en el chat). Ver ratelimit.py.
+app.state.limiter = ratelimit.limiter
+app.add_exception_handler(RateLimitExceeded, ratelimit.manejar_rate_limit)
 
 # ---------------------------------------------------------------------------
 # 2) CORS — permitir que el frontend se conecte

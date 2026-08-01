@@ -237,6 +237,26 @@ MAX_DOCUMENTO_MB: float = float(os.getenv("MAX_DOCUMENTO_MB", "20"))
 #     DESACTIVADO (cómodo en local, igual criterio que CORS_ORIGINS="*").
 ACCESS_CODE: str = os.getenv("ACCESS_CODE", "").strip()
 
+# Rate limit por IP (slowapi). Formato "N/unidad" (ej. "30/minute"). Generoso para
+# el chat, restrictivo para la generación de imagen (lo caro). Al superarlo, el
+# personaje responde "en personaje" (chat) o se devuelve un aviso amable (imagen),
+# nunca un 429 crudo en la cara del niño.
+RATE_LIMIT_ASK: str = os.getenv("RATE_LIMIT_ASK", "30/minute").strip()
+RATE_LIMIT_GENERATE: str = os.getenv("RATE_LIMIT_GENERATE", "10/minute").strip()
+RATE_LIMIT_TRANSCRIBE: str = os.getenv("RATE_LIMIT_TRANSCRIBE", "20/minute").strip()
+
+# Tope DIARIO de generaciones de imagen (por día natural, contado en SQLite). Es un
+# techo duro de coste, complementario al rate limit por minuto. <= 0 = sin tope.
+MAX_IMAGENES_DIA: int = int(os.getenv("MAX_IMAGENES_DIA", "50"))
+
+# Mensaje amable (en personaje) cuando se agota el cupo o el rate limit. Un 429 crudo
+# delante de un niño de 9 años es un fallo de producto.
+MENSAJE_LIMITE: str = os.getenv(
+    "MENSAJE_LIMITE",
+    "¡Uf! Mi máquina del tiempo necesita descansar un ratito. "
+    "Vuelve a intentarlo dentro de un momento, ¿vale?",
+).strip()
+
 
 def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
     """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""
