@@ -83,8 +83,8 @@ def revelar(proveedor: str) -> str | None:
     """Devuelve la clave COMPLETA de un proveedor (para el icono del ojo).
 
     Es una petición aparte, deliberadamente separada de `estado()`, para no enviar
-    nunca la clave completa "por si acaso". (El control de acceso admin llega en el
-    Hito 7; hasta entonces este endpoint no está protegido.)
+    nunca la clave completa "por si acaso". El endpoint va detrás del PIN de adulto
+    (requiere_admin, aplicado en bloque desde main.py).
     """
     if proveedor not in _PROVEEDORES:
         raise ValueError(f"Proveedor desconocido: '{proveedor}'.")

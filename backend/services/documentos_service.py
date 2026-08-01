@@ -23,7 +23,7 @@ SIEMPRE la misma configuración.
 
 import io
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 import chromadb
@@ -294,7 +294,7 @@ def _registrar(
             )
         for p in previos:
             sesion.delete(p)
-        ahora = datetime.utcnow()
+        ahora = datetime.now(UTC)
         fila = Documento(
             personaje_id=personaje_id,
             nombre_archivo=nombre_archivo,
@@ -547,7 +547,7 @@ def actualizar_contenido(personaje_id: str, documento_id: int, contenido: str) -
         fila_db = sesion.get(Documento, documento_id)
         fila_db.traducido = traducido
         fila_db.idioma_original = idioma
-        fila_db.actualizado_en = datetime.utcnow()
+        fila_db.actualizado_en = datetime.now(UTC)
         sesion.add(fila_db)
         sesion.commit()
         resultado = _a_dict(fila_db)

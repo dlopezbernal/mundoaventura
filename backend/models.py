@@ -15,9 +15,14 @@ código; el cambio a leerlo de la BBDD llega en sus hitos respectivos. Los SECRE
 (claves API) NO se modelan aquí: viven en el `.env`.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlmodel import Field, SQLModel
+
+
+def _ahora_utc() -> datetime:
+    """Marca de tiempo actual en UTC (aware). Sustituye a la variante naíf deprecada."""
+    return datetime.now(UTC)
 
 
 class Setting(SQLModel, table=True):
@@ -28,7 +33,7 @@ class Setting(SQLModel, table=True):
     clave: str = Field(primary_key=True)
     valor: str  # siempre texto; el tipo real se guarda aparte
     tipo: str  # "str" | "int" | "float" | "bool"
-    actualizado_en: datetime = Field(default_factory=datetime.utcnow)
+    actualizado_en: datetime = Field(default_factory=_ahora_utc)
 
 
 class Personaje(SQLModel, table=True):
@@ -44,7 +49,7 @@ class Personaje(SQLModel, table=True):
     voz_id: str | None = None  # voz de ElevenLabs; None = solo texto
     activo: bool = True
     prompt_sistema_override: str | None = None
-    creado_en: datetime = Field(default_factory=datetime.utcnow)
+    creado_en: datetime = Field(default_factory=_ahora_utc)
 
 
 class Ubicacion(SQLModel, table=True):
@@ -57,7 +62,7 @@ class Ubicacion(SQLModel, table=True):
     emoji: str | None = None
     prompt: str = ""
     activo: bool = True
-    creado_en: datetime = Field(default_factory=datetime.utcnow)
+    creado_en: datetime = Field(default_factory=_ahora_utc)
 
 
 class UsoDiario(SQLModel, table=True):
@@ -85,8 +90,8 @@ class Documento(SQLModel, table=True):
     url_origen: str | None = None
     idioma_original: str | None = None
     traducido: bool = False
-    creado_en: datetime = Field(default_factory=datetime.utcnow)
-    actualizado_en: datetime = Field(default_factory=datetime.utcnow)
+    creado_en: datetime = Field(default_factory=_ahora_utc)
+    actualizado_en: datetime = Field(default_factory=_ahora_utc)
     copiado_de_id: int | None = (
         None  # id del documento origen si se creó con "copiar a"; solo informativo
     )

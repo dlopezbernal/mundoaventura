@@ -26,7 +26,7 @@ import logging
 import secrets
 import shutil
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import Header, HTTPException
 
@@ -122,7 +122,7 @@ def _guardar_hash(valor: str) -> None:
             fila = Setting(clave=_CLAVE_PIN, valor=valor, tipo="str")
         else:
             fila.valor = valor
-            fila.actualizado_en = datetime.utcnow()
+            fila.actualizado_en = datetime.now(UTC)
         sesion.add(fila)
         sesion.commit()
 

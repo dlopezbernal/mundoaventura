@@ -17,7 +17,7 @@ Los endpoints públicos son los mínimos para arrancar/entrar; el resto exige el
 token (dependencia requiere_admin). Los SECRETOS (claves API) nunca se exportan.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
@@ -91,7 +91,7 @@ def exportar():
     ajustes = {e["clave"]: e["valor"] for e in settings_service.exportar()}
     return {
         "version": 1,
-        "exportado_en": datetime.utcnow().isoformat(),
+        "exportado_en": datetime.now(UTC).isoformat(),
         "ajustes": ajustes,
         "personajes": personajes_service.listar(incluir_inactivos=True),
         "ubicaciones": ubicaciones_service.listar(incluir_inactivos=True),
