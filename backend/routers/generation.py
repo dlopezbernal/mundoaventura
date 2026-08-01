@@ -10,6 +10,7 @@ Dos puertas de entrada (la lógica vive en services/generation_service.py):
 """
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 
 from backend.schemas.generation import GenerateRequest, GenerateResponse
 from backend.services import generation_service
@@ -17,8 +18,11 @@ from backend.services import generation_service
 router = APIRouter(prefix="/api", tags=["Generación"])
 
 
+# `def` (no `async def`) A PROPÓSITO: generar_escena llama a replicate.run (I/O de
+# red síncrona). Como `def`, FastAPI lo ejecuta en su threadpool y el event loop no
+# se bloquea. Ver docs/mediciones/H2-concurrencia.md.
 @router.post("/generate", response_model=GenerateResponse)
-async def generate(req: GenerateRequest):
+def generate(req: GenerateRequest):
     """Genera una imagen del personaje en la ubicación predefinida elegidos."""
     try:
         result = generation_service.generar_escena(
@@ -39,9 +43,13 @@ async def generate_on_photo(
     personaje_id: str = Form(..., description="Identificador del personaje a añadir."),
 ):
     """Estiliza la foto subida a Pixar 3D y añade el personaje (una sola llamada)."""
+    # La lectura del fichero (I/O local rápida) se queda async; la generación en
+    # Replicate (I/O de red LENTA y bloqueante) se delega al threadpool con
+    # run_in_threadpool para no congelar el event loop mientras dura la llamada.
     image_bytes = await image.read()
     try:
-        result = generation_service.generar_en_foto(
+        result = await run_in_threadpool(
+            generation_service.generar_en_foto,
             image_bytes=image_bytes,
             personaje_id=personaje_id,
             mime=image.content_type or "image/png",

@@ -97,7 +97,15 @@ def _medir(segundos: float) -> dict:
     servidor = _arrancar_servidor()
     base = f"http://127.0.0.1:{_PUERTO}"
     try:
-        with ThreadPoolExecutor(max_workers=2) as pool:
+        # Cliente REUTILIZADO para cronometrar /health: crear un httpx.Client nuevo
+        # por llamada añade ~0,5 s de setup de conexión (en Windows), que enmascara
+        # la latencia real del servidor. Reutilizando la conexión medimos el server.
+        with (
+            httpx.Client(base_url=base, timeout=segundos + 10) as salud,
+            ThreadPoolExecutor(max_workers=2) as pool,
+        ):
+            salud.get("/health")  # calienta la conexión (no medir el connect inicial)
+
             # Lanza 2 /api/ask largas EN PARALELO (en hilos cliente).
             futuros = [
                 pool.submit(
@@ -114,7 +122,7 @@ def _medir(segundos: float) -> dict:
             latencias_ms = []
             for _ in range(5):
                 t0 = time.perf_counter()
-                r = httpx.get(f"{base}/health", timeout=segundos + 10)
+                r = salud.get("/health")
                 latencias_ms.append((time.perf_counter() - t0) * 1000)
                 assert r.status_code == 200
                 time.sleep(0.1)

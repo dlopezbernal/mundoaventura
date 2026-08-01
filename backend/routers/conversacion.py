@@ -16,8 +16,13 @@ from backend.services import rag_service
 router = APIRouter(prefix="/api", tags=["Conversación (RAG)"])
 
 
+# `def` (no `async def`) A PROPÓSITO: rag_service.responder llama a SDKs SÍNCRONOS
+# con I/O de red (DeepL, Replicate, ChromaDB, ElevenLabs). Como `def`, FastAPI lo
+# ejecuta en su threadpool y el event loop queda LIBRE para atender otras peticiones;
+# como `async def` bloquearía el servidor entero durante todo el pipeline (medido en
+# scripts/bench_concurrencia.py y docs/mediciones/H2-concurrencia.md).
 @router.post("/ask", response_model=AskResponse)
-async def ask(req: AskRequest):
+def ask(req: AskRequest):
     """Responde a la pregunta del niño como el personaje elegido (RAG)."""
     try:
         result = rag_service.responder(
