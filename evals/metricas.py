@@ -136,3 +136,18 @@ def recall_at_k(chunk_esperado: str | list[str] | None, fuentes: list[str | None
         return None
     esperados = {chunk_esperado} if isinstance(chunk_esperado, str) else set(chunk_esperado)
     return any(f in esperados for f in fuentes if f)
+
+
+def recall_chunk(respuesta_contiene: str | list[str] | None, chunks: list[str]) -> bool | None:
+    """recall@k a nivel de CHUNK: ¿algún fragmento recuperado CONTIENE la respuesta?
+
+    A diferencia del recall de fichero (que se satura al 100 % con pocos documentos),
+    este discrimina la calidad real del retrieval: exige que el texto de la respuesta
+    (una palabra clave en inglés) aparezca en alguno de los chunks recuperados.
+    Devuelve None si la pregunta no lleva `respuesta_contiene`.
+    """
+    if not respuesta_contiene:
+        return None
+    claves = [respuesta_contiene] if isinstance(respuesta_contiene, str) else respuesta_contiene
+    blob = " ".join(chunks).lower()
+    return any(c.lower() in blob for c in claves)

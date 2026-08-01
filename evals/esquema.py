@@ -66,10 +66,14 @@ class PreguntaDorada(BaseModel):
     pregunta: str = Field(min_length=1)
     tipo: TipoPregunta
     origen_esperado: OrigenEsperado
-    # Fichero(s) de documento donde está la respuesta (para medir recall@3). Puede ser
-    # uno o una lista (cuando el mismo dato vive en varios ficheros del personaje, y el
-    # retriever puede traer cualquiera). Solo en literal/inferencial; en las demás, None.
+    # Fichero(s) de documento donde está la respuesta (para medir recall@3 a nivel de
+    # FICHERO). Puede ser uno o una lista. Solo en literal/inferencial; None en las demás.
     chunk_esperado: str | list[str] | None = None
+    # Palabra(s) clave (en inglés, el idioma de los documentos) que la respuesta correcta
+    # contiene; sirve para recall@3 a nivel de CHUNK (¿algún fragmento recuperado la
+    # contiene?), que sí discrimina calidad de retrieval cuando el recall de fichero
+    # está saturado. Cualquiera de la lista cuenta como acierto. Solo literal/inferencial.
+    respuesta_contiene: str | list[str] | None = None
     notas: str = ""
 
 

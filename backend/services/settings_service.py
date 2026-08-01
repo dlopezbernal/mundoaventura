@@ -229,6 +229,16 @@ _SPEC: dict[str, dict[str, Any]] = {
         "requires_reindex": True,
         "ayuda": "Caracteres que se repiten entre fragmentos. Cambiarlo exige reindexar.",
     },
+    "EMBEDDING_BACKEND": {
+        "categoria": CAT_RAG,
+        "tipo": "str",
+        "default": config.EMBEDDING_BACKEND,
+        "opciones": ["minilm-en", "multi-minilm", "e5-large"],
+        "requires_reindex": True,
+        "ayuda": "Modelo de embeddings del RAG. minilm-en = original (inglés, necesita "
+        "DeepL); multi-minilm / e5-large = multilingües locales (embeben el español "
+        "directo). Cambiarlo exige reindexar (cada backend tiene su colección).",
+    },
     "CHROMA_COLLECTION": {
         "categoria": CAT_CHUNKING,
         "tipo": "str",

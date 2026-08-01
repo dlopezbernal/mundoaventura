@@ -149,6 +149,12 @@ CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "120"))
 # Nombre de la colección de ChromaDB donde viven los chunks de los documentos.
 CHROMA_COLLECTION: str = os.getenv("CHROMA_COLLECTION", "documentos_en")
 
+# Backend de embeddings (Hito 4). "minilm-en" = original (all-MiniLM-L6-v2 monolingüe
+# inglés, colección documentos_en, requiere traducir la pregunta); "multi-minilm" y
+# "e5-large" = multilingües locales (fastembed/ONNX) que embeben el español directo.
+# Ver services/embeddings.py. Cambiarlo exige reindexar (colección versionada propia).
+EMBEDDING_BACKEND: str = os.getenv("EMBEDDING_BACKEND", "minilm-en").strip()
+
 
 # ---------------------------------------------------------------------------
 # 3b) Voz (ElevenLabs): transcripción (Scribe/STT) + síntesis (Flash/TTS)

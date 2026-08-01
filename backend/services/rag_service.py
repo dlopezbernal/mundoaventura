@@ -32,6 +32,7 @@ import chromadb
 
 from backend import config, debug_log
 from backend.services import (
+    embeddings,
     personajes_service,
     replicate_client,
     settings_service,
@@ -44,6 +45,7 @@ logger = logging.getLogger(__name__)
 # Cliente y colección de ChromaDB, cargados una sola vez (singleton perezoso).
 _client: chromadb.ClientAPI | None = None
 _collection = None
+_collection_nombre: str | None = None  # nombre con el que se abrió (para detectar cambios)
 
 # Icono por origen, solo para la traza de consola en modo DEBUG.
 _ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡", "SIN_INFO": "🔴"}
@@ -87,14 +89,20 @@ def _trazar_origen(origen: str, metodo: str, distancia: float | None, pregunta_e
 
 
 def _get_collection():
-    """Devuelve la colección de ChromaDB, creándola e indexándola la 1ª vez."""
-    global _client, _collection
-    if _collection is not None:
+    """Devuelve la colección del backend de embeddings vigente (singleton perezoso).
+
+    El nombre depende de `EMBEDDING_BACKEND`; si cambia (p. ej. al comparar backends),
+    se reabre la colección correcta en vez de servir la cacheada del backend anterior.
+    """
+    global _client, _collection, _collection_nombre
+    nombre = embeddings.coleccion_actual()
+    if _collection is not None and _collection_nombre == nombre:
         return _collection
 
     # PersistentClient guarda los datos en disco (config.CHROMA_DIR), así que el
     # índice sobrevive entre reinicios y no hay que recalcularlo cada vez.
-    _client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
+    if _client is None:
+        _client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
 
     # get_or_create_collection: si ya existe la reutiliza; si no, la crea.
     # Por defecto usa su función de embeddings local (CPU).
@@ -107,9 +115,10 @@ def _get_collection():
     # La colección la construye el script de ingesta (python -m backend.ingest)
     # a partir de los documentos. Aquí solo la ABRIMOS para consultarla.
     _collection = _client.get_or_create_collection(
-        name=settings_service.get("CHROMA_COLLECTION"),
+        name=nombre,
         metadata={"hnsw:space": "cosine"},
     )
+    _collection_nombre = nombre
 
     # Si está vacía, avisamos: hay que ejecutar la ingesta primero.
     if _collection.count() == 0:
@@ -131,9 +140,10 @@ def reiniciar_coleccion() -> None:
     fuerza a reabrirla en la siguiente pregunta. Tras un reindexado incremental
     (borrar+reañadir chunks de un personaje) NO hace falta: la colección es la misma.
     """
-    global _client, _collection
+    global _client, _collection, _collection_nombre
     _client = None
     _collection = None
+    _collection_nombre = None
 
 
 def _recuperar_contexto(personaje_id: str, pregunta: str) -> tuple[list[str], list[float]]:
@@ -147,12 +157,17 @@ def _recuperar_contexto(personaje_id: str, pregunta: str) -> tuple[list[str], li
     Triceratops nunca responde con datos de Sherlock Holmes.
     """
     collection = _get_collection()
-    resultado = collection.query(
-        query_texts=[pregunta],
-        n_results=settings_service.get("RAG_TOP_K"),
-        where={"personaje_id": personaje_id},  # solo fichas de este personaje
-        include=["documents", "distances"],  # pedimos también las distancias
-    )
+    comun = {
+        "n_results": settings_service.get("RAG_TOP_K"),
+        "where": {"personaje_id": personaje_id},  # solo fichas de este personaje
+        "include": ["documents", "distances"],  # pedimos también las distancias
+    }
+    # Backend multilingüe: embebemos NOSOTROS la consulta (como 'query') y pasamos el
+    # vector. Backend original: la embebe Chroma a partir del texto (query_texts).
+    if embeddings.usa_manuales():
+        resultado = collection.query(query_embeddings=[embeddings.embed_query(pregunta)], **comun)
+    else:
+        resultado = collection.query(query_texts=[pregunta], **comun)
     # query devuelve listas anidadas (una por consulta); tomamos la primera.
     documentos = (resultado.get("documents") or [[]])[0]
     distancias = (resultado.get("distances") or [[]])[0]

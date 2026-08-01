@@ -32,6 +32,7 @@ from sqlmodel import select
 from backend import config, db
 from backend.models import Documento
 from backend.services import (
+    embeddings,
     personajes_service,
     rag_service,
     settings_service,
@@ -101,9 +102,13 @@ def _get_client() -> chromadb.ClientAPI:
 
 
 def _get_collection():
-    """Abre (o crea) la colección con la MISMA métrica coseno que usa el chat."""
+    """Abre (o crea) la colección del backend de embeddings vigente (métrica coseno).
+
+    El nombre depende de `EMBEDDING_BACKEND` (cada backend tiene su colección propia),
+    para poder comparar backends sin pisar la colección de la línea base.
+    """
     return _get_client().get_or_create_collection(
-        name=settings_service.get("CHROMA_COLLECTION"),
+        name=embeddings.coleccion_actual(),
         metadata={"hnsw:space": "cosine"},
     )
 
@@ -128,7 +133,17 @@ def _indexar_personaje(collection, personaje_id: str) -> tuple[int, int]:
             continue
         metadatos = [{"personaje_id": personaje_id, "source": archivo.name} for _ in chunks]
         ids = [f"{personaje_id}::{archivo.name}::{i}" for i in range(len(chunks))]
-        collection.add(documents=chunks, metadatas=metadatos, ids=ids)
+        # Backend multilingüe: embebemos los chunks NOSOTROS (como 'passage') y
+        # pasamos los vectores. Backend original: los embebe Chroma (add con documents).
+        if embeddings.usa_manuales():
+            collection.add(
+                embeddings=embeddings.embed_passages(chunks),
+                documents=chunks,
+                metadatas=metadatos,
+                ids=ids,
+            )
+        else:
+            collection.add(documents=chunks, metadatas=metadatos, ids=ids)
         n_archivos += 1
         n_chunks += len(chunks)
     return n_archivos, n_chunks
@@ -182,7 +197,7 @@ def reindexar_todo() -> dict:
 
     Actualiza `_progreso_reindex_todo` personaje a personaje mientras dura.
     """
-    coleccion = settings_service.get("CHROMA_COLLECTION")
+    coleccion = embeddings.coleccion_actual()
     client = _get_client()
     try:
         client.delete_collection(coleccion)
