@@ -1,0 +1,1627 @@
+{
+  "generado_en": "2026-08-01",
+  "rag_top_k": 3,
+  "chroma_collection": "documentos_en",
+  "retrieval": {
+    "trex-01": {
+      "pregunta_en": "What did you eat?",
+      "chunks": [
+        "### Diet and feeding behavior",
+        "Tyrannosaurs had large olfactory bulbs and olfactory nerves (relative to their brain size). These suggest a highly developed sense of smell which could sniff out carcasses over great distances, as modern vultures do. Research on the olfactory bulbs of dinosaurs has shown that Tyrannosaurus had the most highly developed sense of smell of 21 sampled dinosaurs.\nTyrannosaur teeth could crush bone, and therefore could extract as much food (bone marrow) as possible from carcass remnants, usually the least nutritious parts. Karen Chin and colleagues have found bone fragments in coprolites (fossilized feces) that they attribute to tyrannosaurs, but point out that a tyrannosaur's teeth were not well adapted to systematically chewing bone like hyenas do to extract marrow.",
+        "the origin of the deltoid or teres major muscles. The presence of avulsion injuries being limited to the forelimb and shoulder in both Tyrannosaurus and Allosaurus suggests that theropods may have had a musculature more complex than and functionally different from those of birds. The researchers concluded that Sue's tendon avulsion was probably obtained from struggling prey. The presence of stress fractures and tendon avulsions, in general, provides evidence for a \"very active\" predation-based diet rather than obligate scavenging."
+      ],
+      "distances": [
+        0.6692836284637451,
+        0.7611634135246277,
+        0.7783933281898499
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-02": {
+      "pregunta_en": "Were you really that tall?",
+      "chunks": [
+        "The forelimb or arm was very short. The upper arm bone, the humerus, was short but robust. It had a narrow upper end with an exceptionally rounded head. The lower arm bones, the ulna and radius, were straight elements, much shorter than the humerus. The second metacarpal was longer and wider than the first, whereas normally in theropods the opposite is true. The forelimbs had only two clawed fingers, along with an additional splint-like small third metacarpal representing the remnant of a third digit.",
+        "T. rex was one of the largest land carnivores of all time. One of its largest and the most complete specimens, nicknamed Sue (FMNH PR2081), is located at the Field Museum of Natural History in Chicago. Sue measured 12.3–12.8 m (40–42 ft) long, was 3.66–3.96 m (12.0–13.0 ft) tall at the hips, and according to the most recent studies, using a variety of techniques, maximum body masses have been estimated approximately 8.4–9.22 t (8.27–9.07 long tons; 9.26–10.16 short tons). A specimen nicknamed Scotty (RSM P2523.8), located at the Royal Saskatchewan Museum, is reported to measure 13 m (43 ft) in length. Using a mass estimation technique that extrapolates from the circumference of the femur, Scotty was estimated as the largest known specimen at 8.87 t (8.73 long tons; 9.78 short tons) in",
+        "Not every adult Tyrannosaurus specimen recovered is as big. Historically average adult mass estimates have varied widely over the years, from as low as 4.5 t (4.4 long tons; 5.0 short tons), to more than 7.2 t (7.1 long tons; 7.9 short tons), with most modern estimates ranging between 5.4 and 8.0 t (5.3 and 7.9 long tons; 6.0 and 8.8 short tons).\nA 2024 study found that there was little evidence of size-based sexual dimorphism in T. rex."
+      ],
+      "distances": [
+        0.7006058096885681,
+        0.7235236167907715,
+        0.740498960018158
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-03": {
+      "pregunta_en": "When were you living there?",
+      "chunks": [
+        "The bones were then shipped to New Jersey where the mount was constructed, then shipped back to Chicago for the final assembly. The mounted skeleton opened to the public on May 17, 2000, in the Field Museum of Natural History. A study of this specimen's fossilized bones showed that Sue reached full size at age 19 and died at the age of 28, the longest estimated life of any tyrannosaur known.",
+        "## Paleobiology\n\n### Life history",
+        "Tyrannosaurus lived during what is referred to as the Lancian faunal stage (Maastrichtian age) at the end of the Late Cretaceous. Tyrannosaurus ranged from Canada in the north to at least New Mexico in the south of Laramidia."
+      ],
+      "distances": [
+        0.7738642692565918,
+        0.804054319858551,
+        0.8116006851196289
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-04": {
+      "pregunta_en": "Did you have those little arms?",
+      "chunks": [
+        "the arms cannot have been very useful and as evidence that they were indeed used and acquired wounds, like the rest of the body.",
+        "The forelimb or arm was very short. The upper arm bone, the humerus, was short but robust. It had a narrow upper end with an exceptionally rounded head. The lower arm bones, the ulna and radius, were straight elements, much shorter than the humerus. The second metacarpal was longer and wider than the first, whereas normally in theropods the opposite is true. The forelimbs had only two clawed fingers, along with an additional splint-like small third metacarpal representing the remnant of a third digit.",
+        "### Arms"
+      ],
+      "distances": [
+        0.5666787624359131,
+        0.6042773127555847,
+        0.6058420538902283
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-05": {
+      "pregunta_en": "Was your bite really hard?",
+      "chunks": [
+        "powerful bite, which easily surpassed that of all non-tyrannosaurids. The tip of the upper jaw was U-shaped (most non-tyrannosauroid carnivores had V-shaped upper jaws), which increased the amount of tissue and bone a tyrannosaur could rip out with one bite, although it also increased the stresses on the front teeth.",
+        "Most non-tyrannosauroid carnivores had V-shaped upper jaws. Tyrannosaurids were different: the tip of their jaws was U-shaped. This increased the amount of tissue and bone a tyrannosaur could rip out with one bite (although it also increased the stresses on the front teeth). These features are part of the tyrannosaurid trend towards an increasingly powerful bite. These features made its bite strength easily surpass that of all non-tyrannosaurids.",
+        "In 1992, William Abler suggested that Tyrannosaurus may have had infectious saliva used to kill its prey. Abler observed that the serrations (tiny protuberances) on the cutting edges of the teeth are closely spaced, enclosing little chambers, which he argued trapped pieces of carcass with bacteria, giving Tyrannosaurus a deadly, infectious bite, as the Komodo dragon was mistakenly thought to have. Jack Horner and Don Lessem, in a 1993 popular book, questioned Abler's hypothesis, arguing that Tyrannosaurus's tooth serrations as more like cubes in shape than the serrations on a Komodo monitor's teeth, which are rounded. The basis for an infectious bite in Tyrannosaurus or any other theropod was further undermined when it was found Komodo dragons do not actually have an infectious bite nor"
+      ],
+      "distances": [
+        0.5894553065299988,
+        0.6446183919906616,
+        0.661044180393219
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_rex_simple.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-06": {
+      "pregunta_en": "Who found you out?",
+      "chunks": [
+        "## History of research\n\n### Earliest finds",
+        "### Possible footprints",
+        "A tooth from what is now documented as a Tyrannosaurus rex was found in July 1874 upon South Table Mountain (Colorado) by Jarvis Hall (Colorado) student Peter T. Dotson under the auspices of Arthur Lakes near Golden, Colorado, in sediments belonging to the Denver Formation. In the early 1890s, John Bell Hatcher collected postcranial elements in eastern Wyoming. The fossils were believed to be from the large species Ornithomimus grandis (now Deinodon) but are now considered T. rex remains."
+      ],
+      "distances": [
+        0.733906626701355,
+        0.784173309803009,
+        0.8055371642112732
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-07": {
+      "pregunta_en": "Were you a hunter, or did you eat animals that were already dead?",
+      "chunks": [
+        "expenditures during hunting or scavenging. This in turn likely resulted in tyrannosaurs having a reduced need for hunting forays and requiring less food to sustain themselves as a result. Additionally, the research, in conjunction with studies that show tyrannosaurs were more agile than other large-bodied theropods, indicates they were quite well-adapted to a long-distance stalking approach followed by a quick burst of speed to go for the kill. Analogies can be noted between tyrannosaurids and modern wolves as a result, supported by evidence that at least some tyrannosaurids were hunting in group settings.",
+        "Tyrannosaurs had large olfactory bulbs and olfactory nerves (relative to their brain size). These suggest a highly developed sense of smell which could sniff out carcasses over great distances, as modern vultures do. Research on the olfactory bulbs of dinosaurs has shown that Tyrannosaurus had the most highly developed sense of smell of 21 sampled dinosaurs.\nTyrannosaur teeth could crush bone, and therefore could extract as much food (bone marrow) as possible from carcass remnants, usually the least nutritious parts. Karen Chin and colleagues have found bone fragments in coprolites (fossilized feces) that they attribute to tyrannosaurs, but point out that a tyrannosaur's teeth were not well adapted to systematically chewing bone like hyenas do to extract marrow.",
+        "Paleontologist Jack Horner has been a major proponent of the view that Tyrannosaurus was not a predator at all but instead was an obligate scavenger. He has put forward arguments in the popular literature to support the pure scavenger hypothesis:"
+      ],
+      "distances": [
+        0.581559419631958,
+        0.5924705266952515,
+        0.6305584907531738
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-08": {
+      "pregunta_en": "Why did you have such a wide head but a narrow nose?",
+      "chunks": [
+        "The largest known T. rex skulls measure up to 1.52 m (5 ft 0 in) in length. Large fenestrae (openings) in the skull reduced weight, as in all carnivorous theropods. In other respects Tyrannosaurus's skull was significantly different from those of large non-tyrannosaurid theropods. It was extremely wide at the rear but had a narrow snout, allowing unusually good binocular vision. The skull bones were massive and the nasals and some other bones were fused, preventing movement between them; but many were pneumatized (contained a \"honeycomb\" of tiny air spaces) and thus lighter. These and other skull-strengthening features are part of the tyrannosaurid trend towards an increasingly powerful bite, which easily surpassed that of all non-tyrannosaurids. The tip of the upper jaw was U-shaped",
+        "The largest known Tyrannosaurus rex skulls measure up to 5 feet (1.5 m) in length. Large openings ('fenestrae') in the skull reduced weight and gave places for muscle attachment, as in all carnivorous theropods. \nBut in other respects Tyrannosaurus's skull was significantly different from those of large non-tyrannosaurid theropods. It was extremely wide at the rear but had a narrow snout. This permitted good binocular vision. \nThe skull bones were massive. Some bones were fused, preventing movement between them; but many were pneumatized, with a \"honeycomb\" of tiny air spaces. This may have made the bones more flexible as well as lighter.",
+        "In 2006, Montana State University revealed that it possessed the largest Tyrannosaurus skull yet discovered (from a specimen named MOR 008), measuring 5 feet (152 cm) long. Subsequent comparisons indicated that the longest head was 136.5 centimetres (53.7 in) (from specimen LACM 23844) and the widest head was 90.2 centimetres (35.5 in) (from Sue)."
+      ],
+      "distances": [
+        0.6335980296134949,
+        0.6409738063812256,
+        0.6543252468109131
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_rex_simple.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-09": {
+      "pregunta_en": "What's the name of the largest T. rex ever found?",
+      "chunks": [
+        "T. rex was one of the largest land carnivores of all time. One of its largest and the most complete specimens, nicknamed Sue (FMNH PR2081), is located at the Field Museum of Natural History in Chicago. Sue measured 12.3–12.8 m (40–42 ft) long, was 3.66–3.96 m (12.0–13.0 ft) tall at the hips, and according to the most recent studies, using a variety of techniques, maximum body masses have been estimated approximately 8.4–9.22 t (8.27–9.07 long tons; 9.26–10.16 short tons). A specimen nicknamed Scotty (RSM P2523.8), located at the Royal Saskatchewan Museum, is reported to measure 13 m (43 ft) in length. Using a mass estimation technique that extrapolates from the circumference of the femur, Scotty was estimated as the largest known specimen at 8.87 t (8.73 long tons; 9.78 short tons) in",
+        "Other tyrannosaur fossils found in the same formations as T. rex were originally classified as separate taxa, including Aublysodon and Albertosaurus megagracilis, the latter being named Dinotyrannus megagracilis in 1995. These fossils are now universally considered to belong to juvenile T. rex. A small but nearly complete skull from Montana, 57.2 centimeters (1.88 ft) long, is an exception. This skull, CMNH 7541, was originally classified as a species of Gorgosaurus (G. lancensis) by Charles W. Gilmore in 1946. In 1988, the specimen was re-described by Robert T. Bakker, Michael Williams, then the curator of paleontology at the Cleveland Museum of Natural History, and Phil Currie, where the original specimen was housed and is now on display. Their initial research indicated that the skull",
+        "In 2006, Montana State University revealed that it possessed the largest Tyrannosaurus skull yet discovered (from a specimen named MOR 008), measuring 5 feet (152 cm) long. Subsequent comparisons indicated that the longest head was 136.5 centimetres (53.7 in) (from specimen LACM 23844) and the widest head was 90.2 centimetres (35.5 in) (from Sue)."
+      ],
+      "distances": [
+        0.3005298376083374,
+        0.30468255281448364,
+        0.3123902678489685
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-10": {
+      "pregunta_en": "Why did the dinosaurs go extinct?",
+      "chunks": [
+        "of the tyrannosaurids and among the last non-avian dinosaurs to exist before the Cretaceous–Paleogene extinction event.",
+        "According to studies published in 2021 by Charles Marshall et al., the total population of adult Tyrannosaurus at any given time was perhaps 20,000 individuals, with computer estimations also suggesting a total population no lower than 1,300 and no higher than 328,000. The authors themselves suggest that the estimate of 20,000 individuals is probably lower than what should be expected, especially when factoring in that disease pandemics could easily wipe out such a small population. Over the span of the genus' existence, it is estimated that there were about 127,000 generations and that this added up to a total of roughly 2.5 billion animals until their extinction.",
+        "Over half of the known T. rex specimens appear to have died within six years of reaching sexual maturity, a pattern which is also seen in other tyrannosaurs and in some large, long-lived birds and mammals today. These species are characterized by high infant mortality rates, followed by relatively low mortality among juveniles. Mortality increases again following sexual maturity, partly due to the stresses of reproduction. One study suggests that the rarity of juvenile T. rex fossils is due in part to low juvenile mortality rates; the animals were not dying in large numbers at these ages, and thus were not often fossilized. This rarity may also be due to the incompleteness of the fossil record or to the bias of fossil collectors towards larger, more spectacular specimens. In a 2013"
+      ],
+      "distances": [
+        0.370044469833374,
+        0.47046327590942383,
+        0.47174757719039917
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-11": {
+      "pregunta_en": "Could you run fast with those legs?",
+      "chunks": [
+        "A 2002 report used a mathematical model (validated by applying it to three living animals: alligators, chickens, and humans; and eight more species, including emus and ostriches) to gauge the leg muscle mass needed for fast running (over 40 km/h or 25 mph). Scientists who think that Tyrannosaurus was able to run point out that hollow bones and other features that would have lightened its body may have kept adult weight to a mere 4.5 metric tons (5.0 short tons) or so, or that other animals like ostriches and horses with long, flexible legs are able to achieve high speeds through slower but longer strides. Proposed top speeds exceeded 40 kilometers per hour (25 mph) for Tyrannosaurus, but were deemed infeasible because they would require exceptional leg muscles of approximately 40–86% of",
+        "Additionally, a 2020 study indicates that Tyrannosaurus and other tyrannosaurids were exceptionally efficient walkers. Studies by Dececchi et al., compared the leg proportions, body mass, and the gaits of more than 70 species of theropod dinosaurs including Tyrannosaurus and its relatives. The research team then applied a variety of methods to estimate each dinosaur's top speed when running as well as how much energy each dinosaur expended while moving at more relaxed speeds such as when walking. Among smaller to medium-sized species such as dromaeosaurids, longer legs appear to be an adaptation for faster running, in line with previous results by other researchers. But for theropods weighing over 1,000 kg (2,200 lb), top running speed is limited by body size, so longer legs instead were",
+        "Scientists have produced a wide range of possible maximum running speeds for Tyrannosaurus: mostly around 9 meters per second (32 km/h; 20 mph), but as low as 4.5–6.8 meters per second (16–24 km/h; 10–15 mph) and as high as 20 meters per second (72 km/h; 45 mph), though it running at this speed is very unlikely. Tyrannosaurus was a bulky and heavy carnivore so it is unlikely to run very fast at all compared to other theropods like Carnotaurus or Giganotosaurus. Researchers have relied on various estimating techniques because, while there are many tracks of large theropods walking, none showed evidence of running."
+      ],
+      "distances": [
+        0.463479220867157,
+        0.49501603841781616,
+        0.5736209750175476
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-12": {
+      "pregunta_en": "Do you like soccer?",
+      "chunks": [
+        "### Social behavior",
+        "## Cultural significance",
+        "### Speed"
+      ],
+      "distances": [
+        0.8587686419487,
+        0.8721191883087158,
+        0.8978168368339539
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-13": {
+      "pregunta_en": "Can you dance?",
+      "chunks": [
+        "### Posture",
+        "stretched due to the swaying of the tail. Using a 3-D model of Tyrannosaurus specimen Trix, muscles and ligaments were reconstructed to simulate the tail movements. This results in a rhythmic, energy-efficient walking speed for Tyrannosaurus similar to that seen in living animals such as humans, ostriches and giraffes.",
+        "locomotor muscles that attached to the thighbones. The thirteenth tail vertebra formed the transition point between the deep tail base and the middle tail that was stiffened by a rather long front articulation processes. The underside of the trunk was covered by eighteen or nineteen pairs of segmented belly ribs."
+      ],
+      "distances": [
+        0.7760956287384033,
+        0.8210635185241699,
+        0.8270878791809082
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-14": {
+      "pregunta_en": "Are you afraid of the dark?",
+      "chunks": [
+        "Paleontologist Jack Horner has been a major proponent of the view that Tyrannosaurus was not a predator at all but instead was an obligate scavenger. He has put forward arguments in the popular literature to support the pure scavenger hypothesis:",
+        "## Paleoecology",
+        "Tyrannosaur arms are short when compared to other known predators. Horner argues that the arms were too short to make the necessary gripping force to hold on to prey. Other paleontologists such as Thomas Holtz Jr. argued that there are plenty of modern-day predators that do not use their forelimbs to hunt such as wolves, hyenas, and secretary birds as well as other extinct animals thought to be predators that would not have used their forelimbs such as phorusrhacids."
+      ],
+      "distances": [
+        0.8138325214385986,
+        0.8179114460945129,
+        0.8256868720054626
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-15": {
+      "pregunta_en": "Are you coming for Christmas?",
+      "chunks": [
+        "### Nanotyrannus",
+        "the North Carolina Museum of Natural Sciences in 2020, after which the museum built an additional research lab space in which to prepare, study, and display the specimens. In 2025, paleontologists Lindsay Zanno and James Napoli published an initial description of the \"Bloody Mary\" specimen as part of an extensive revision of the genus Nanotyrannus. They identified this specimen as a skeletally mature individual of Nanotyrannus and provided several lines of evidence supporting the validity of this genus. They also described a second species, N. lethaeus, based on the Jane specimen due to notable differences between it and N. lancensis.",
+        "### Skin and possible filamentous feathering"
+      ],
+      "distances": [
+        0.8411318063735962,
+        0.8732975721359253,
+        0.8807129859924316
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-16": {
+      "pregunta_en": "Who won the league this year?",
+      "chunks": [
+        "### Scotty",
+        "### Thermoregulation",
+        "### Skull"
+      ],
+      "distances": [
+        0.878450334072113,
+        0.8977990746498108,
+        0.8984302282333374
+      ],
+      "fuentes": [
+        "tyrannosaurus_rex_simple.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-17": {
+      "pregunta_en": "What time is it now?",
+      "chunks": [
+        "### Speed",
+        "surface—consistent with T. rex and its Asian relative Tarbosaurus. The specimen's considerable size places it within the range of known T. rex individuals, suggesting the presence of large tyrannosaurids during the Campanian stage (~75 million years ago), a temporal range earlier than the established Maastrichtian age (~68–66 Ma) for Tyrannosaurus rex. However, the exact age and provenance of CM 9401 remain uncertain due to a lack of detailed field documentation.",
+        "## Paleobiology\n\n### Life history"
+      ],
+      "distances": [
+        0.8116312026977539,
+        0.8498554229736328,
+        0.8504011631011963
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-18": {
+      "pregunta_en": "How much does a new cell phone cost?",
+      "chunks": [
+        "## Description\n\n### Size",
+        "## Description\n\n### Size",
+        "### Population estimates"
+      ],
+      "distances": [
+        0.8874731659889221,
+        0.8874731659889221,
+        0.8934794664382935
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_rex_simple.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-19": {
+      "pregunta_en": "and that's because",
+      "chunks": [
+        "### Arms",
+        "## Cultural significance",
+        "### Soft tissue"
+      ],
+      "distances": [
+        0.8072540760040283,
+        0.8207201957702637,
+        0.8240715265274048
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "trex-20": {
+      "pregunta_en": "But, but—what if they catch you?",
+      "chunks": [
+        "Currie's pack-hunting T. rex hypothesis has been criticized for not having been peer-reviewed, but rather was discussed in a television interview and book called Dino Gangs. The Currie theory for pack hunting by T. rex is based mainly by analogy to a different species, Tarbosaurus bataar. Evidence of gregariousness in T. bataar itself has not been peer-reviewed, and to Currie's own admission, can only be interpreted with reference to evidence in other closely related species. According to Currie gregariousness in Albertosaurus sarcophagus is supported by the discovery of 26 individuals with varied ages in the Dry Island bonebed. He ruled out the possibility of a predator trap due to the similar preservation state of individuals and the near absence of herbivores.",
+        "expenditures during hunting or scavenging. This in turn likely resulted in tyrannosaurs having a reduced need for hunting forays and requiring less food to sustain themselves as a result. Additionally, the research, in conjunction with studies that show tyrannosaurs were more agile than other large-bodied theropods, indicates they were quite well-adapted to a long-distance stalking approach followed by a quick burst of speed to go for the kill. Analogies can be noted between tyrannosaurids and modern wolves as a result, supported by evidence that at least some tyrannosaurids were hunting in group settings.",
+        "Tyrannosaur arms are short when compared to other known predators. Horner argues that the arms were too short to make the necessary gripping force to hold on to prey. Other paleontologists such as Thomas Holtz Jr. argued that there are plenty of modern-day predators that do not use their forelimbs to hunt such as wolves, hyenas, and secretary birds as well as other extinct animals thought to be predators that would not have used their forelimbs such as phorusrhacids."
+      ],
+      "distances": [
+        0.7705168128013611,
+        0.7772716283798218,
+        0.7826694250106812
+      ],
+      "fuentes": [
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md",
+        "tyrannosaurus_en.md"
+      ]
+    },
+    "tri-01": {
+      "pregunta_en": "What did you eat?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.8064189553260803
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-02": {
+      "pregunta_en": "How many horns did you have?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.8311452269554138
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-03": {
+      "pregunta_en": "What did you use the horns for?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.7784910202026367
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-04": {
+      "pregunta_en": "Were you really that big?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.8937984108924866
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-05": {
+      "pregunta_en": "Where did you live?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.948451042175293
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-06": {
+      "pregunta_en": "Who was your evil enemy?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.8398844599723816
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-07": {
+      "pregunta_en": "How did you cut the tough plants?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.7309048175811768
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-08": {
+      "pregunta_en": "Were you a hunter?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.8308562636375427
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-09": {
+      "pregunta_en": "How would you defend yourself against a T. rex?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.6016867756843567
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-10": {
+      "pregunta_en": "Did you live there a long time ago?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.8743089437484741
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-11": {
+      "pregunta_en": "Could a T. rex eat you?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.504834771156311
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-12": {
+      "pregunta_en": "Do you like ice cream?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.9800121784210205
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-13": {
+      "pregunta_en": "Can you swim?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.9735778570175171
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-14": {
+      "pregunta_en": "Do you have friends to play with?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        1.0048233270645142
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-15": {
+      "pregunta_en": "Do you like watching TV?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        1.0051016807556152
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-16": {
+      "pregunta_en": "What day is it today?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.9488255977630615
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-17": {
+      "pregunta_en": "How much does a car cost?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.9666644334793091
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-18": {
+      "pregunta_en": "Who is the president now?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.9012728333473206
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-19": {
+      "pregunta_en": "And then what happened?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.9539521336555481
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "tri-20": {
+      "pregunta_en": "Why is that?",
+      "chunks": [
+        "# Triceratops\n\nThe Triceratops was a herbivorous dinosaur, which means it only ate plants. It fed\non ferns, leaves and low-growing plants from the Cretaceous period. It had a beak\nsimilar to a parrot's that it used to cut tough plants before chewing them.\n\nIt had three horns on its face and a large bony frill behind its head. It used them\nto defend itself and to show off, not to hunt, because it was not a hunter.\n\nThe Triceratops lived at the end of the Cretaceous period, about 66 million years ago,\nin what is now North America. It was big: about 9 meters long and it weighed as much\nas a large elephant.\n\nIt shared its time with the Tyrannosaurus Rex, which was its greatest danger. Its horns\nhelped it defend itself from the T-Rex."
+      ],
+      "distances": [
+        0.941082775592804
+      ],
+      "fuentes": [
+        "triceratops_ejemplo.md"
+      ]
+    },
+    "sher-01": {
+      "pregunta_en": "Where do you live?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.9743639826774597,
+        0.9743639826774597
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-02": {
+      "pregunta_en": "Who is your friend?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.7844281792640686,
+        0.7844281792640686
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-03": {
+      "pregunta_en": "What do you do for a living?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.8489012122154236,
+        0.8489012122154236
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-04": {
+      "pregunta_en": "Who made you up?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.8944552540779114,
+        0.8944552540779114
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-05": {
+      "pregunta_en": "What do you use to watch the tracks?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        1.0004832744598389,
+        1.0004832744598389
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-06": {
+      "pregunta_en": "What kind of hat are you wearing?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.9487239718437195,
+        0.9487239718437195
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-07": {
+      "pregunta_en": "How do you solve mysteries?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.6586058139801025,
+        0.6586058139801025
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-08": {
+      "pregunta_en": "Are you a real person?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.8443452715873718,
+        0.8443452715873718
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-09": {
+      "pregunta_en": "Why do you focus on such tiny things?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        1.0002796649932861,
+        1.0002796649932861
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-10": {
+      "pregunta_en": "What city do you work in?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.9015026092529297,
+        0.9015026092529297
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-11": {
+      "pregunta_en": "Who wrote about your adventures?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.770671010017395,
+        0.770671010017395
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-12": {
+      "pregunta_en": "Do you like soccer?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.9693787097930908,
+        0.9693787097930908
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-13": {
+      "pregunta_en": "Do you know how to cook?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.9547956585884094,
+        0.9547956585884094
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-14": {
+      "pregunta_en": "What kind of music do you like?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        1.0180044174194336,
+        1.0180044174194336
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-15": {
+      "pregunta_en": "Do you have a pet?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.8405522108078003,
+        0.8405522108078003
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-16": {
+      "pregunta_en": "Who won yesterday's game?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        1.0533288717269897,
+        1.0533288717269897
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-17": {
+      "pregunta_en": "What's the weather going to be like tomorrow?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.9855698943138123,
+        0.9855698943138123
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-18": {
+      "pregunta_en": "How much does a house cost?",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        0.9863881468772888,
+        0.9863881468772888
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-19": {
+      "pregunta_en": "and that",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        1.0100492238998413,
+        1.0100492238998413
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "sher-20": {
+      "pregunta_en": "but as you know",
+      "chunks": [
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted.",
+        "# Sherlock Holmes\n\nSherlock Holmes is a detective. He is a fictional character created by the writer Arthur\nConan Doyle in 1887.\n\nHe lives in London, at 221B Baker Street, with his great friend and assistant, Doctor\nWatson. He solves mysteries using observation and deduction: he notices small details that\nothers miss and draws conclusions.\n\nHe usually uses a magnifying glass to examine clues, a deerstalker hunting cap, and sometimes\na pipe. Although he is very famous, he is a character from books, not a person who really\nexisted."
+      ],
+      "distances": [
+        1.0408252477645874,
+        1.0408252477645874
+      ],
+      "fuentes": [
+        "sherlock_base.md",
+        "sherlock_ejemplo.md"
+      ]
+    },
+    "leo-01": {
+      "pregunta_en": "k How many paintings did you paint?",
+      "chunks": [
+        "## Work\n\n### Painting",
+        "Between 1503 and 1506, he worked on a small portrait, *La Gioconda*, likely the most famous painting in Western art. The work depicts Lisa Gherardini, wife of Francesco del Giocondo. It was a painting very dear to Leonardo, and he kept it with him until his death. Its current appearance is deceptive due to a thick layer of darkened varnishes, the removal of which is being delayed because of the risks involved. Despite this, the painting is in an unusually good state of preservation, as it shows no visible signs of repairs, overpainting, or retouching—a very rare occurrence for a painting from this period.",
+        "Another notable work is *The Virgin, the Infant Jesus, and Saint Anne*, painted around 1510, which has been copied many times. The work influenced Michelangelo, Raphael, and Andrea del Sarto in particular, and through them, Pontormo and Antonio da Correggio. The compositional style was adopted in particular by Venetian painters such as Tintoretto and Paolo Veronese. One of Leonardo’s last paintings was that of Saint John the Baptist, for which he used Salai as a model.​"
+      ],
+      "distances": [
+        0.49898040294647217,
+        0.5342826843261719,
+        0.5583600997924805
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-02": {
+      "pregunta_en": "When were you born?",
+      "chunks": [
+        "He was born on Saturday, April 15, 1452, “at the third hour of the night,” that is, three hours after the Hail Mary: at 10:30 p.m.​ It has been debated whether his birth took place at the castle in Vinci—a town about 25 km as the crow flies from Florence—or at his mother’s home in Anchiano, a hamlet about two kilometers from Vinci.​ Leonardo, a descendant of a wealthy family of Italian nobles, was born out of wedlock: his father, Messer Piero Fruosino di Antonio (notary, chancellor, and ambassador of the Republic of Florence), impregnated Caterina, a young woman from a peasant family,​​ who has been suspected of having been a Circassian slave from the Middle East, from the Caucasus Mountains.​​ Martin Kemp, professor emeritus of art history at the University of Oxford, after researching",
+        "## Biography\n\n### Childhood",
+        "# Leonardo da Vinci\n\nLeonardo da Vinci was an artist and inventor from the Renaissance. He was born in 1452\nin the town of Vinci, in Italy, and he died in 1519.\n\nHe painted very famous works, such as the Mona Lisa (La Gioconda) and The Last Supper.\nHe filled notebooks with inventions ahead of his time: flying machines, a kind of\nhelicopter, and even a parachute.\n\nHe loved studying nature: water, light, birds and the human body. For him, art and science\nwent together. He wrote many notes backwards, in mirror writing, which is read with a\nmirror. He was very curious and always asked himself questions about how everything he saw\nworked."
+      ],
+      "distances": [
+        0.6280502080917358,
+        0.704440712928772,
+        0.7270995378494263
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_ejemplo.md"
+      ]
+    },
+    "leo-03": {
+      "pregunta_en": "Why were you writing backwards?",
+      "chunks": [
+        "These journals are mostly written in mirror writing, also known as “reversed script,” which may have been due more to practical reasons—since this method of writing was faster—than to encryption, as has so often been suggested. Since Leonardo wrote with his left hand, he found it more comfortable to write from right to left.\nHis notes and drawings—the earliest of which date back to 1475—reveal a wide variety of interests and concerns, including simple shopping lists or records of money borrowed. There are compositions for paintings, studies of details and tapestries, studies of facial expressions, animals, dissections, babies, studies in botany and geology, war machines, flying machines, and architectural works.",
+        "Leonardo’s closest relationships were with his students Salai and Francesco Melzi. Melzi wrote that Leonardo’s feelings were a mixture of love and passion. Since the 16th century, these relationships have been described as erotic. Since then, much has been written about his alleged homosexuality and its role in his art, particularly the androgynous impression evident in his *Bacchus* and, more specifically, in some of his drawings.​\nLeonardo was a passionate admirer of nature and animals, to the point of becoming a vegetarian and buying caged birds only to set them free. He was also an excellent musician. He was left-handed, which would explain his use of mirror writing.",
+        "The young Leonardo was a nature lover who observed the world with great curiosity. He drew caricatures and practiced writing in mirror image in the Tuscan dialect. Vasari recounts an anecdote about the early stages of his career: “One day, Ser Piero took some of his drawings and showed them to his friend Andrea del Verrocchio, urging him to say whether Leonardo could devote himself to the art of drawing and whether he might achieve anything in this field. Andrea was greatly surprised by Leonardo’s extraordinary gifts and recommended to Ser Piero that he allow him to choose this craft,” so Ser Piero decided that Leonardo would begin working in Verrocchio’s workshop. Leonardo did not need to be asked twice, and, not content merely to practice this craft, he undertook everything related to"
+      ],
+      "distances": [
+        0.5310577154159546,
+        0.7544413805007935,
+        0.7750340700149536
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-04": {
+      "pregunta_en": "What inventions did you come up with?",
+      "chunks": [
+        "His notebooks contain a large number of “inventions” that are both practical and realistic, notably hydraulic pumps, crank mechanisms such as the machine for machining screws, fins for mortar shells, a steam cannon,​ the submarine, various automatons, the war chariot, the automobile, floats for “walking on water,” solar energy concentration, the calculator, the diving suit, the double hull for ships, and ball bearings. As for the bicycle, its invention is not clearly attributed to him.​",
+        "### Engineering and Inventions",
+        "Along with Heron of Alexandria, Leonardo is considered an important precursor of a number of modern machines. However, beyond the wonder inspired by the author’s forward-thinking imagination, it quickly becomes clear that the actual functioning of the machines was likely not his primary concern. Just like the monk Eilmer of Malmesbury, who in the 11th century forgot to attach a tail to his flying machine, Leonardo’s inventions run into numerous difficulties: the helicopter would have spun around like a top, the diver would have suffocated, and the paddleboat would never have been able to move forward [...]​ However, it has also been suggested that Leonardo intentionally introduced specific errors into his designs to prevent others from successfully building his devices.​"
+      ],
+      "distances": [
+        0.46993982791900635,
+        0.5220155715942383,
+        0.5492008328437805
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-05": {
+      "pregunta_en": "Where were you from?",
+      "chunks": [
+        "### From Milan to Rome",
+        "### In Milan and in the Service of Ludovico Sforza (1482–1500)",
+        "used to dry the paint more quickly or the quality of the materials used; it was later covered, probably by a fresco by Giorgio Vasari.​"
+      ],
+      "distances": [
+        0.8372384309768677,
+        0.841329038143158,
+        0.8430892825126648
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-06": {
+      "pregunta_en": "When did you die?",
+      "chunks": [
+        "On April 23, 1519, Leonardo, who had been ill for several months, drew up his will before a notary in Amboise. He asked for a priest to hear his confession and administer last rites.​ He died on May 2, 1519, in Cloux, at the age of 67. Tradition holds that he died in the arms of Francis I, but this is likely based on a misinterpretation of an epitaph written by Giorgio Vasari:​",
+        "Although the three giants of the Renaissance—Leonardo, Michelangelo, and Raphael—are often mentioned together, they were not of the same generation. Leonardo was 23 when Michelangelo was born and 31 when Raphael was born. Raphael died in 1520, one year after Leonardo. By the time Michelangelo died, Leonardo had already been dead for 45 years.​​",
+        "an engineer in charge of work on rivers and canals.​ In 1495, a detailed list of funeral expenses suggests the death of his mother, Caterina.​​"
+      ],
+      "distances": [
+        0.6299429535865784,
+        0.7159724831581116,
+        0.7519033551216125
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-07": {
+      "pregunta_en": "Why did you like nature so much?",
+      "chunks": [
+        "Renaissance humanism does not view science and the arts as mutually exclusive. Leonardo’s studies in science and engineering are as impressive and innovative as his artistic work, and were recorded in his diaries and notebooks, which comprise 13,000 pages of text and drawings, linking art and natural philosophy (the precursor to modern science). These notes were made and updated daily throughout Leonardo’s life and travels. He constantly strove to make observations of the world around him, aware and proud of being, as he defined himself, an “illiterate,” self-taught, and keen observer of natural phenomena that often lay far removed from what was taught in school.",
+        "also drew numerous models, some of whom had significant facial deformities or visible signs of illness. He also studied the anatomy of numerous animals. He dissected cows, birds, monkeys, bears, and frogs, with the sole purpose of comparing the anatomical structure of these animals with that of humans. He also conducted studies on horses.",
+        "made substantial discoveries in the fields of anatomy, civil engineering, optics, and hydrodynamics, but since he never published his findings, they had little, if any, influence on subsequent science.​"
+      ],
+      "distances": [
+        0.7529826164245605,
+        0.7551168203353882,
+        0.7941786050796509
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-08": {
+      "pregunta_en": "Were you just a painter?",
+      "chunks": [
+        "Another notable work is *The Virgin, the Infant Jesus, and Saint Anne*, painted around 1510, which has been copied many times. The work influenced Michelangelo, Raphael, and Andrea del Sarto in particular, and through them, Pontormo and Antonio da Correggio. The compositional style was adopted in particular by Venetian painters such as Tintoretto and Paolo Veronese. One of Leonardo’s last paintings was that of Saint John the Baptist, for which he used Salai as a model.​",
+        "Between 1503 and 1506, he worked on a small portrait, *La Gioconda*, likely the most famous painting in Western art. The work depicts Lisa Gherardini, wife of Francesco del Giocondo. It was a painting very dear to Leonardo, and he kept it with him until his death. Its current appearance is deceptive due to a thick layer of darkened varnishes, the removal of which is being delayed because of the risks involved. Despite this, the painting is in an unusually good state of preservation, as it shows no visible signs of repairs, overpainting, or retouching—a very rare occurrence for a painting from this period.",
+        "paintings, such as the Mona Lisa, which was still in his workshop. Leonardo’s vineyards were divided between Gian Giacomo Caprotti da Oreno—another student and disciple whom Leonardo held in high regard and who had entered his service at the age of fifteen—and his servant Battista di Vilussis. The land was bequeathed to Leonardo’s brothers, and his servant received a black coat.​"
+      ],
+      "distances": [
+        0.5534176826477051,
+        0.569045901298523,
+        0.5804815292358398
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-09": {
+      "pregunta_en": "Who taught you how to paint?",
+      "chunks": [
+        "## Work\n\n### Painting",
+        "After a year spent cleaning brushes and performing other minor tasks typical of an apprentice, Verrocchio introduced Leonardo to the many techniques practiced in a traditional workshop. Thus, in this context, Leonardo had the opportunity to learn the basics of chemistry, metallurgy, leatherworking, plasterwork, mechanics, and carpentry, as well as various artistic techniques such as drawing, painting, and sculpting in marble and bronze.​​ He also received training in color preparation, engraving, and fresco painting. Realizing his exceptional talent, Verrocchio decided to entrust his student with completing some of his own works.",
+        "used to dry the paint more quickly or the quality of the materials used; it was later covered, probably by a fresco by Giorgio Vasari.​"
+      ],
+      "distances": [
+        0.5295497179031372,
+        0.5365210771560669,
+        0.559359073638916
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-10": {
+      "pregunta_en": "Who did you work for in Milan?",
+      "chunks": [
+        "### In Milan and in the Service of Ludovico Sforza (1482–1500)",
+        "### From Milan to Rome",
+        "portraits of the Milanese court. Leonardo’s contact with Milan’s enlightened elites made him realize the gaps in his education.​"
+      ],
+      "distances": [
+        0.40844064950942993,
+        0.4417508840560913,
+        0.5567823052406311
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-11": {
+      "pregunta_en": "Why are there so few of your paintings left?",
+      "chunks": [
+        "His most famous historical association is with painting. Two of his best-known works, the Mona Lisa and The Last Supper, have been copied and parodied numerous times, as has his drawing of the Vitruvian Man. However, only about twenty of his works are known to exist, due mainly to his repeated (and sometimes disastrous) experiments with new techniques and his chronic inconsistency. This small number of creations, along with his sketchbooks containing drawings, scientific diagrams, and reflections on the nature of painting, constitute a legacy for successive generations of artists.",
+        "Between 1503 and 1506, he worked on a small portrait, *La Gioconda*, likely the most famous painting in Western art. The work depicts Lisa Gherardini, wife of Francesco del Giocondo. It was a painting very dear to Leonardo, and he kept it with him until his death. Its current appearance is deceptive due to a thick layer of darkened varnishes, the removal of which is being delayed because of the risks involved. Despite this, the painting is in an unusually good state of preservation, as it shows no visible signs of repairs, overpainting, or retouching—a very rare occurrence for a painting from this period.",
+        "Leonardo was not a prolific painter, but he was, in contrast, a very productive draftsman; he filled his journals with small sketches and highly detailed drawings to record everything that had caught his attention. In addition to his notes, there are numerous studies for his paintings, some of which are preparatory sketches for works such as The Adoration of the Magi, The Virgin of the Rocks, and The Last Supper.​ His first dated drawing was Landscape of the Arno Valley from 1473, in which the river, the mountains, Montelupo Castle, and, in the distance, the farmlands are rendered in great detail.​​"
+      ],
+      "distances": [
+        0.5144336223602295,
+        0.527452290058136,
+        0.5710896253585815
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-12": {
+      "pregunta_en": "Do you like pizza?",
+      "chunks": [
+        "### From Milan to Rome",
+        "### In Milan and in the Service of Ludovico Sforza (1482–1500)",
+        "In 1507, Leonardo became the sole heir of his uncle Francesco, but Leonardo’s brothers initiated proceedings to have the will amended.​ Leonardo appealed to Charles d’Amboise and Florimond Robertet to intervene on his behalf;​ Louis XII returned to Milan, and Leonardo once again became the organizer of the festivities held in the Lombard capital."
+      ],
+      "distances": [
+        0.7809596061706543,
+        0.8032488822937012,
+        0.8039444088935852
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-13": {
+      "pregunta_en": "Do you know how to ride a bike?",
+      "chunks": [
+        "His notebooks contain a large number of “inventions” that are both practical and realistic, notably hydraulic pumps, crank mechanisms such as the machine for machining screws, fins for mortar shells, a steam cannon,​ the submarine, various automatons, the war chariot, the automobile, floats for “walking on water,” solar energy concentration, the calculator, the diving suit, the double hull for ships, and ball bearings. As for the bicycle, its invention is not clearly attributed to him.​",
+        "Along with Heron of Alexandria, Leonardo is considered an important precursor of a number of modern machines. However, beyond the wonder inspired by the author’s forward-thinking imagination, it quickly becomes clear that the actual functioning of the machines was likely not his primary concern. Just like the monk Eilmer of Malmesbury, who in the 11th century forgot to attach a tail to his flying machine, Leonardo’s inventions run into numerous difficulties: the helicopter would have spun around like a top, the diver would have suffocated, and the paddleboat would never have been able to move forward [...]​ However, it has also been suggested that Leonardo intentionally introduced specific errors into his designs to prevent others from successfully building his devices.​",
+        "### Training in Verrocchio’s Workshop"
+      ],
+      "distances": [
+        0.6736909747123718,
+        0.8534899950027466,
+        0.8565198183059692
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-14": {
+      "pregunta_en": "Do you have any pets at home?",
+      "chunks": [
+        "## Work\n\n### Painting",
+        "These sketchbooks (originally loose sheets of various sizes and types, given away by his friends after his death) have found their way into major collections such as those on display at Windsor Castle, the Louvre, the National Library of Spain, the Ambrosian Library in Milan, and the Victoria and Albert Museum and the British Library in London. The British Library has made a selection available online (BL Arundel MS 263). The Codex Leicester, or Codex Hammer, is the only major work of this kind in private hands.",
+        "In September 1515, the new king of France, Francis I, recaptured Milan after winning the Battle of Marignano. In November of that same year, Leonardo designed a new plan for the layout of the Medici quarter in Florence. On December 19, he was present at the meeting between Francis I and Pope Leo X held in Bologna.​​​ Francis I commissioned Leonardo to create a mechanical lion that could walk, with the detail that its chest would open to reveal the fleur-de-lis.It is not known for what occasion this lion was conceived, but it may have been related to the king’s arrival in Lyon or to the peace talks between the king and the pope."
+      ],
+      "distances": [
+        0.8779278993606567,
+        0.8943042159080505,
+        0.8996846675872803
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-15": {
+      "pregunta_en": "Do you like video games?",
+      "chunks": [
+        "### Personal Life",
+        "## Biography\n\n### Childhood",
+        "#### Drawings"
+      ],
+      "distances": [
+        0.8483023643493652,
+        0.8678898811340332,
+        0.8696303367614746
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-16": {
+      "pregunta_en": "Which movie is the best one this year?",
+      "chunks": [
+        "# Leonardo da Vinci",
+        "## Leonardo as an Observer, Scientist, and Inventor\n\n### Notebooks",
+        "### Final Years in France"
+      ],
+      "distances": [
+        0.7434452772140503,
+        0.7917407751083374,
+        0.8087285757064819
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-17": {
+      "pregunta_en": "Who won the World Cup?",
+      "chunks": [
+        "### Final Years in France",
+        "In September 1515, the new king of France, Francis I, recaptured Milan after winning the Battle of Marignano. In November of that same year, Leonardo designed a new plan for the layout of the Medici quarter in Florence. On December 19, he was present at the meeting between Francis I and Pope Leo X held in Bologna.​​​ Francis I commissioned Leonardo to create a mechanical lion that could walk, with the detail that its chest would open to reveal the fleur-de-lis.It is not known for what occasion this lion was conceived, but it may have been related to the king’s arrival in Lyon or to the peace talks between the king and the pope.",
+        "### In Milan and in the Service of Ludovico Sforza (1482–1500)"
+      ],
+      "distances": [
+        0.6475498080253601,
+        0.8281159400939941,
+        0.8329064249992371
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-18": {
+      "pregunta_en": "How much does a computer cost?",
+      "chunks": [
+        "#### 1490s",
+        "#### The 1480s",
+        "#### 1500s"
+      ],
+      "distances": [
+        0.7726936340332031,
+        0.8030909895896912,
+        0.8123729228973389
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-19": {
+      "pregunta_en": "And how do you do that?",
+      "chunks": [
+        "## Work\n\n### Painting",
+        "#### 1490s",
+        "These journals are mostly written in mirror writing, also known as “reversed script,” which may have been due more to practical reasons—since this method of writing was faster—than to encryption, as has so often been suggested. Since Leonardo wrote with his left hand, he found it more comfortable to write from right to left.\nHis notes and drawings—the earliest of which date back to 1475—reveal a wide variety of interests and concerns, including simple shopping lists or records of money borrowed. There are compositions for paintings, studies of details and tapestries, studies of facial expressions, animals, dissections, babies, studies in botany and geology, war machines, flying machines, and architectural works."
+      ],
+      "distances": [
+        0.9167988300323486,
+        0.9180907011032104,
+        0.9209783673286438
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "leo-20": {
+      "pregunta_en": "because of you",
+      "chunks": [
+        "### Personal Life",
+        "## Biography\n\n### Childhood",
+        "#### Drawings"
+      ],
+      "distances": [
+        0.7413463592529297,
+        0.7934240698814392,
+        0.8336191177368164
+      ],
+      "fuentes": [
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md",
+        "leonardo_da_vinci_es.en.md"
+      ]
+    },
+    "pan-01": {
+      "pregunta_en": "Where do you live?",
+      "chunks": [
+        "I don’t know whether you have ever seen a map of a person’s mind.\nDoctors sometimes draw maps of other parts of you, and your own map can\nbecome intensely interesting, but catch them trying to draw a map of a\nchild’s mind, which is not only confused, but keeps going round all the\ntime. There are zigzag lines on it, just like your temperature on a\ncard, and these are probably roads in the island, for the Neverland is\nalways more or less an island, with astonishing splashes of colour here\nand there, and coral reefs and rakish-looking craft in the offing, and\nsavages and lonely lairs, and gnomes who are mostly tailors, and caves\nthrough which a river runs, and princes with six elder brothers, and a\nhut fast going to decay, and one very small old lady with a hooked",
+        "V\n\nTHE LITTLE HOUSE\n\nEverybody has heard of the Little House in the Kensington Gardens,\nwhich is the only house in the whole world that the fairies have built\nfor humans.  But no one has really seen it, except just three or four,\nand they have not only seen it but slept in it, and unless you sleep in\nit you never see it.  This is because it is not there when you lie\ndown, but it is there when you wake up and step outside.",
+        "Of all delectable islands the Neverland is the snuggest and most\ncompact, not large and sprawly, you know, with tedious distances\nbetween one adventure and another, but nicely crammed. When you play at\nit by day with the chairs and table-cloth, it is not in the least\nalarming, but in the two minutes before you go to sleep it becomes very\nreal. That is why there are night-lights."
+      ],
+      "distances": [
+        0.7743315696716309,
+        0.8170781135559082,
+        0.8212717771530151
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-02": {
+      "pregunta_en": "Who is your best friend?",
+      "chunks": [
+        "His sobs woke Wendy, and she sat up in bed. She was not alarmed to see\na stranger crying on the nursery floor; she was only pleasantly\ninterested.\n\n“Boy,” she said courteously, “why are you crying?”\n\nPeter could be exceeding polite also, having learned the grand manner\nat fairy ceremonies, and he rose and bowed to her beautifully. She was\nmuch pleased, and bowed beautifully to him from the bed.\n\n“What’s your name?” he asked.\n\n“Wendy Moira Angela Darling,” she replied with some satisfaction. “What\nis your name?”\n\n“Peter Pan.”\n\nShe was already sure that he must be Peter, but it did seem a\ncomparatively short name.\n\n“Is that all?”\n\n“Yes,” he said rather sharply. He felt for the first time that it was a\nshortish name.\n\n“I’m so sorry,” said Wendy Moira Angela.",
+        "“Oh, say you’re pleased,” cried Nibs.\n\n“Lovely, darling house,” Wendy said, and they were the very words they\nhad hoped she would say.\n\n“And we are your children,” cried the twins.\n\nThen all went on their knees, and holding out their arms cried, “O\nWendy lady, be our mother.”\n\n“Ought I?” Wendy said, all shining. “Of course it’s frightfully\nfascinating, but you see I am only a little girl. I have no real\nexperience.”\n\n“That doesn’t matter,” said Peter, as if he were the only person\npresent who knew all about it, though he was really the one who knew\nleast. “What we need is just a nice motherly person.”\n\n“Oh dear!” Wendy said, “you see, I feel that is exactly what I am.”\n\n“It is, it is,” they all cried; “we saw it at once.”",
+        "Wendy’s favourite time for sewing and darning was after they had all\ngone to bed. Then, as she expressed it, she had a breathing time for\nherself; and she occupied it in making new things for them, and putting\ndouble pieces on the knees, for they were all most frightfully hard on\ntheir knees.\n\nWhen she sat down to a basketful of their stockings, every heel with a\nhole in it, she would fling up her arms and exclaim, “Oh dear, I am\nsure I sometimes think spinsters are to be envied!”\n\nHer face beamed when she exclaimed this.\n\nYou remember about her pet wolf. Well, it very soon discovered that she\nhad come to the island and it found her out, and they just ran into\neach other’s arms. After that it followed her about everywhere."
+      ],
+      "distances": [
+        0.719328761100769,
+        0.7280346751213074,
+        0.7325305938720703
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-03": {
+      "pregunta_en": "Who is your evil enemy?",
+      "chunks": [
+        "“Ay, ay.”\n\n“Then hoist them up.”\n\nThe wretched prisoners were dragged from the hold, all except Wendy,\nand ranged in line in front of him. For a time he seemed unconscious of\ntheir presence. He lolled at his ease, humming, not unmelodiously,\nsnatches of a rude song, and fingering a pack of cards. Ever and anon\nthe light from his cigar gave a touch of colour to his face.\n\n“Now then, bullies,” he said briskly, “six of you walk the plank\nto-night, but I have room for two cabin boys. Which of you is it to\nbe?”",
+        "“So, Pan,” said Hook at last, “this is all your doing.”\n\n“Ay, James Hook,” came the stern answer, “it is all my doing.”\n\n“Proud and insolent youth,” said Hook, “prepare to meet thy doom.”\n\n“Dark and sinister man,” Peter answered, “have at thee.”",
+        "“The great white father,” he would say to them in a very lordly manner,\nas they grovelled at his feet, “is glad to see the Piccaninny warriors\nprotecting his wigwam from the pirates.”\n\n“Me Tiger Lily,” that lovely creature would reply. “Peter Pan save me,\nme his velly nice friend. Me no let pirates hurt him.”\n\nShe was far too pretty to cringe in this way, but Peter thought it his\ndue, and he would answer condescendingly, “It is good. Peter Pan has\nspoken.”"
+      ],
+      "distances": [
+        0.6956140398979187,
+        0.6961307525634766,
+        0.716768205165863
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-04": {
+      "pregunta_en": "How do you fly?",
+      "chunks": [
+        "'I can give you the power to fly to her house,' the Queen said, 'but I\ncan't open the door for you.'\n\n'The window I flew out at will be open,' Peter said confidently.\n'Mother always keeps it open in the hope that I may fly back.'\n\n'How do you know?' they asked, quite surprised, and, really, Peter\ncould not explain how he knew.\n\n'I just do know,' he said.\n\nSo as he persisted in his wish, they had to grant it.  The way they\ngave him power to fly was this: They all tickled him on the shoulder,\nand soon he felt a funny itching in that part, and then up he rose\nhigher and higher, and flew away out of the Gardens and over the\nhousetops.",
+        "Well, Peter Pan got out by the window, which had no bars.  Standing on\nthe ledge he could see trees far away, which were doubtless the\nKensington Gardens, and the moment he saw them he entirely forgot that\nhe was now a little boy in a nightgown, and away he flew, right over\nthe houses to the Gardens.  It is wonderful that he could fly without\nwings, but the place itched tremendously, and--and--perhaps we could\nall fly if we were as dead-confident-sure of our capacity to do it as\nwas bold Peter Pan that evening.",
+        "“I say, how do you do it?” asked John, rubbing his knee. He was quite a\npractical boy.\n\n“You just think lovely wonderful thoughts,” Peter explained, “and they\nlift you up in the air.”\n\nHe showed them again.\n\n“You’re so nippy at it,” John said, “couldn’t you do it very slowly\nonce?”\n\nPeter did it both slowly and quickly. “I’ve got it now, Wendy!” cried\nJohn, but soon he found he had not. Not one of them could fly an inch,\nthough even Michael was in words of two syllables, and Peter did not\nknow A from Z.\n\nOf course Peter had been trifling with them, for no one can fly unless\nthe fairy dust has been blown on him. Fortunately, as we have\nmentioned, one of his hands was messy with it, and he blew some on each\nof them, with the most superb results."
+      ],
+      "distances": [
+        0.5047657489776611,
+        0.5217695832252502,
+        0.555279016494751
+      ],
+      "fuentes": [
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-05": {
+      "pregunta_en": "Who made you up?",
+      "chunks": [
+        "“We’ve built the little walls and roof\n    And made a lovely door,\nSo tell us, mother Wendy,\n    What are you wanting more?”\n\nTo this she answered greedily:\n\n“Oh, really next I think I’ll have\n    Gay windows all about,\nWith roses peeping in, you know,\n    And babies peeping out.”\n\nWith a blow of their fists they made windows, and large yellow leaves\nwere the blinds. But roses—?\n\n“Roses,” cried Peter sternly.\n\nQuickly they made-believe to grow the loveliest roses up the walls.\n\nBabies?\n\nTo prevent Peter ordering babies they hurried into song again:\n\n“We’ve made the roses peeping out,\n    The babes are at the door,\nWe cannot make ourselves, you know,\n    ’Cos we’ve been made before.”",
+        "'So that is what it is called,' said Maimie thoughtfully.\n\n'That's not my name,' he explained, 'my name is Peter Pan.'\n\n'Yes, of course,' she said, 'I know, everybody knows.'\n\nYou can't think how pleased Peter was to learn that all the people\noutside the gates knew about him.  He begged Maimie to tell him what\nthey knew and what they said, and she did so.  They were sitting by\nthis time on a fallen tree; Peter had cleared off the snow for Maimie,\nbut he sat on a snowy bit himself.\n\n'Squeeze closer,' Maimie said.",
+        "“O Peter, no wonder you were crying,” she said, and got out of bed and\nran to him.\n\n“I wasn’t crying about mothers,” he said rather indignantly. “I was\ncrying because I can’t get my shadow to stick on. Besides, I wasn’t\ncrying.”\n\n“It has come off?”\n\n“Yes.”\n\nThen Wendy saw the shadow on the floor, looking so draggled, and she\nwas frightfully sorry for Peter. “How awful!” she said, but she could\nnot help smiling when she saw that he had been trying to stick it on\nwith soap. How exactly like a boy!\n\nFortunately she knew at once what to do. “It must be sewn on,” she\nsaid, just a little patronisingly.\n\n“What’s sewn?” he asked.\n\n“You’re dreadfully ignorant.”\n\n“No, I’m not.”"
+      ],
+      "distances": [
+        0.6430445909500122,
+        0.6687809228897095,
+        0.6705746650695801
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-06": {
+      "pregunta_en": "What are the names of the children who live with you?",
+      "chunks": [
+        "“I knew them,” John said, to annoy the others.\n\n“I think I knew them,” said Michael rather doubtfully.\n\n“They were married, you know,” explained Wendy, “and what do you think\nthey had?”\n\n“White rats,” cried Nibs, inspired.\n\n“No.”\n\n“It’s awfully puzzling,” said Tootles, who knew the story by heart.\n\n“Quiet, Tootles. They had three descendants.”\n\n“What is descendants?”\n\n“Well, you are one, Twin.”\n\n“Did you hear that, John? I am a descendant.”\n\n“Descendants are only children,” said John.\n\n“Oh dear, oh dear,” sighed Wendy. “Now these three children had a\nfaithful nurse called Nana; but Mr. Darling was angry with her and\nchained her up in the yard, and so all the children flew away.”\n\n“It’s an awfully good story,” said Nibs.",
+        "mistress, and when she has called the roll, they all go out for a walk\nand never come back.  It is a very noticeable thing that, in fairy\nfamilies, the youngest is always chief person, and usually becomes a\nprince or princess; and children remember this, and think it must be so\namong humans also; and that is why they are often made uneasy when they\ncome upon their mother furtively putting new frills on the basinette.",
+        "“Oh, say you’re pleased,” cried Nibs.\n\n“Lovely, darling house,” Wendy said, and they were the very words they\nhad hoped she would say.\n\n“And we are your children,” cried the twins.\n\nThen all went on their knees, and holding out their arms cried, “O\nWendy lady, be our mother.”\n\n“Ought I?” Wendy said, all shining. “Of course it’s frightfully\nfascinating, but you see I am only a little girl. I have no real\nexperience.”\n\n“That doesn’t matter,” said Peter, as if he were the only person\npresent who knew all about it, though he was really the one who knew\nleast. “What we need is just a nice motherly person.”\n\n“Oh dear!” Wendy said, “you see, I feel that is exactly what I am.”\n\n“It is, it is,” they all cried; “we saw it at once.”"
+      ],
+      "distances": [
+        0.5703295469284058,
+        0.586910605430603,
+        0.618578314781189
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-07": {
+      "pregunta_en": "Why does Captain Hook hate you so much?",
+      "chunks": [
+        "“I do.”\n\n“Suppose,” John said, a little huskily, “he were to wake up.”\n\nPeter spoke indignantly. “You don’t think I would kill him while he was\nsleeping! I would wake him first, and then kill him. That’s the way I\nalways do.”\n\n“I say! Do you kill many?”\n\n“Tons.”\n\nJohn said “How ripping,” but decided to have tea first. He asked if\nthere were many pirates on the island just now, and Peter said he had\nnever known so many.\n\n“Who is captain now?”\n\n“Hook,” answered Peter, and his face became very stern as he said that\nhated word.\n\n“Jas. Hook?”\n\n“Ay.”\n\nThen indeed Michael began to cry, and even John could speak in gulps\nonly, for they knew Hook’s reputation.\n\n“He was Blackbeard’s bo’sun,” John whispered huskily. “He is the worst\nof them all. He is the only man of whom Barbecue was afraid.”",
+        "“Not now, Smee,” Hook said darkly. “He is only one, and I want to\nmischief all the seven. Scatter and look for them.”\n\nThe pirates disappeared among the trees, and in a moment their Captain\nand Smee were alone. Hook heaved a heavy sigh, and I know not why it\nwas, perhaps it was because of the soft beauty of the evening, but\nthere came over him a desire to confide to his faithful bo’sun the\nstory of his life. He spoke long and earnestly, but what it was all\nabout Smee, who was rather stupid, did not know in the least.\n\nAnon he caught the word Peter.\n\n“Most of all,” Hook was saying passionately, “I want their captain,\nPeter Pan. ’Twas he cut off my arm.” He brandished the hook\nthreateningly. “I’ve waited long to shake his hand with this. Oh, I’ll\ntear him!”",
+        "“Brimstone and gall,” the voice retorted, “say that again, and I’ll\ncast anchor in you.”\n\nHook tried a more ingratiating manner. “If you are Hook,” he said\nalmost humbly, “come tell me, who am I?”\n\n“A codfish,” replied the voice, “only a codfish.”\n\n“A codfish!” Hook echoed blankly, and it was then, but not till then,\nthat his proud spirit broke. He saw his men draw back from him.\n\n“Have we been captained all this time by a codfish!” they muttered. “It\nis lowering to our pride.”\n\nThey were his dogs snapping at him, but, tragic figure though he had\nbecome, he scarcely heeded them. Against such fearful evidence it was\nnot their belief in him that he needed, it was his own. He felt his ego\nslipping from him. “Don’t desert me, bully,” he whispered hoarsely to\nit."
+      ],
+      "distances": [
+        0.3367002010345459,
+        0.37230151891708374,
+        0.38014620542526245
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-08": {
+      "pregunta_en": "What happened to Hook's hand?",
+      "chunks": [
+        "Hook was not his true name. To reveal who he really was would even at\nthis date set the country in a blaze; but as those who read between the\nlines must already have guessed, he had been at a famous public school;\nand its traditions still clung to him like garments, with which indeed\nthey are largely concerned. Thus it was offensive to him even now to\nboard a ship in the same dress in which he grappled her, and he still\nadhered in his walk to the school’s distinguished slouch. But above all\nhe retained the passion for good form.\n\nGood form! However much he may have degenerated, he still knew that\nthis is all that really matters.",
+        "But Peter issued from the powder magazine with the shell in his hands,\nand calmly flung it overboard.\n\nWhat sort of form was Hook himself showing? Misguided man though he\nwas, we may be glad, without sympathising with him, that in the end he\nwas true to the traditions of his race. The other boys were flying\naround him now, flouting, scornful; and he staggered about the deck\nstriking up at them impotently, his mind was no longer with them; it\nwas slouching in the playing fields of long ago, or being sent up for\ngood, or watching the wall-game from a famous wall. And his shoes were\nright, and his waistcoat was right, and his tie was right, and his\nsocks were right.\n\nJames Hook, thou not wholly unheroic figure, farewell.\n\nFor we have come to his last moment.",
+        "I think all were gone when a group of savage boys surrounded Hook, who\nseemed to have a charmed life, as he kept them at bay in that circle of\nfire. They had done for his dogs, but this man alone seemed to be a\nmatch for them all. Again and again they closed upon him, and again and\nagain he hewed a clear space. He had lifted up one boy with his hook,\nand was using him as a buckler, when another, who had just passed his\nsword through Mullins, sprang into the fray.\n\n“Put up your swords, boys,” cried the newcomer, “this man is mine.”\n\nThus suddenly Hook found himself face to face with Peter. The others\ndrew back and formed a ring around them.\n\nFor long the two enemies looked at one another, Hook shuddering\nslightly, and Peter with the strange smile upon his face."
+      ],
+      "distances": [
+        0.3786947727203369,
+        0.4098496437072754,
+        0.4232897162437439
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-09": {
+      "pregunta_en": "Why don't you want to grow up?",
+      "chunks": [
+        "“It was because I heard father and mother,” he explained in a low\nvoice, “talking about what I was to be when I became a man.” He was\nextraordinarily agitated now. “I don’t want ever to be a man,” he said\nwith passion. “I want always to be a little boy and to have fun. So I\nran away to Kensington Gardens and lived a long long time among the\nfairies.”",
+        "“Hullo, Wendy, good-bye,” he said.\n\n“Oh dear, are you going away?”\n\n“Yes.”\n\n“You don’t feel, Peter,” she said falteringly, “that you would like to\nsay anything to my parents about a very sweet subject?”\n\n“No.”\n\n“About me, Peter?”\n\n“No.”\n\nMrs. Darling came to the window, for at present she was keeping a sharp\neye on Wendy. She told Peter that she had adopted all the other boys,\nand would like to adopt him also.\n\n“Would you send me to school?” he inquired craftily.\n\n“Yes.”\n\n“And then to an office?”\n\n“I suppose so.”\n\n“Soon I would be a man?”\n\n“Very soon.”\n\n“I don’t want to go to school and learn solemn things,” he told her\npassionately. “I don’t want to be a man. O Wendy’s mother, if I was to\nwake up and feel there was a beard!”",
+        "“We’ve built the little walls and roof\n    And made a lovely door,\nSo tell us, mother Wendy,\n    What are you wanting more?”\n\nTo this she answered greedily:\n\n“Oh, really next I think I’ll have\n    Gay windows all about,\nWith roses peeping in, you know,\n    And babies peeping out.”\n\nWith a blow of their fists they made windows, and large yellow leaves\nwere the blinds. But roses—?\n\n“Roses,” cried Peter sternly.\n\nQuickly they made-believe to grow the loveliest roses up the walls.\n\nBabies?\n\nTo prevent Peter ordering babies they hurried into song again:\n\n“We’ve made the roses peeping out,\n    The babes are at the door,\nWe cannot make ourselves, you know,\n    ’Cos we’ve been made before.”"
+      ],
+      "distances": [
+        0.6419579386711121,
+        0.7173334956169128,
+        0.7199341058731079
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-10": {
+      "pregunta_en": "What are you wearing?",
+      "chunks": [
+        "But you simply must fit, and Peter measures you for your tree as\ncarefully as for a suit of clothes: the only difference being that the\nclothes are made to fit you, while you have to be made to fit the tree.\nUsually it is done quite easily, as by your wearing too many garments\nor too few, but if you are bumpy in awkward places or the only\navailable tree is an odd shape, Peter does some things to you, and\nafter that you fit. Once you fit, great care must be taken to go on\nfitting, and this, as Wendy was to discover to her delight, keeps a\nwhole family in perfect condition.\n\nWendy and Michael fitted their trees at the first try, but John had to\nbe altered a little.",
+        "She was not in the least cold.  She was wearing a russet-coloured\npelisse and had the hood over her head, so that nothing of her showed\nexcept her dear little face and her curls.  The rest of her real self\nwas hidden far away inside so many warm garments that in shape she\nseemed rather like a ball.  She was about forty round the waist.",
+        "[Illustration: _When her Majesty wants to know the time._]\n\nThe table-cloth varies according to the seasons, and in May it is made\nof chestnut blossom.  The way the fairy servants do is this: The men,\nscores of them, climb up the trees and shake the branches, and the\nblossom falls like snow.  Then the lady servants sweep it together by\nwhisking their skirts until it is exactly like a tablecloth, and that\nis how they get their tablecloth."
+      ],
+      "distances": [
+        0.721429169178009,
+        0.7425485849380493,
+        0.75312340259552
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt"
+      ]
+    },
+    "pan-11": {
+      "pregunta_en": "What kind of gun do you carry?",
+      "chunks": [
+        "By all the unwritten laws of savage warfare it is always the redskin\nwho attacks, and with the wiliness of his race he does it just before\nthe dawn, at which time he knows the courage of the whites to be at its\nlowest ebb. The white men have in the meantime made a rude stockade on\nthe summit of yonder undulating ground, at the foot of which a stream\nruns, for it is destruction to be too far from water. There they await\nthe onslaught, the inexperienced ones clutching their revolvers and\ntreading on twigs, but the old hands sleeping tranquilly until just\nbefore the dawn. Through the long black night the savage scouts\nwriggle, snake-like, among the grass without stirring a blade. The\nbrushwood closes behind them, as silently as sand into which a mole has",
+        "one hand clenched, all but for the forefinger, which he bent and held\nthreateningly aloft like a hook.",
+        "On the trail of the pirates, stealing noiselessly down the war-path,\nwhich is not visible to inexperienced eyes, come the redskins, every\none of them with his eyes peeled. They carry tomahawks and knives, and\ntheir naked bodies gleam with paint and oil. Strung around them are\nscalps, of boys as well as of pirates, for these are the Piccaninny\ntribe, and not to be confused with the softer-hearted Delawares or the\nHurons. In the van, on all fours, is Great Big Little Panther, a brave\nof so many scalps that in his present position they somewhat impede his\nprogress. Bringing up the rear, the place of greatest danger, comes\nTiger Lily, proudly erect, a princess in her own right. She is the most\nbeautiful of dusky Dianas and the belle of the Piccaninnies,"
+      ],
+      "distances": [
+        0.7946226596832275,
+        0.816534161567688,
+        0.8167797327041626
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-12": {
+      "pregunta_en": "Do you like school?",
+      "chunks": [
+        "Of course all the boys went to school; and most of them got into Class\nIII, but Slightly was put first into Class IV and then into Class V.\nClass I is the top class. Before they had attended school a week they\nsaw what goats they had been not to remain on the island; but it was\ntoo late now, and soon they settled down to being as ordinary as you or\nme or Jenkins minor. It is sad to have to say that the power to fly\ngradually left them. At first Nana tied their feet to the bed-posts so\nthat they should not fly away in the night; and one of their diversions\nby day was to pretend to fall off buses; but by and by they ceased to\ntug at their bonds in bed, and found that they hurt themselves when\nthey let go of the bus. In time they could not even fly after their",
+        "“Hullo, Wendy, good-bye,” he said.\n\n“Oh dear, are you going away?”\n\n“Yes.”\n\n“You don’t feel, Peter,” she said falteringly, “that you would like to\nsay anything to my parents about a very sweet subject?”\n\n“No.”\n\n“About me, Peter?”\n\n“No.”\n\nMrs. Darling came to the window, for at present she was keeping a sharp\neye on Wendy. She told Peter that she had adopted all the other boys,\nand would like to adopt him also.\n\n“Would you send me to school?” he inquired craftily.\n\n“Yes.”\n\n“And then to an office?”\n\n“I suppose so.”\n\n“Soon I would be a man?”\n\n“Very soon.”\n\n“I don’t want to go to school and learn solemn things,” he told her\npassionately. “I don’t want to be a man. O Wendy’s mother, if I was to\nwake up and feel there was a beard!”",
+        "orders,' replied the other, and, having emptied the cart, they dug up\nthe boarding school and put the poor, terrified things in it in five\nrows.  Of course, neither the governess nor the girls dare let on that\nthey were fairies, so they were carted far away to a potting-shed, out\nof which they escaped in the night without their shoes, but there was a\ngreat row about it among the parents, and the school was ruined."
+      ],
+      "distances": [
+        0.7204957008361816,
+        0.7360953092575073,
+        0.772285521030426
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt"
+      ]
+    },
+    "pan-13": {
+      "pregunta_en": "Do you know how to play on the PlayStation?",
+      "chunks": [
+        "a smart dance nowadays without him.  'P. P.' is written on the corner\nof the invitation-cards sent out by all really good families.  They are\ngrateful little people, too, and at the princesses coming-of-age ball\n(they come of age on their second birthday and have a birthday every\nmonth) they gave him the wish of his heart.",
+        "play with them), and she is not the only one who has done this.  David\ndoes it, for instance, and he and I know the likeliest place for\nleaving them in, and we shall tell you if you like, but for mercy's\nsake don't ask us before Porthos, for he is so fond of toys that, were\nhe to find out the place, he would take every one of them.",
+        "Adventures, of course, as we shall see, were of daily occurrence; but\nabout this time Peter invented, with Wendy’s help, a new game that\nfascinated him enormously, until he suddenly had no more interest in\nit, which, as you have been told, was what always happened with his\ngames. It consisted in pretending not to have adventures, in doing the\nsort of thing John and Michael had been doing all their lives, sitting\non stools flinging balls in the air, pushing each other, going out for\nwalks and coming back without having killed so much as a grizzly. To\nsee Peter doing nothing on a stool was a great sight; he could not help\nlooking solemn at such times, to sit still seemed to him such a comic\nthing to do. He boasted that he had gone walking for the good of his"
+      ],
+      "distances": [
+        0.7859339714050293,
+        0.7936099767684937,
+        0.7971802949905396
+      ],
+      "fuentes": [
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-14": {
+      "pregunta_en": "What are you having for breakfast?",
+      "chunks": [
+        "II\n\nPETER PAN",
+        "Sometimes it was dark and sometimes light, and now they were very cold\nand again too warm. Did they really feel hungry at times, or were they\nmerely pretending, because Peter had such a jolly new way of feeding\nthem? His way was to pursue birds who had food in their mouths suitable\nfor humans and snatch it from them; then the birds would follow and\nsnatch it back; and they would all go chasing each other gaily for\nmiles, parting at last with mutual expressions of good-will. But Wendy\nnoticed with gentle concern that Peter did not seem to know that this\nwas rather an odd way of getting your bread and butter, nor even that\nthere are other ways.",
+        "kettle-holder for him, and one day when she was wondering what Easter\npresent he would like, her mother made a suggestion."
+      ],
+      "distances": [
+        0.6963421106338501,
+        0.7266305685043335,
+        0.7271489500999451
+      ],
+      "fuentes": [
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt"
+      ]
+    },
+    "pan-15": {
+      "pregunta_en": "Do you have any siblings?",
+      "chunks": [
+        "“I knew them,” John said, to annoy the others.\n\n“I think I knew them,” said Michael rather doubtfully.\n\n“They were married, you know,” explained Wendy, “and what do you think\nthey had?”\n\n“White rats,” cried Nibs, inspired.\n\n“No.”\n\n“It’s awfully puzzling,” said Tootles, who knew the story by heart.\n\n“Quiet, Tootles. They had three descendants.”\n\n“What is descendants?”\n\n“Well, you are one, Twin.”\n\n“Did you hear that, John? I am a descendant.”\n\n“Descendants are only children,” said John.\n\n“Oh dear, oh dear,” sighed Wendy. “Now these three children had a\nfaithful nurse called Nana; but Mr. Darling was angry with her and\nchained her up in the yard, and so all the children flew away.”\n\n“It’s an awfully good story,” said Nibs.",
+        "wants a baby-sister, always take pains to write your address clearly.\nYou can't think what a lot of babies Solomon has sent to the wrong\nhouse.",
+        "brother (but this was never proved), and Gentleman Starkey, once an\nusher in a public school and still dainty in his ways of killing; and\nSkylights (Morgan’s Skylights); and the Irish bo’sun Smee, an oddly\ngenial man who stabbed, so to speak, without offence, and was the only\nNon-conformist in Hook’s crew; and Noodler, whose hands were fixed on\nbackwards; and Robt. Mullins and Alf Mason and many another ruffian\nlong known and feared on the Spanish Main."
+      ],
+      "distances": [
+        0.5532621145248413,
+        0.6513000130653381,
+        0.6515913009643555
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-16": {
+      "pregunta_en": "What day is it today?",
+      "chunks": [
+        "We have now reached the evening that was to be known among them as the\nNight of Nights, because of its adventures and their upshot. The day,\nas if quietly gathering its forces, had been almost uneventful, and now\nthe redskins in their blankets were at their posts above, while, below,\nthe children were having their evening meal; all except Peter, who had\ngone out to get the time. The way you got the time on the island was to\nfind the crocodile, and then stay near him till the clock struck.",
+        "“But, my dear madam, it is ten days till Thursday week; so that by\ntelling you what’s what, we can save you ten days of unhappiness.”\n\n“Yes, but at what a cost! By depriving the children of ten minutes of\ndelight.”\n\n“Oh, if you look at it in that way!”\n\n“What other way is there in which to look at it?”",
+        "Maimie was one of the kind who like to fix a day for doing things, but\nTony was not that kind, and when she asked him which day he was to\nremain behind in the Gardens after Lock-out he merely replied, 'Just\nsome day'; he was quite vague about which day except when she asked,\n'Will it be to-day?' and then he could always say for certain that it\nwould not be to-day.  So she saw that he was waiting for a real good\nchance.\n\nThis brings us to an afternoon when the Gardens were white with snow,\nand there was ice on the Round Pond; not thick enough to skate on, but\nat least you could spoil it for to-morrow by flinging stones, and many\nbright little boys and girls were doing that."
+      ],
+      "distances": [
+        0.6946061849594116,
+        0.7339913845062256,
+        0.7375547289848328
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt"
+      ]
+    },
+    "pan-17": {
+      "pregunta_en": "Who won the league this year?",
+      "chunks": [
+        "Which side had won?\n\nThe pirates, listening avidly at the mouths of the trees, heard the\nquestion put by every boy, and alas, they also heard Peter’s answer.\n\n“If the redskins have won,” he said, “they will beat the tom-tom; it is\nalways their sign of victory.”\n\nNow Smee had found the tom-tom, and was at that moment sitting on it.\n“You will never hear the tom-tom again,” he muttered, but inaudibly of\ncourse, for strict silence had been enjoined. To his amazement Hook\nsigned him to beat the tom-tom, and slowly there came to Smee an\nunderstanding of the dreadful wickedness of the order. Never, probably,\nhad this simple man admired Hook so much.\n\nTwice Smee beat upon the instrument, and then stopped to listen\ngleefully.\n\n“The tom-tom,” the miscreants heard Peter cry; “an Indian victory!”",
+        "forward girls challenged David's team, and a disturbing creature called\nAngela Clare sent down so many yorkers that--However, instead of\ntelling you the result of that regrettable match I shall pass on\nhurriedly to the Round Pond, which is the wheel that keeps all the\nGardens going.",
+        "“Redskin; what are you, Nibs?” and Nibs said, “Redskin; what are you\nTwin?” and so on; and they were all redskins; and of course this would\nhave ended the fight had not the real redskins fascinated by Peter’s\nmethods, agreed to be lost boys for that once, and so at it they all\nwent again, more fiercely than ever."
+      ],
+      "distances": [
+        0.7693668603897095,
+        0.8397598266601562,
+        0.8451753258705139
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-18": {
+      "pregunta_en": "How much does a toy cost?",
+      "chunks": [
+        "play with them), and she is not the only one who has done this.  David\ndoes it, for instance, and he and I know the likeliest place for\nleaving them in, and we shall tell you if you like, but for mercy's\nsake don't ask us before Porthos, for he is so fond of toys that, were\nhe to find out the place, he would take every one of them.",
+        "[Illustration: _Building the house for Maimie._]\n\nThe house was exactly the size of Maimie, and perfectly lovely.  One of\nher arms was extended, and this had bothered them for a second, but\nthey built a verandah round it leading to the front door.  The windows\nwere the size of a coloured picture-book and the door rather smaller,\nbut it would be easy for her to get out by taking off the roof.  The\nfairies, as is their custom, clapped their hands with delight over\ntheir cleverness, and they were so madly in love with the little house\nthat they could not bear to think they had finished it.  So they gave\nit ever so many little extra touches, and even then they added more\nextra touches.\n\nFor instance, two of them ran up a ladder and put on a chimney.",
+        "It was rough and simple, and not unlike what baby bears would have made\nof an underground house in the same circumstances. But there was one\nrecess in the wall, no larger than a bird-cage, which was the private\napartment of Tinker Bell. It could be shut off from the rest of the\nhouse by a tiny curtain, which Tink, who was most fastidious, always\nkept drawn when dressing or undressing. No woman, however large, could\nhave had a more exquisite boudoir and bed-chamber combined. The couch,\nas she always called it, was a genuine Queen Mab, with club legs; and\nshe varied the bedspreads according to what fruit-blossom was in\nseason. Her mirror was a Puss-in-Boots, of which there are now only\nthree, unchipped, known to fairy dealers; the washstand was Pie-crust"
+      ],
+      "distances": [
+        0.7504681348800659,
+        0.7689172029495239,
+        0.775448203086853
+      ],
+      "fuentes": [
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    },
+    "pan-19": {
+      "pregunta_en": "and then k",
+      "chunks": [
+        "“What’s that?”\n\n“It’s like this.” She kissed him.\n\n“Funny!” said Peter gravely. “Now shall I give you a thimble?”\n\n“If you wish to,” said Wendy, keeping her head erect this time.\n\nPeter thimbled her, and almost immediately she screeched. “What is it,\nWendy?”\n\n“It was exactly as if someone were pulling my hair.”\n\n“That must have been Tink. I never knew her so naughty before.”\n\nAnd indeed Tink was darting about again, using offensive language.\n\n“She says she will do that to you, Wendy, every time I give you a\nthimble.”\n\n“But why?”\n\n“Why, Tink?”\n\nAgain Tink replied, “You silly ass.” Peter could not understand why,\nbut Wendy understood, and she was just slightly disappointed when he\nadmitted that he came to the nursery window not to see her but to\nlisten to stories.",
+        "“Wendy,” he said, striding up and down, “I have asked the redskins to\nguide you through the wood, as flying tires you so.”\n\n“Thank you, Peter.”\n\n“Then,” he continued, in the short sharp voice of one accustomed to be\nobeyed, “Tinker Bell will take you across the sea. Wake her, Nibs.”\n\nNibs had to knock twice before he got an answer, though Tink had really\nbeen sitting up in bed listening for some time.\n\n“Who are you? How dare you? Go away,” she cried.\n\n“You are to get up, Tink,” Nibs called, “and take Wendy on a journey.”\n\nOf course Tink had been delighted to hear that Wendy was going; but she\nwas jolly well determined not to be her courier, and she said so in\nstill more offensive language. Then she pretended to be asleep again.",
+        "twink, and again your rakish craft noses for the wind, whales spout,\nyou glide over buried cities, and have brushes with pirates, and cast\nanchor on coral isles.  You are a solitary boy while all this is taking\nplace, for two boys together cannot adventure far upon the Round Pond,\nand though you may talk to yourself throughout the voyage, giving\norders and executing them with despatch, you know not, when it is time\nto go home, where you have been or what swelled your sails; your\ntreasure-trove is all locked away in your hold, so to speak, which will\nbe opened, perhaps, by another little boy many years afterwards."
+      ],
+      "distances": [
+        0.8118875622749329,
+        0.8127620816230774,
+        0.8148152828216553
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt"
+      ]
+    },
+    "pan-20": {
+      "pregunta_en": "But... but why?",
+      "chunks": [
+        "“It was because I heard father and mother,” he explained in a low\nvoice, “talking about what I was to be when I became a man.” He was\nextraordinarily agitated now. “I don’t want ever to be a man,” he said\nwith passion. “I want always to be a little boy and to have fun. So I\nran away to Kensington Gardens and lived a long long time among the\nfairies.”",
+        "given her quite a red face.  Once she was a new one, because the old\none had let go, and David was very sorry for the old one, but as she\ndid let go, he wished he had been there to see.",
+        "“Now don’t interrupt,” he would beg of her.\n\n“I have one pound seventeen here, and two and six at the office; I can\ncut off my coffee at the office, say ten shillings, making two nine and\nsix, with your eighteen and three makes three nine seven, with five\nnaught naught in my cheque-book makes eight nine seven—who is that\nmoving?—eight nine seven, dot and carry seven—don’t speak, my own—and\nthe pound you lent to that man who came to the door—quiet, child—dot\nand carry child—there, you’ve done it!—did I say nine nine seven? yes,\nI said nine nine seven; the question is, can we try it for a year on\nnine nine seven?”\n\n“Of course we can, George,” she cried. But she was prejudiced in\nWendy’s favour, and he was really the grander character of the two."
+      ],
+      "distances": [
+        0.7643167972564697,
+        0.7701471447944641,
+        0.7753968834877014
+      ],
+      "fuentes": [
+        "Peter_Pan_and_Wendy.txt",
+        "Peter_Pan_in_Kensington_Gardens.txt",
+        "Peter_Pan_and_Wendy.txt"
+      ]
+    }
+  }
+}

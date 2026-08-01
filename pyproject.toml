@@ -30,6 +30,8 @@ dependencies = [
     "pydantic>=2.13,<3",
     "python-dotenv>=1.0,<2",
     "slowapi>=0.1.10",
+    "lingua-language-detector>=2.2.0",
+    "pyphen>=0.17.2",
 ]
 
 [dependency-groups]
@@ -69,7 +71,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["backend"]
+known-first-party = ["backend", "evals"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Los "defaults" de FastAPI (Depends/File/Form/...) son llamadas en la firma A
