@@ -22,6 +22,7 @@ operaciones destructivas (p. ej. importar configuración), como pide el Hito 7.
 
 import hashlib
 import hmac
+import logging
 import secrets
 import shutil
 import time
@@ -31,6 +32,8 @@ from fastapi import Header, HTTPException
 
 from backend import config, db
 from backend.models import Setting
+
+logger = logging.getLogger(__name__)
 
 # Clave RESERVADA en la tabla `settings` para el hash del PIN. No está en el
 # `_SPEC` de settings_service, así que ni se exporta, ni se importa, ni aparece
@@ -48,6 +51,57 @@ _TTL_TOKEN = 12 * 3600
 # Tokens de sesión válidos → instante de caducidad (epoch). En memoria: un solo
 # proceso (uvicorn en dev). Al reiniciar el backend se vacían (hay que reentrar).
 _tokens: dict[str, float] = {}
+
+# ---------------------------------------------------------------------------
+# Anti-fuerza-bruta del login (Hito 2)
+# ---------------------------------------------------------------------------
+# Un PIN de 4 dígitos son ~10.000 combinaciones: sin freno, minutos de ataque. Tres
+# barreras baratas: (1) un retardo fijo en CADA intento (encarece mucho el ataque,
+# imperceptible para el adulto); (2) tras varios fallos por IP, bloqueo temporal con
+# espera CRECIENTE; (3) log de los intentos fallidos.
+_RETARDO_LOGIN = 0.5  # s de espera fija en cada login (los tests lo ponen a 0)
+_MAX_FALLOS = 5  # fallos consecutivos por IP antes de bloquear
+_BLOQUEO_BASE = 30  # s del primer bloqueo; se duplica en bloqueos consecutivos
+_MAX_BLOQUEO = 3600  # tope del bloqueo (1 h)
+
+# Estado por IP: {"fallos": int, "bloqueos": int, "hasta": epoch de fin de bloqueo}.
+_fallos_login: dict[str, dict[str, float]] = {}
+
+
+class BloqueoLoginError(Exception):
+    """Demasiados intentos fallidos de PIN: bloqueo temporal (el router → HTTP 429)."""
+
+    def __init__(self, segundos: int):
+        self.segundos = segundos
+        super().__init__(
+            f"Demasiados intentos. Espera {segundos} segundos antes de volver a intentarlo."
+        )
+
+
+def _comprobar_bloqueo(ip: str) -> None:
+    """Lanza BloqueoLoginError si la IP está bloqueada ahora mismo."""
+    entrada = _fallos_login.get(ip)
+    if entrada and entrada["hasta"] > time.time():
+        restante = int(entrada["hasta"] - time.time()) + 1
+        raise BloqueoLoginError(restante)
+
+
+def _registrar_fallo(ip: str) -> None:
+    """Suma un fallo a la IP; al llegar a _MAX_FALLOS, la bloquea con espera creciente."""
+    entrada = _fallos_login.setdefault(ip, {"fallos": 0, "bloqueos": 0, "hasta": 0.0})
+    entrada["fallos"] += 1
+    logger.warning("PIN de admin incorrecto desde %s (fallo %s).", ip, int(entrada["fallos"]))
+    if entrada["fallos"] >= _MAX_FALLOS:
+        entrada["bloqueos"] += 1
+        espera = min(_BLOQUEO_BASE * (2 ** (entrada["bloqueos"] - 1)), _MAX_BLOQUEO)
+        entrada["hasta"] = time.time() + espera
+        entrada["fallos"] = 0  # reinicia el contador; el siguiente ciclo bloquea más
+        logger.warning("Login de admin BLOQUEADO para %s durante %ss.", ip, int(espera))
+
+
+def _limpiar_fallos(ip: str) -> None:
+    """Olvida los fallos de una IP (tras un login correcto)."""
+    _fallos_login.pop(ip, None)
 
 
 # ---------------------------------------------------------------------------
@@ -113,13 +167,22 @@ def configurar(pin: str) -> str:
     return _crear_token()
 
 
-def login(pin: str) -> str:
-    """Valida el PIN y devuelve un token de sesión. Lanza ValueError (→ 400) si no cuadra."""
+def login(pin: str, ip: str = "?") -> str:
+    """Valida el PIN y devuelve un token de sesión.
+
+    Lanza BloqueoLoginError (→ 429) si la IP está bloqueada por intentos, o
+    ValueError (→ 400) si no hay PIN o es incorrecto. Aplica un retardo fijo y
+    cuenta los fallos por IP para frenar la fuerza bruta (ver arriba).
+    """
+    _comprobar_bloqueo(ip)
+    time.sleep(_RETARDO_LOGIN)  # coste fijo por intento: encarece el ataque
     guardado = _leer_hash()
     if guardado is None:
         raise ValueError("Aún no hay un PIN configurado. Créalo primero.")
     if not _verificar(pin.strip(), guardado):
+        _registrar_fallo(ip)
         raise ValueError("PIN incorrecto.")
+    _limpiar_fallos(ip)  # login correcto: borrón y cuenta nueva
     return _crear_token()
 
 
