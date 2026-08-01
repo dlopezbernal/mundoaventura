@@ -239,6 +239,23 @@ _SPEC: dict[str, dict[str, Any]] = {
         "DeepL); multi-minilm / e5-large = multilingües locales (embeben el español "
         "directo). Cambiarlo exige reindexar (cada backend tiene su colección).",
     },
+    "CHUNKING": {
+        "categoria": CAT_RAG,
+        "tipo": "str",
+        "default": config.CHUNKING,
+        "opciones": ["recursivo", "estructura"],
+        "requires_reindex": True,
+        "ayuda": "Troceado de documentos. recursivo = por tamaño; estructura = por "
+        "secciones de Markdown, prefijando cada fragmento con su ruta de encabezados "
+        "(da contexto al embedding y procedencia real). Cambiarlo exige reindexar.",
+    },
+    "MOSTRAR_FUENTES": {
+        "categoria": CAT_RAG,
+        "tipo": "bool",
+        "default": config.MOSTRAR_FUENTES,
+        "ayuda": "Mostrar al niño en el chat los fragmentos usados (desplegable "
+        "'¿de dónde lo he sacado?'). Flag propio, independiente de DEBUG.",
+    },
     "CHROMA_COLLECTION": {
         "categoria": CAT_CHUNKING,
         "tipo": "str",

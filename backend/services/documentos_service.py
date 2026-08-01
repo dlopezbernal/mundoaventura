@@ -88,6 +88,45 @@ def _crear_splitter():
     )
 
 
+def _trocear(texto: str, ext: str) -> list[tuple[str, str]]:
+    """Trocea un documento en [(fragmento, ruta_de_encabezados)] según CHUNKING.
+
+    - "estructura" + `.md`: parte por secciones de Markdown y prefija cada fragmento
+      con su ruta de encabezados ("Tyrannosaurus > Description > Skull: ..."), lo que
+      da contexto al embedding y procedencia real. Las secciones largas se sub-trocean.
+    - "recursivo" (o cualquier no-`.md`): troceo por tamaño, sin ruta de encabezados.
+    """
+    if settings_service.get("CHUNKING") == "estructura" and ext == ".md":
+        return _trocear_estructura(texto)
+    return [(c, "") for c in _crear_splitter().split_text(texto)]
+
+
+def _trocear_estructura(texto: str) -> list[tuple[str, str]]:
+    """Troceado por secciones de Markdown; la ruta de encabezados va en el METADATO.
+
+    Decisión MEDIDA (ver ADR-005): trocear por sección mejora el recall, pero
+    **prefijar el texto embebido** con la ruta ("Tyrannosaurus: ...") lo EMPEORA (el
+    prefijo repetido diluye el embedding). Así que el texto del chunk se deja limpio
+    y la ruta se guarda aparte, en el metadato `header_path`, que alimenta la
+    procedencia real del desplegable "¿de dónde lo he sacado?" sin tocar el embedding.
+    """
+    from langchain_text_splitters import MarkdownHeaderTextSplitter
+
+    cabeceras = [("#", "h1"), ("##", "h2"), ("###", "h3")]
+    secciones = MarkdownHeaderTextSplitter(cabeceras).split_text(texto)
+    recursivo = _crear_splitter()
+    limite = settings_service.get("CHUNK_SIZE")
+    pares: list[tuple[str, str]] = []
+    for sec in secciones:
+        ruta = " > ".join(sec.metadata[k] for k in ("h1", "h2", "h3") if sec.metadata.get(k))
+        cuerpo = sec.page_content.strip()
+        if not cuerpo:
+            continue
+        subs = recursivo.split_text(cuerpo) if len(cuerpo) > limite else [cuerpo]
+        pares.extend((s, ruta) for s in subs)  # texto limpio; ruta al metadato
+    return pares
+
+
 # ---------------------------------------------------------------------------
 # Acceso a ChromaDB (cliente propio; chromadb comparte el System por ruta)
 # ---------------------------------------------------------------------------
@@ -123,15 +162,18 @@ def _archivos_de(personaje_id: str) -> list[Path]:
 
 def _indexar_personaje(collection, personaje_id: str) -> tuple[int, int]:
     """Trocea e indexa TODOS los documentos de un personaje. Devuelve (archivos, chunks)."""
-    splitter = _crear_splitter()
     n_archivos = 0
     n_chunks = 0
     for archivo in _archivos_de(personaje_id):
         texto = leer_texto(archivo)
-        chunks = splitter.split_text(texto)
-        if not chunks:
+        pares = _trocear(texto, archivo.suffix.lower())
+        if not pares:
             continue
-        metadatos = [{"personaje_id": personaje_id, "source": archivo.name} for _ in chunks]
+        chunks = [c for c, _ in pares]
+        metadatos = [
+            {"personaje_id": personaje_id, "source": archivo.name, "header_path": ruta}
+            for _, ruta in pares
+        ]
         ids = [f"{personaje_id}::{archivo.name}::{i}" for i in range(len(chunks))]
         # Backend multilingüe: embebemos los chunks NOSOTROS (como 'passage') y
         # pasamos los vectores. Backend original: los embebe Chroma (add con documents).

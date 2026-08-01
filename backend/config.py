@@ -155,6 +155,23 @@ CHROMA_COLLECTION: str = os.getenv("CHROMA_COLLECTION", "documentos_en")
 # Ver services/embeddings.py. Cambiarlo exige reindexar (colección versionada propia).
 EMBEDDING_BACKEND: str = os.getenv("EMBEDDING_BACKEND", "minilm-en").strip()
 
+# Estrategia de troceado (Hito 4.2). "recursivo" = original (RecursiveCharacterText
+# Splitter, tira los encabezados). "estructura" = trocea los .md por secciones
+# (MarkdownHeaderTextSplitter) y prefija cada chunk con su ruta de encabezados
+# ("Tyrannosaurus > Description > Skull: ..."), que gana contexto para el embedding y
+# da procedencia real en el desplegable "¿de dónde lo saqué?". Cambiarlo exige reindexar.
+CHUNKING: str = os.getenv("CHUNKING", "recursivo").strip()
+
+# Mostrar las FUENTES (fragmentos usados) al niño en el chat (Hito 4.2). Antes iba
+# atado a DEBUG; ahora es un flag propio: enseñar la procedencia es pedagogía, no
+# depuración. False = chat limpio (por defecto). (_leer_bool se define más abajo.)
+MOSTRAR_FUENTES: bool = os.getenv("MOSTRAR_FUENTES", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+
 
 # ---------------------------------------------------------------------------
 # 3b) Voz (ElevenLabs): transcripción (Scribe/STT) + síntesis (Flash/TTS)

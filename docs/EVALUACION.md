@@ -132,12 +132,12 @@ sub-rama, con su ADR (`docs/decisiones/ADR-004…`).
 
 | Métrica | Baseline | H4.1 +embeddings | H4.2 +chunking | H4.3 +reranker | H4.4 −DeepL |
 |---|---|---|---|---|---|
-| Backend | minilm-en (0,75) | multi-minilm (0,80) | — | — | — |
-| **recall@3 chunk** | 78,2 % | **81,8 %** | | | |
-| **lat. retrieval (ms)** | 191,7 | **27,3** | | | |
-| Acierto de ruteo | 66,7 % | 70,0 % | | | |
-| Español | 99 % | 100 % | | | |
-| Roto de personaje | 0 % | 0 % | | | |
+| Config | minilm-en (0,75) | multi-minilm (0,80) | + estructura | — | — |
+| **recall@3 chunk** | 78,2 % | 81,8 % | **83,6 %** | | |
+| **lat. retrieval (ms)** | 191,7 | 27,3 | ~8 | | |
+| Acierto de ruteo | 66,7 % | 70,0 % | 71,1 % | | |
+| Español | 99 % | 100 % | 100 % | | |
+| Roto de personaje | 0 % | 0 % | 0 % | | |
 
 **H4.1 (embeddings multilingües, `multi-minilm`):** recall@3 a nivel de chunk sube
 78,2 → 81,8 %, y la latencia de retrieval cae **7×** (191 → 27 ms: `fastembed` embebe
@@ -146,6 +146,15 @@ mismo umbral que la baseline (0,75) el ruteo ya mejora (66,7 → 70 %), efecto p
 embedding. El umbral se recalibra a 0,80 (equilibrado; ver ADR-004). Nota: el recall
 de FICHERO sigue saturado al 100 % (poco discriminante) — por eso la métrica que
 gobierna H4 es el recall de **chunk**.
+
+**H4.2 (troceado por estructura, `estructura`):** trocear los `.md` por secciones de
+Markdown sube el recall de chunk 81,8 → 83,6 %. Hallazgo medido (ADR-005):
+**prefijar el texto** con la ruta de encabezados lo EMPEORA (80,0 %, el prefijo
+repetido diluye el embedding), así que la ruta va al metadato `header_path` — que
+además da **procedencia real** al desplegable "¿de dónde lo he sacado?" (flag propio
+`MOSTRAR_FUENTES`, ya no atado a `DEBUG`). Aplica a `.md`; los `.txt` (libros) caen al
+recursivo. Números de retrieval (deterministas); la corrida completa tuvo errores
+transitorios de Replicate en la generación (429 del free tier), ajenos al chunking.
 
 ## 8. Cómo reproducir
 

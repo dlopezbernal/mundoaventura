@@ -146,12 +146,15 @@ def reiniciar_coleccion() -> None:
     _collection_nombre = None
 
 
-def _recuperar_contexto(personaje_id: str, pregunta: str) -> tuple[list[str], list[float]]:
-    """Devuelve (fichas, distancias) más relevantes para la pregunta, de ESE personaje.
+def _recuperar_contexto(
+    personaje_id: str, pregunta: str
+) -> tuple[list[str], list[float], list[dict]]:
+    """Devuelve (fichas, distancias, metadatos) más relevantes, de ESE personaje.
 
     - fichas: los textos recuperados (ordenados de más a menos parecido).
-    - distancias: la distancia coseno de cada ficha a la pregunta (menor = más
-      parecido). Las usa el Evaluator para decidir por umbral, sin LLM.
+    - distancias: la distancia coseno de cada ficha (menor = más parecido). Las usa
+      el Evaluator para decidir por umbral, sin LLM.
+    - metadatos: source y header_path de cada ficha (para la procedencia del chat).
 
     Usa el filtro `where` para limitar la búsqueda al personaje elegido: así un
     Triceratops nunca responde con datos de Sherlock Holmes.
@@ -160,7 +163,7 @@ def _recuperar_contexto(personaje_id: str, pregunta: str) -> tuple[list[str], li
     comun = {
         "n_results": settings_service.get("RAG_TOP_K"),
         "where": {"personaje_id": personaje_id},  # solo fichas de este personaje
-        "include": ["documents", "distances"],  # pedimos también las distancias
+        "include": ["documents", "distances", "metadatas"],
     }
     # Backend multilingüe: embebemos NOSOTROS la consulta (como 'query') y pasamos el
     # vector. Backend original: la embebe Chroma a partir del texto (query_texts).
@@ -171,7 +174,14 @@ def _recuperar_contexto(personaje_id: str, pregunta: str) -> tuple[list[str], li
     # query devuelve listas anidadas (una por consulta); tomamos la primera.
     documentos = (resultado.get("documents") or [[]])[0]
     distancias = (resultado.get("distances") or [[]])[0]
-    return documentos, distancias
+    metadatos = (resultado.get("metadatas") or [[]])[0]
+    return documentos, distancias, metadatos
+
+
+def _formatear_fuente(texto: str, meta: dict | None) -> str:
+    """Antepone la ruta de encabezados a la ficha, para la procedencia del chat."""
+    ruta = (meta or {}).get("header_path") or ""
+    return f"[{ruta}] {texto}" if ruta else texto
 
 
 def _construir_prompt(nombre: str, contexto: list[str], pregunta: str) -> tuple[str, str]:
@@ -421,7 +431,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
 
     # 1) RETRIEVAL: recuperar las fichas candidatas y sus distancias (con la
     #    pregunta YA en inglés, igual que las fichas).
-    contexto, distancias = _recuperar_contexto(personaje_id, pregunta_en)
+    contexto, distancias, metadatos = _recuperar_contexto(personaje_id, pregunta_en)
 
     # 2) EVALUATOR + ROUTER: ¿son esas fichas relevantes? (umbral / llm / híbrido)
     es_rag, metodo, distancia = _decidir_origen(contexto, distancias, pregunta_en)
@@ -433,11 +443,16 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         # mejor en inglés. La respuesta, eso sí, se genera en español (lo pide el prompt).
         system, user = _construir_prompt(nombre, contexto, pregunta_en)
         respuesta = _llamar_llm(system, user, etiqueta="RAG")
-        # DEBUG decide si el niño VE el desplegable "¿De dónde lo he sacado?" en el
-        # chat (Chat.tsx lo pinta si `fuentes` no viene vacío) — igual que decide si
-        # se imprimen trazas en la consola del backend. No afecta a que la respuesta
-        # siga fundamentada en el RAG, solo a si se enseña el porqué.
-        fuentes = contexto if settings_service.get("DEBUG") else []
+        # MOSTRAR_FUENTES (flag propio, ya no atado a DEBUG) decide si el niño VE el
+        # desplegable "¿De dónde lo he sacado?" en el chat (Chat.tsx lo pinta si
+        # `fuentes` no viene vacío). Enseñar la procedencia es pedagogía, no depuración.
+        # No afecta a que la respuesta siga fundamentada en el RAG, solo a si se
+        # enseña el porqué (con troceado estructural, la ruta de encabezados va incluida).
+        fuentes = (
+            [_formatear_fuente(c, m) for c, m in zip(contexto, metadatos, strict=False)]
+            if settings_service.get("MOSTRAR_FUENTES")
+            else []
+        )
     elif settings_service.get("PERMITIR_CONOCIMIENTO_GENERAL"):
         # --- Camino GENERAL: las fichas no sirven; el personaje responde con su
         # conocimiento propio (aquí, en el futuro, podría enrutarse a búsqueda web).
