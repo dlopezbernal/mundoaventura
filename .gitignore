@@ -56,3 +56,4 @@ Thumbs.db
 # Evals: los resultados de cada corrida no se versionan (salvo la línea base).
 evals/resultados/*
 !evals/resultados/BASELINE.csv
+!evals/resultados/BASELINE.html

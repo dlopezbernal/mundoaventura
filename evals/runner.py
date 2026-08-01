@@ -99,6 +99,19 @@ def _origen_de(es_rag: bool) -> str:
     return "GENERAL" if settings_service.get("PERMITIR_CONOCIMIENTO_GENERAL") else "SIN_INFO"
 
 
+def config_evaluacion() -> dict:
+    """Config vigente que condiciona el resultado (para archivar junto a la corrida)."""
+    return {
+        "evaluator_mode": settings_service.get("EVALUATOR_MODE"),
+        "umbral_bajo": settings_service.get("EVALUATOR_UMBRAL_BAJO"),
+        "umbral_alto": settings_service.get("EVALUATOR_UMBRAL_ALTO"),
+        "permitir_conocimiento_general": settings_service.get("PERMITIR_CONOCIMIENTO_GENERAL"),
+        "rag_top_k": settings_service.get("RAG_TOP_K"),
+        "llm_model": settings_service.get("REPLICATE_LLM_MODEL"),
+        "llm_max_tokens": settings_service.get("LLM_MAX_TOKENS"),
+    }
+
+
 def _coste_estimado(system: str, user: str, respuesta: str) -> tuple[int, float]:
     """Estima (tokens_totales, coste_usd) con tokens ≈ caracteres/4."""
     tokens_in = (len(system) + len(user)) // 4
@@ -169,10 +182,14 @@ def evaluar_pregunta(
             infl = metricas.inflesz(respuesta)
             tokens, coste = _coste_estimado(sys_p, usr_p, respuesta)
             roto = metricas.roto_de_personaje(respuesta)
+            # Acierto de RUTEO (RAG vs no-RAG), no del string exacto: el reparto
+            # GENERAL/SIN_INFO depende de PERMITIR_CONOCIMIENTO_GENERAL (config), y
+            # ambos significan "no fundamentado en el RAG". Lo que se mide es si el
+            # Evaluator acertó en fundamentar (RAG) o no. Las ambiguas no se puntúan.
             acierto = (
                 None
                 if preg.origen_esperado.value == "cualquiera"
-                else origen == preg.origen_esperado.value
+                else (origen == "RAG") == (preg.origen_esperado.value == "RAG")
             )
             base.update(
                 {
@@ -328,6 +345,7 @@ def escribir_html(filas: list[dict], resumen: dict, meta: dict, ruta: Path) -> N
 <h1>Informe de evaluación — {html.escape(meta.get("etiqueta", ""))}</h1>
 <p class="meta">Modo: {html.escape(meta.get("modo", ""))} · Fecha: {html.escape(meta.get("fecha", ""))} ·
  Repeticiones: {meta.get("reps", "")} · Preguntas: {meta.get("n_preguntas", "")}</p>
+{_tabla_html("Configuración del sistema evaluado", meta.get("config", {}))}
 {_tabla_html("Resumen global", resumen)}
 <h2>Resumen por personaje</h2>
 {bloques_pers}
@@ -392,17 +410,22 @@ def run(modo: str, etiqueta: str, reps: int, limite: int | None, fixture_path: P
 
     resumen = resumir(filas)
     fecha = date.today().isoformat()
+    config = config_evaluacion()
     meta = {
         "etiqueta": etiqueta,
         "modo": modo,
         "fecha": fecha,
         "reps": reps,
         "n_preguntas": len(preguntas),
+        "config": config,
     }
     base = _RESULTADOS / f"{fecha}_{etiqueta}"
     escribir_csv(filas, base.with_suffix(".csv"))
     escribir_html(filas, resumen, meta, base.with_suffix(".html"))
 
+    print("\n=== Config del sistema evaluado ===")
+    for k, v in config.items():
+        print(f"  {k:30}: {v}")
     print("\n=== Resumen ===")
     for k, v in resumen.items():
         print(f"  {k:26}: {v}")
