@@ -20,9 +20,7 @@ class AskRequest(BaseModel):
     personaje_id: str = Field(
         ..., description="Identificador del personaje al que se pregunta (ej. 't-rex')."
     )
-    pregunta: str = Field(
-        ..., min_length=1, description="La pregunta del niño, en texto."
-    )
+    pregunta: str = Field(..., min_length=1, description="La pregunta del niño, en texto.")
 
 
 class AskResponse(BaseModel):
@@ -55,8 +53,7 @@ class AskResponse(BaseModel):
     )
     fuentes: list[str] = Field(
         default_factory=list,
-        description="Fragmentos (chunks) de los documentos usados para fundamentar "
-        "la respuesta.",
+        description="Fragmentos (chunks) de los documentos usados para fundamentar la respuesta.",
     )
     audio_base64: str | None = Field(
         default=None,

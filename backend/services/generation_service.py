@@ -34,13 +34,15 @@ error: la imagen se genera igual).
 """
 
 import base64
+import logging
 import re
 
 import replicate
 
-from backend import config
-from backend import debug_log
+from backend import config, debug_log
 from backend.services import personajes_service, settings_service, ubicaciones_service
+
+logger = logging.getLogger(__name__)
 
 
 def _salida_a_base64(output) -> str:
@@ -69,11 +71,12 @@ def _avisar_si_prompt_largo(prompt: str) -> None:
     tokens = _estimar_tokens(prompt)
     limite = settings_service.get("CLIP_TOKEN_LIMIT")
     if tokens > limite:
-        print(
-            f"[GEN] ⚠️  El prompt (~{tokens} tokens) supera el límite de CLIP "
-            f"({limite}). CLIP truncará el final, pero T5 lo leerá "
-            "completo. Lo importante va al principio, así que la imagen no debería "
-            "verse afectada."
+        logger.warning(
+            "El prompt (~%s tokens) supera el límite de CLIP (%s). CLIP truncará el "
+            "final, pero T5 lo leerá completo. Lo importante va al principio, así que "
+            "la imagen no debería verse afectada.",
+            tokens,
+            limite,
         )
 
 

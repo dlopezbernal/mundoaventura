@@ -19,10 +19,13 @@ Arquitectura de 1 sola traducción:
     directamente en español (es multilingüe).
 """
 
+import logging
+
 import deepl
 
-from backend import config
-from backend import debug_log
+from backend import config, debug_log
+
+logger = logging.getLogger(__name__)
 
 
 class TranslationError(ValueError):
@@ -58,12 +61,10 @@ def _get_translator() -> deepl.Translator:
         translator = deepl.Translator(config.DEEPL_API_KEY)
         translator.get_usage()  # comprueba que la clave funciona y hay conexión
     except Exception as exc:
-        raise TranslationError(
-            f"No hay conexión con DeepL o la clave no es válida: {exc}"
-        )
+        raise TranslationError(f"No hay conexión con DeepL o la clave no es válida: {exc}") from exc
 
     _translator = translator
-    print("[Traducción] DeepL conectado. ✅")
+    logger.info("DeepL conectado. ✅")
     return _translator
 
 
@@ -76,12 +77,10 @@ def traducir_es_en(texto: str) -> str:
     translator = _get_translator()
     debug_log.trazar_prompt("DeepL · traducción ES→EN", prompt=texto)
     try:
-        resultado = translator.translate_text(
-            texto, source_lang="ES", target_lang="EN-US"
-        )
+        resultado = translator.translate_text(texto, source_lang="ES", target_lang="EN-US")
         return resultado.text
     except Exception as exc:
-        raise TranslationError(f"Error al traducir con DeepL: {exc}")
+        raise TranslationError(f"Error al traducir con DeepL: {exc}") from exc
 
 
 # Tamaño máximo (caracteres) por petición a DeepL al traducir documentos largos.
@@ -150,7 +149,7 @@ def traducir_a_ingles(texto: str) -> tuple[str, str]:
         idioma_detectado = resultados[0].detected_source_lang.lower()
         return texto_traducido, idioma_detectado
     except Exception as exc:
-        raise TranslationError(f"Error al traducir el documento con DeepL: {exc}")
+        raise TranslationError(f"Error al traducir el documento con DeepL: {exc}") from exc
 
 
 def estado() -> dict:

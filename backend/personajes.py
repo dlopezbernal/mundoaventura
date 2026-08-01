@@ -97,11 +97,11 @@ NOMBRES = {
 # en español con el modelo multilingüe eleven_multilingual_v2 (ver ELEVENLABS_TTS_MODEL
 # en .env). Cámbialas por voces de tu biblioteca desde https://elevenlabs.io/voices.
 VOCES = {
-    "sherlock_holmes":   "nPczCjzI2devNBz1zQrb",  # grave y madura (Brian)
+    "sherlock_holmes": "nPczCjzI2devNBz1zQrb",  # grave y madura (Brian)
     "leonardo_da_vinci": "JBFqnCBsd6RMkjVDRZzb",  # cálida y sabia (George)
-    "t-rex":             "IKne3meq5aSn9XLyUdCD",  # juguetona (Charlie)
-    "triceratops":       "bIHbv24MWmeRgasZH58o",  # amable (Will)
-    "peter_pan":         "TX3LPaxmHKxFdv7VOQHJ",  # aventurera y joven (Liam)
+    "t-rex": "IKne3meq5aSn9XLyUdCD",  # juguetona (Charlie)
+    "triceratops": "bIHbv24MWmeRgasZH58o",  # amable (Will)
+    "peter_pan": "TX3LPaxmHKxFdv7VOQHJ",  # aventurera y joven (Liam)
 }
 
 # Categoría y emoji de cada personaje (antes solo vivían en el frontend, en
@@ -110,16 +110,16 @@ VOCES = {
 # la tabla `personajes` (vía personajes_service) y el frontend lo consume por API.
 # categoria agrupa la carta en la UI: "prehistorico" | "historico" | "ficticio".
 CATEGORIAS = {
-    "triceratops":       "prehistorico",
-    "t-rex":             "prehistorico",
+    "triceratops": "prehistorico",
+    "t-rex": "prehistorico",
     "leonardo_da_vinci": "historico",
-    "sherlock_holmes":   "ficticio",
-    "peter_pan":         "ficticio",
+    "sherlock_holmes": "ficticio",
+    "peter_pan": "ficticio",
 }
 EMOJIS = {
-    "triceratops":       "🦕",
-    "t-rex":             "🦖",
+    "triceratops": "🦕",
+    "t-rex": "🦖",
     "leonardo_da_vinci": "🎨",
-    "sherlock_holmes":   "🕵️",
-    "peter_pan":         "👦",
+    "sherlock_holmes": "🕵️",
+    "peter_pan": "👦",
 }

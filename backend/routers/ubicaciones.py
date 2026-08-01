@@ -44,9 +44,7 @@ def crear_ubicacion(req: UbicacionCrear):
 def editar_ubicacion(ubicacion_id: str, req: UbicacionEditar):
     """Actualiza los campos indicados de una ubicación (el id no cambia). 400 si inválido."""
     try:
-        ubicacion = ubicaciones_service.actualizar(
-            ubicacion_id, req.model_dump(exclude_unset=True)
-        )
+        ubicacion = ubicaciones_service.actualizar(ubicacion_id, req.model_dump(exclude_unset=True))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "ubicacion": ubicacion}

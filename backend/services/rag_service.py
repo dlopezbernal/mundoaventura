@@ -26,16 +26,20 @@ Decisiones para mantenerlo simple y sin GPU local:
 """
 
 import base64
+import logging
 
 import chromadb
 import replicate
 
-from backend import config
-from backend import debug_log
-from backend.services import personajes_service
-from backend.services import settings_service
-from backend.services import translation_service
-from backend.services import voice_service
+from backend import config, debug_log
+from backend.services import (
+    personajes_service,
+    settings_service,
+    translation_service,
+    voice_service,
+)
+
+logger = logging.getLogger(__name__)
 
 # Cliente y colección de ChromaDB, cargados una sola vez (singleton perezoso).
 _client: chromadb.ClientAPI | None = None
@@ -45,9 +49,7 @@ _collection = None
 _ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡", "SIN_INFO": "🔴"}
 
 
-def _trazar_origen(
-    origen: str, metodo: str, distancia: float | None, pregunta_en: str
-) -> None:
+def _trazar_origen(origen: str, metodo: str, distancia: float | None, pregunta_en: str) -> None:
     """Imprime por la consola del BACKEND si la respuesta vino del RAG o no.
 
     Solo en modo DEBUG (settings_service). Antes esto se calculaba/mostraba en el
@@ -70,15 +72,18 @@ def _trazar_origen(
         "llm": "desempatado por el LLM-juez (la distancia caía en la zona dudosa)",
     }.get(metodo, metodo)
 
-    print(f"[CHAT] {icono} Evaluator → origen={origen}: {explica_origen}")
-    print(f"[CHAT]        método: {explica_metodo}")
+    lineas = [
+        f"[CHAT] {icono} Evaluator → origen={origen}: {explica_origen}",
+        f"[CHAT]        método: {explica_metodo}",
+    ]
     if distancia is not None:
-        print(
+        lineas.append(
             f"[CHAT]        mejor distancia d={distancia:.2f}  "
             f"(umbrales coseno: BAJO={settings_service.get('EVALUATOR_UMBRAL_BAJO')}→RAG, "
             f"ALTO={settings_service.get('EVALUATOR_UMBRAL_ALTO')}→GENERAL; entre ambos=dudoso)"
         )
-    print(f'[CHAT]        pregunta traducida (EN) que se buscó: "{pregunta_en}"')
+    lineas.append(f'[CHAT]        pregunta traducida (EN) que se buscó: "{pregunta_en}"')
+    logger.debug("\n".join(lineas))
 
 
 def _get_collection():
@@ -108,11 +113,11 @@ def _get_collection():
 
     # Si está vacía, avisamos: hay que ejecutar la ingesta primero.
     if _collection.count() == 0:
-        print(
-            "[RAG] ⚠️  La colección de ChromaDB está VACÍA: no hay ninguna ficha "
-            "indexada, así que el chat responderá sin contexto (respuestas pobres o "
-            "siempre 'no lo sé'). Añade documentos en backend/documentos/<personaje>/ "
-            "y reconstruye el índice con:  python -m backend.ingest"
+        logger.warning(
+            "La colección de ChromaDB está VACÍA: no hay ninguna ficha indexada, así "
+            "que el chat responderá sin contexto (respuestas pobres o siempre 'no lo "
+            "sé'). Añade documentos en backend/documentos/<personaje>/ y reconstruye el "
+            "índice con:  python -m backend.ingest"
         )
 
     return _collection
@@ -131,9 +136,7 @@ def reiniciar_coleccion() -> None:
     _collection = None
 
 
-def _recuperar_contexto(
-    personaje_id: str, pregunta: str
-) -> tuple[list[str], list[float]]:
+def _recuperar_contexto(personaje_id: str, pregunta: str) -> tuple[list[str], list[float]]:
     """Devuelve (fichas, distancias) más relevantes para la pregunta, de ESE personaje.
 
     - fichas: los textos recuperados (ordenados de más a menos parecido).
@@ -147,8 +150,8 @@ def _recuperar_contexto(
     resultado = collection.query(
         query_texts=[pregunta],
         n_results=settings_service.get("RAG_TOP_K"),
-        where={"personaje_id": personaje_id},   # solo fichas de este personaje
-        include=["documents", "distances"],     # pedimos también las distancias
+        where={"personaje_id": personaje_id},  # solo fichas de este personaje
+        include=["documents", "distances"],  # pedimos también las distancias
     )
     # query devuelve listas anidadas (una por consulta); tomamos la primera.
     documentos = (resultado.get("documents") or [[]])[0]
@@ -171,9 +174,7 @@ def _construir_prompt(nombre: str, contexto: list[str], pregunta: str) -> tuple[
     fichas_texto = "\n".join(f"- {ficha}" for ficha in contexto) or "(no data)"
     # Plantillas editables desde el menú de configuración (settings_service);
     # sus valores por defecto son los prompts en inglés de siempre.
-    system = settings_service.rellenar(
-        settings_service.get("PROMPT_RAG_SYSTEM"), nombre=nombre
-    )
+    system = settings_service.rellenar(settings_service.get("PROMPT_RAG_SYSTEM"), nombre=nombre)
     user = settings_service.rellenar(
         settings_service.get("PROMPT_RAG_USER"),
         fichas=fichas_texto,
@@ -191,12 +192,8 @@ def _construir_prompt_general(nombre: str, pregunta: str) -> tuple[str, str]:
     Mismo criterio que _construir_prompt: instrucciones + pregunta EN INGLÉS (Llama 3
     obedece mejor), pero la RESPUESTA se pide EN ESPAÑOL (es lo que lee el niño).
     """
-    system = settings_service.rellenar(
-        settings_service.get("PROMPT_GENERAL_SYSTEM"), nombre=nombre
-    )
-    user = settings_service.rellenar(
-        settings_service.get("PROMPT_GENERAL_USER"), pregunta=pregunta
-    )
+    system = settings_service.rellenar(settings_service.get("PROMPT_GENERAL_SYSTEM"), nombre=nombre)
+    user = settings_service.rellenar(settings_service.get("PROMPT_GENERAL_USER"), pregunta=pregunta)
     return system, user
 
 
@@ -293,10 +290,10 @@ def _clasificar_umbral(distancia: float) -> str:
     Es el árbitro GRATIS: solo compara números, sin llamar a ningún LLM.
     """
     if distancia <= settings_service.get("EVALUATOR_UMBRAL_BAJO"):
-        return "relevante"     # muy parecida a una ficha → es RAG seguro
+        return "relevante"  # muy parecida a una ficha → es RAG seguro
     if distancia >= settings_service.get("EVALUATOR_UMBRAL_ALTO"):
-        return "irrelevante"   # muy lejana → no es RAG seguro
-    return "dudoso"            # zona gris
+        return "irrelevante"  # muy lejana → no es RAG seguro
+    return "dudoso"  # zona gris
 
 
 def _decidir_origen(
@@ -356,19 +353,26 @@ def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
     try:
         audio_bytes = voice_service.sintetizar(respuesta, voz_id)
         audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
-    except Exception as exc:
-        if settings_service.get("DEBUG"):
-            print(
-                f"[VOZ] ⚠️ TTS (síntesis de voz) FALLÓ para el personaje "
-                f"'{personaje_id}' (voz_id={voz_id}): {exc}. Degradación elegante: la "
-                "respuesta se entrega SOLO en texto (audio_base64=null); el chat sigue."
-            )
+    except Exception:
+        # Degradación elegante: la respuesta se entrega SOLO en texto y el chat
+        # sigue. Pero el fallo se registra SIEMPRE (no solo en DEBUG) para que no
+        # se pierda sin rastro; exc_info=True guarda la traza completa.
+        logger.warning(
+            "TTS (síntesis de voz) FALLÓ para el personaje '%s' (voz_id=%s); la "
+            "respuesta se entrega solo en texto (audio_base64=null).",
+            personaje_id,
+            voz_id,
+            exc_info=True,
+        )
         return None
     if settings_service.get("DEBUG"):
-        print(
-            f"[VOZ] 🔊 TTS OK · personaje={personaje_id} · voz_id={voz_id} · "
-            f"{len(respuesta)} caracteres → mp3 base64 "
-            f"(ElevenLabs modelo={settings_service.get('ELEVENLABS_TTS_MODEL')})"
+        logger.debug(
+            "[VOZ] 🔊 TTS OK · personaje=%s · voz_id=%s · %s caracteres → mp3 base64 "
+            "(ElevenLabs modelo=%s)",
+            personaje_id,
+            voz_id,
+            len(respuesta),
+            settings_service.get("ELEVENLABS_TTS_MODEL"),
         )
     return audio_b64
 

@@ -30,6 +30,7 @@ Tras ejecutar este script, reconstruye el índice vectorial con:
 """
 
 import argparse
+import logging
 import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
@@ -38,29 +39,35 @@ from urllib.parse import unquote, urlparse
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# En Windows la consola puede usar cp1252 y romper al imprimir emojis.
+from backend import config, logging_config  # noqa: E402
+
+logging_config.configurar_logging()
+logger = logging.getLogger(__name__)
+
+# En Windows la consola puede usar cp1252 y romper al emitir emojis. El mensaje de
+# fallo es ASCII a propósito (loguearlo no debe fallar por el propio encoding).
 try:
     sys.stdout.reconfigure(encoding="utf-8")
-except Exception:
-    pass
-
-from backend import config  # noqa: E402
+except Exception as exc:
+    logger.debug("No se pudo forzar UTF-8 en stdout: %s", exc)
 
 # Secciones sin valor para el RAG: listas de fuentes, enlaces, notas al pie…
-_SECCIONES_EXCLUIDAS = frozenset({
-    "references",
-    "external links",
-    "see also",
-    "further reading",
-    "bibliography",
-    "notes",
-    "footnotes",
-    "citations",
-    "sources",
-    "in popular culture",
-    "gallery",
-    "works cited",
-})
+_SECCIONES_EXCLUIDAS = frozenset(
+    {
+        "references",
+        "external links",
+        "see also",
+        "further reading",
+        "bibliography",
+        "notes",
+        "footnotes",
+        "citations",
+        "sources",
+        "in popular culture",
+        "gallery",
+        "works cited",
+    }
+)
 
 # User-Agent obligatorio por la política de la API de Wikipedia.
 _USER_AGENT = "MaquinaDelTiempoApp/1.0 (dlopezbernal@gmail.com)"
@@ -116,9 +123,8 @@ def _descargar(lang: str, title: str) -> tuple[str, str]:
         import wikipediaapi
     except ImportError:
         raise ImportError(
-            "Falta la librería 'wikipedia-api'. Instálala con:\n"
-            "   pip install wikipedia-api"
-        )
+            "Falta la librería 'wikipedia-api'. Instálala con:\n   pip install wikipedia-api"
+        ) from None
 
     wiki = wikipediaapi.Wikipedia(
         user_agent=_USER_AGENT,
@@ -179,23 +185,26 @@ def main() -> None:
 
     if args.personaje_id not in personajes_cfg.NOMBRES:
         ids_validos = ", ".join(personajes_cfg.NOMBRES.keys())
-        print(f"❌ Personaje '{args.personaje_id}' no encontrado.")
-        print(f"   IDs válidos: {ids_validos}")
+        logger.error(
+            "Personaje '%s' no encontrado. IDs válidos: %s",
+            args.personaje_id,
+            ids_validos,
+        )
         sys.exit(1)
 
     # Parsear URL.
     try:
         lang, titulo_slug = _parsear_url(args.url)
     except ValueError as e:
-        print(f"❌ {e}")
+        logger.error("%s", e)
         sys.exit(1)
 
-    print(f"🌐 Descargando '{titulo_slug}' de Wikipedia ({lang})…")
+    logger.info("🌐 Descargando '%s' de Wikipedia (%s)…", titulo_slug, lang)
 
     try:
         titulo_real, contenido = _descargar(lang, titulo_slug)
     except (ImportError, ValueError) as e:
-        print(f"❌ {e}")
+        logger.error("%s", e)
         sys.exit(1)
 
     # Carpeta de destino.
@@ -208,11 +217,9 @@ def main() -> None:
     destino.write_text(contenido, encoding="utf-8")
 
     num_lineas = contenido.count("\n") + 1
-    print(f"✅ Guardado: {destino}")
-    print(f"   {num_lineas} líneas · {len(contenido):,} caracteres")
-    print()
-    print("Ahora reconstruye el índice vectorial con:")
-    print("   python -m backend.ingest")
+    logger.info("✅ Guardado: %s", destino)
+    logger.info("   %s líneas · %s caracteres", num_lineas, f"{len(contenido):,}")
+    logger.info("Ahora reconstruye el índice vectorial con:  python -m backend.ingest")
 
 
 if __name__ == "__main__":

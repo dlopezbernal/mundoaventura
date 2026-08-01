@@ -13,11 +13,14 @@ devuelva como HTTP 400 con un mensaje claro, en vez de un 500 genérico.
 """
 
 import io
+import logging
 
 from elevenlabs.client import ElevenLabs
 
 from backend import config
 from backend.services import settings_service
+
+logger = logging.getLogger(__name__)
 
 
 class VoiceError(ValueError):
@@ -29,7 +32,9 @@ class VoiceError(ValueError):
 
 # Frase fija para el botón "Probar voz" de la pestaña Personajes: la misma
 # para todos los personajes, así el adulto compara voces en igualdad de condiciones.
-FRASE_PRUEBA_VOZ = "¡Hola! Prueba de sonido, uno, dos, tres. El rápido zorro marrón salta sobre el perro perezoso."
+FRASE_PRUEBA_VOZ = (
+    "¡Hola! Prueba de sonido, uno, dos, tres. El rápido zorro marrón salta sobre el perro perezoso."
+)
 
 
 # Cliente de ElevenLabs, creado una sola vez (singleton perezoso).
@@ -68,14 +73,16 @@ def transcribir(audio_bytes: bytes) -> str:
         )
         texto = (resultado.text or "").strip()
     except Exception as exc:
-        raise VoiceError(f"Error al transcribir con ElevenLabs: {exc}")
+        raise VoiceError(f"Error al transcribir con ElevenLabs: {exc}") from exc
 
     if settings_service.get("DEBUG"):
-        print(
-            f"[VOZ] 🎙️ STT OK · {len(audio_bytes)} bytes de audio recibidos del "
-            f'frontend → texto transcrito: "{texto}" '
-            f"(ElevenLabs modelo={settings_service.get('ELEVENLABS_STT_MODEL')}, "
-            f"idioma={settings_service.get('STT_LANG')})"
+        logger.debug(
+            "[VOZ] 🎙️ STT OK · %s bytes de audio recibidos del frontend → texto "
+            'transcrito: "%s" (ElevenLabs modelo=%s, idioma=%s)',
+            len(audio_bytes),
+            texto,
+            settings_service.get("ELEVENLABS_STT_MODEL"),
+            settings_service.get("STT_LANG"),
         )
     return texto
 
@@ -99,7 +106,7 @@ def sintetizar(texto: str, voz_id: str) -> bytes:
             return bytes(stream)
         return b"".join(stream)
     except Exception as exc:
-        raise VoiceError(f"Error al sintetizar con ElevenLabs: {exc}")
+        raise VoiceError(f"Error al sintetizar con ElevenLabs: {exc}") from exc
 
 
 def estado() -> dict:
@@ -148,8 +155,14 @@ def probar() -> dict:
         return {"ok": True, "mensaje": "ElevenLabs conectado."}
     except Exception as exc:
         detalle = _detalle_error(exc)
-        if getattr(exc, "status_code", None) == 401 and detalle.get("status") == "missing_permissions":
-            return {"ok": True, "mensaje": "ElevenLabs conectado (clave válida, con permisos limitados)."}
+        if (
+            getattr(exc, "status_code", None) == 401
+            and detalle.get("status") == "missing_permissions"
+        ):
+            return {
+                "ok": True,
+                "mensaje": "ElevenLabs conectado (clave válida, con permisos limitados).",
+            }
         mensaje = detalle.get("message") or str(exc)
         return {"ok": False, "mensaje": f"No se pudo conectar con ElevenLabs: {mensaje}"}
 
@@ -181,7 +194,10 @@ def listar_voces() -> dict:
         respuesta = _get_client().voices.get_all()
     except Exception as exc:
         detalle = _detalle_error(exc)
-        if getattr(exc, "status_code", None) == 401 and detalle.get("status") == "missing_permissions":
+        if (
+            getattr(exc, "status_code", None) == 401
+            and detalle.get("status") == "missing_permissions"
+        ):
             return {
                 "disponible": False,
                 "voces": [],
@@ -190,7 +206,11 @@ def listar_voces() -> dict:
                 "elevenlabs.io/voices).",
             }
         mensaje = detalle.get("message") or str(exc)
-        return {"disponible": False, "voces": [], "mensaje": f"No se pudieron cargar las voces: {mensaje}"}
+        return {
+            "disponible": False,
+            "voces": [],
+            "mensaje": f"No se pudieron cargar las voces: {mensaje}",
+        }
 
     voces = [
         {

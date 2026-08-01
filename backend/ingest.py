@@ -35,22 +35,27 @@ Importante: los documentos deben estar EN INGLÉS (los embeddings rinden mucho
 mejor). En el chat, la pregunta del niño se traduce ES→EN automáticamente.
 """
 
+import logging
 import sys
 from pathlib import Path
-
-# En Windows la consola puede usar cp1252 y romper al imprimir emojis (✅, ·...).
-# Forzamos UTF-8 en la salida para que el resumen no falle en ningún terminal.
-try:
-    sys.stdout.reconfigure(encoding="utf-8")
-except Exception:
-    pass
 
 # Permite ejecutar el script tanto con "python -m backend.ingest" como directamente.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from backend import config  # noqa: E402
+from backend import config, logging_config  # noqa: E402
 from backend.services import documentos_service, settings_service  # noqa: E402
+
+logging_config.configurar_logging()
+logger = logging.getLogger(__name__)
+
+# En Windows la consola puede usar cp1252 y romper al emitir emojis (✅, ·...).
+# Forzamos UTF-8 en la salida para que el resumen no falle en ningún terminal. El
+# mensaje de fallo es ASCII a propósito (loguearlo no debe fallar por el encoding).
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception as exc:
+    logger.debug("No se pudo forzar UTF-8 en stdout: %s", exc)
 
 
 def main() -> None:
@@ -59,25 +64,28 @@ def main() -> None:
     La lógica de troceado e indexado vive en `documentos_service` (fuente única,
     compartida con el menú de configuración), que también reindexa de forma
     INCREMENTAL por personaje. Aquí solo se lanza el reindexado completo y se
-    imprime el resumen, para el flujo clásico `python -m backend.ingest`.
+    registra el resumen, para el flujo clásico `python -m backend.ingest`.
     """
     base = config.DOCUMENTOS_DIR
     if not base.exists():
-        print(f"❌ No existe la carpeta de documentos: {base}")
+        logger.error("No existe la carpeta de documentos: %s", base)
         sys.exit(1)
 
-    print(
-        f"Troceado: chunk_size={settings_service.get('CHUNK_SIZE')}, "
-        f"overlap={settings_service.get('CHUNK_OVERLAP')}\n"
+    logger.info(
+        "Troceado: chunk_size=%s, overlap=%s",
+        settings_service.get("CHUNK_SIZE"),
+        settings_service.get("CHUNK_OVERLAP"),
     )
     resumen = documentos_service.reindexar_todo()
-    print(
-        f"✅ Indexado completo: {resumen['archivos']} archivos → {resumen['chunks']} chunks "
-        f"de {resumen['personajes']} personaje(s) en la colección "
-        f"'{settings_service.get('CHROMA_COLLECTION')}'."
+    logger.info(
+        "✅ Indexado completo: %s archivos → %s chunks de %s personaje(s) en la colección '%s'.",
+        resumen["archivos"],
+        resumen["chunks"],
+        resumen["personajes"],
+        settings_service.get("CHROMA_COLLECTION"),
     )
     if resumen["chunks"] == 0:
-        print("   (Aún no has puesto documentos. Mira backend/documentos/README.md)")
+        logger.warning("Aún no has puesto documentos. Mira backend/documentos/README.md")
 
 
 if __name__ == "__main__":

@@ -9,6 +9,12 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.ruff_cache/
+
+# ─── Cobertura de tests (pytest-cov) ────────────────────────────
+.coverage
+coverage.xml
+htmlcov/
 
 # ─── Variables de entorno ───────────────────────────────────────
 # .env contiene configuración local (URLs, rutas). Solo se versiona .env.example.

@@ -1,8 +1,14 @@
 # =====================================================================
 #  DEPENDENCIAS DEL BACKEND (servidor de IA)
 # ---------------------------------------------------------------------
-#  Instálalas dentro de tu entorno virtual con:
-#       pip install -r requirements-backend.txt
+#  ⚠️  FALLBACK, NO la fuente reproducible. Desde H1 el proyecto usa `uv`:
+#      la lista de dependencias vive en pyproject.toml y el pin EXACTO de
+#      todas las transitivas (con hashes) en uv.lock. La instalación
+#      reproducible "clona y arranca" es:
+#           uv sync
+#      Este fichero se conserva como alternativa sin pin para quien no use
+#      uv (mismo conjunto de paquetes, sin versiones clavadas):
+#           pip install -r requirements-backend.txt
 #
 #  Ya NO se genera en local: la generación de imágenes se delega a
 #  Replicate.com (su GPU). Por eso este backend es MUY ligero: no

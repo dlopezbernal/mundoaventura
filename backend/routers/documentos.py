@@ -62,7 +62,9 @@ async def subir_documento(
     if len(pares) == 1:
         nombre, contenido = pares[0]
         try:
-            documento = documentos_service.subir(personaje_id, nombre, contenido, sobrescribir=sobrescribir)
+            documento = documentos_service.subir(
+                personaje_id, nombre, contenido, sobrescribir=sobrescribir
+            )
         except documentos_service.ConflictoDocumentoError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except ValueError as exc:
@@ -77,7 +79,9 @@ async def subir_documento(
 def ingerir_url(personaje_id: str, req: DocumentoUrlRequest):
     """Ingesta un artículo de Wikipedia desde su URL (traducido automáticamente si hace falta)."""
     try:
-        documento = documentos_service.ingesta_url(personaje_id, req.url, sobrescribir=req.sobrescribir)
+        documento = documentos_service.ingesta_url(
+            personaje_id, req.url, sobrescribir=req.sobrescribir
+        )
     except documentos_service.ConflictoDocumentoError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     except ValueError as exc:
@@ -98,7 +102,9 @@ def obtener_contenido(personaje_id: str, documento_id: int):
 def actualizar_contenido(personaje_id: str, documento_id: int, req: DocumentoContenidoRequest):
     """Edita el texto de un documento .txt/.md existente y reindexa al personaje."""
     try:
-        documento = documentos_service.actualizar_contenido(personaje_id, documento_id, req.contenido)
+        documento = documentos_service.actualizar_contenido(
+            personaje_id, documento_id, req.contenido
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "documento": documento}

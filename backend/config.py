@@ -43,9 +43,7 @@ REPLICATE_API_TOKEN: str = os.getenv("REPLICATE_API_TOKEN", "").strip()
 
 # Modelo de texto-a-imagen que genera la escena (personaje + ubicación).
 # Por defecto FLUX schnell: muy rápido y barato, calidad excelente.
-REPLICATE_MODEL: str = os.getenv(
-    "REPLICATE_MODEL", "black-forest-labs/flux-schnell"
-).strip()
+REPLICATE_MODEL: str = os.getenv("REPLICATE_MODEL", "black-forest-labs/flux-schnell").strip()
 
 # Modelo de EDICIÓN de imagen para el modo "Usar mi foto": en una sola llamada
 # estiliza la foto del niño a Pixar 3D y añade el personaje de forma coherente.
@@ -79,9 +77,7 @@ CLIP_TOKEN_LIMIT: int = int(os.getenv("CLIP_TOKEN_LIMIT", "77"))
 # ---------------------------------------------------------------------------
 # Modelo de lenguaje que responde como el personaje. Por defecto Llama 3 (8B):
 # rápido, barato y suficientemente bueno para respuestas cortas para niños.
-REPLICATE_LLM_MODEL: str = os.getenv(
-    "REPLICATE_LLM_MODEL", "meta/meta-llama-3-8b-instruct"
-).strip()
+REPLICATE_LLM_MODEL: str = os.getenv("REPLICATE_LLM_MODEL", "meta/meta-llama-3-8b-instruct").strip()
 
 # Tope de longitud de la respuesta del LLM (en "tokens" ≈ trozos de palabra).
 LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "300"))
@@ -114,9 +110,9 @@ EVALUATOR_UMBRAL_ALTO: float = float(os.getenv("EVALUATOR_UMBRAL_ALTO", "0.95"))
 # un mensaje FIJO de "no lo sé" sin llamar a ningún modelo? True = comportamiento de
 # siempre (fallback a conocimiento general). False = chat estrictamente anclado a
 # los documentos: fuera de ellos, respuesta fija y sin coste de LLM.
-PERMITIR_CONOCIMIENTO_GENERAL: bool = (
-    os.getenv("PERMITIR_CONOCIMIENTO_GENERAL", "true").strip().lower() in ("1", "true", "yes", "on")
-)
+PERMITIR_CONOCIMIENTO_GENERAL: bool = os.getenv(
+    "PERMITIR_CONOCIMIENTO_GENERAL", "true"
+).strip().lower() in ("1", "true", "yes", "on")
 
 # --- Traducción (DeepL) ---
 # Los documentos están en INGLÉS (mejora la calidad de los embeddings). Para
@@ -141,9 +137,7 @@ CONFIG_DB_PATH: Path = (
 # --- Ingesta de documentos (chunking) ---
 # Carpeta raíz de los documentos, organizada por personaje:
 #   backend/documentos/<personaje_id>/<archivo.pdf|.txt|.md>
-DOCUMENTOS_DIR: Path = (
-    PROJECT_ROOT / os.getenv("DOCUMENTOS_DIR", "backend/documentos")
-).resolve()
+DOCUMENTOS_DIR: Path = (PROJECT_ROOT / os.getenv("DOCUMENTOS_DIR", "backend/documentos")).resolve()
 
 # Troceado (chunking) con solape, en caracteres:
 #   CHUNK_SIZE    → tamaño de cada fragmento.

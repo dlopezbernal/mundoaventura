@@ -26,8 +26,6 @@ async def transcribe(audio: UploadFile = File(...)):
         # Falta la clave o el audio no se pudo transcribir -> 400.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(
-            status_code=500, detail=f"Error al transcribir: {exc}"
-        ) from exc
+        raise HTTPException(status_code=500, detail=f"Error al transcribir: {exc}") from exc
 
     return {"texto": texto}

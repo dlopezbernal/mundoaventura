@@ -1,0 +1,103 @@
+[project]
+name = "maquina-del-tiempo-backend"
+version = "0.3.0"
+description = "Backend de IA (FastAPI) de la Máquina del Tiempo: escena (Replicate) + chat RAG por personaje."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+
+# Dependencias del backend (antes en requirements-backend.txt). Las cotas son
+# deliberadamente conservadoras: chromadb y langchain-text-splitters rompen la
+# API entre menores, así que se acotan por minor. El pin EXACTO (con hashes de
+# todas las transitivas) vive en uv.lock, que es lo que garantiza el "clona y
+# arranca" reproducible: `uv sync` instala exactamente lo del lockfile.
+dependencies = [
+    # --- Generación de imágenes y conversación (en la nube) ---
+    "replicate>=1.0,<2",
+    # --- Configuración editable en caliente (menú de ajustes) ---
+    "sqlmodel>=0.0.39,<0.1",
+    # --- Conversación / RAG ---
+    "chromadb>=1.5,<2",
+    "deepl>=1.30,<2",
+    "elevenlabs>=2.0,<3.0",
+    # --- Ingesta de documentos ---
+    "langchain-text-splitters>=1.1,<2",
+    "pypdf>=6.0,<7",
+    "wikipedia-api>=0.15,<0.16",
+    # --- Servidor web / API ---
+    "fastapi>=0.136,<0.137",
+    "uvicorn[standard]>=0.48,<0.49",
+    "python-multipart>=0.0.20,<0.1",
+    "pydantic>=2.13,<3",
+    "python-dotenv>=1.0,<2",
+]
+
+[dependency-groups]
+# Herramientas de desarrollo (no van al despliegue). Se instalan con `uv sync`
+# (uv incluye los dependency-groups por defecto) y quedan disponibles con
+# `uv run ruff ...`, `uv run pytest ...`.
+dev = [
+    "pytest>=8.0,<9",
+    "pytest-cov>=6.0,<8",
+    "ruff>=0.14,<0.15",
+    "pre-commit>=4.0,<5",
+    "httpx>=0.28,<0.29",  # para fastapi.testclient (TestClient)
+]
+
+[tool.uv]
+# El repo se ejecuta desde la raíz (`uvicorn backend.main:app`), NO se instala
+# `backend/` como wheel. `package = false` hace que `uv sync` solo resuelva e
+# instale las dependencias en .venv; `backend` es importable por estar en la
+# raíz del proyecto (cwd), que es como ya se ejecutaba.
+package = false
+
+# ---------------------------------------------------------------------------
+# Ruff — lint + formato (sustituye a black/isort/flake8)
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+# El frontend tiene su propio linter (oxlint); ruff solo mira Python.
+extend-exclude = ["frontend-react", ".venv"]
+
+[tool.ruff.lint]
+# E/F: errores y pyflakes · I: orden de imports · UP: pyupgrade ·
+# B: bugbear (fallos sutiles) · SIM: simplificaciones.
+select = ["E", "F", "I", "UP", "B", "SIM"]
+# E501 (línea larga) lo gestiona el formateador para el código; los comentarios
+# didácticos largos de este repo se dejan como están a propósito.
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["backend"]
+
+[tool.ruff.lint.flake8-bugbear]
+# Los "defaults" de FastAPI (Depends/File/Form/...) son llamadas en la firma A
+# PROPÓSITO: es el patrón idiomático de inyección de dependencias del framework,
+# no el antipatrón que B008 persigue. Se permiten explícitamente.
+extend-immutable-calls = [
+    "fastapi.Depends",
+    "fastapi.File",
+    "fastapi.Form",
+    "fastapi.Query",
+    "fastapi.Body",
+    "fastapi.Path",
+    "fastapi.Header",
+]
+
+# ---------------------------------------------------------------------------
+# Pytest + cobertura
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.coverage.run]
+source = ["backend"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+# En H1 NO se fija un umbral GLOBAL: se testean solo funciones puras (ver
+# docs/H1-andamiaje.md §3), así que el resto del backend queda sin cubrir a
+# propósito. El objetivo ≥80 % aplica a los módulos de funciones puras y se
+# verifica por informe, no como puerta global (que llegará con más tests).

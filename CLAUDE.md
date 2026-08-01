@@ -10,31 +10,40 @@ Los comentarios del código, los docstrings y el README están en **español** �
 
 ## Comandos
 
+La gestión de dependencias del backend usa **`uv`** (Hito 1): `pyproject.toml` declara las dependencias y `uv.lock` clava las versiones exactas (incluidas las transitivas, con hashes). Ese lockfile es la **fuente de reproducibilidad** ("clona y arranca"); `requirements-backend.txt` se conserva solo como *fallback sin pin* para quien no use uv.
+
 ```powershell
 # Configuración inicial (Windows PowerShell)
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
-pip install -r requirements-backend.txt
+uv sync                              # crea .venv e instala EXACTAMENTE lo del uv.lock (backend + herramientas dev)
 Copy-Item .env.example .env          # luego rellena REPLICATE_API_TOKEN, DEEPL_API_KEY y ELEVENLABS_API_KEY
 cd frontend-react; npm install; cd ..   # dependencias del frontend (Node 20+), una sola vez
 
-# Arrancar el backend (una terminal) — sirve en http://127.0.0.1:8000, docs en /docs
-uvicorn backend.main:app --reload
+# Arrancar backend + frontend a la vez (Windows), cada uno en su ventana
+.\scripts\dev.ps1                    # o -Solo back / -Solo front
 
-# Arrancar el frontend (otra terminal) — servidor de desarrollo Vite en http://localhost:5173
+# Arrancar el backend a mano (una terminal) — sirve en http://127.0.0.1:8000, docs en /docs
+uv run uvicorn backend.main:app --reload
+
+# Arrancar el frontend a mano (otra terminal) — servidor de desarrollo Vite en http://localhost:5173
 cd frontend-react; npm run dev          # redirige /api y /health al backend
 
 # Construir/actualizar el índice RAG — OBLIGATORIO antes de que el chat funcione, y tras cualquier cambio de documentos.
 # Cada ejecución borra y reconstruye la colección de ChromaDB desde cero.
-python -m backend.ingest
+uv run python -m backend.ingest
 
 # (Opcional) descarga un artículo de Wikipedia limpio a backend/documentos/<id>/, luego reindexa
-python -m backend.fetch_wikipedia t-rex https://simple.wikipedia.org/wiki/Tyrannosaurus_rex
+uv run python -m backend.fetch_wikipedia t-rex https://simple.wikipedia.org/wiki/Tyrannosaurus_rex
+
+# Calidad (Hito 1): lint, formato y tests
+uv run ruff check backend/ tests/       # lint (reglas E,F,I,UP,B,SIM)
+uv run ruff format backend/ tests/      # formateo
+uv run pytest --cov=backend             # tests + cobertura
+uv run pre-commit install               # (una vez) engancha ruff + oxlint a cada commit
 ```
 
-No hay **suite de tests automatizada**. Verifica los cambios a mano: comprueba que `GET /health` muestra `token_configurado: true`, `deepl_ok: true` y `elevenlabs_ok: true`, y luego prueba el flujo desde la interfaz React o `/docs`.
+Hay una **suite de tests con `pytest`** (Hito 1) en `tests/`, de momento sobre las funciones puras de los servicios; el CI de GitHub Actions (`.github/workflows/ci.yml`) corre lint + formato + pytest (backend) y oxlint + build (frontend) en cada push/PR contra `dev`. Además de los tests, verifica a mano los cambios de IA: comprueba que `GET /health` muestra `token_configurado: true`, `deepl_ok: true` y `elevenlabs_ok: true`, y luego prueba el flujo desde la interfaz React o `/docs`.
 
-Activa `DEBUG=true` para imprimir en la **consola del backend** trazas de los prompts, del razonamiento del RAG y de la voz (`[VOZ] 🎙️ STT ...` / `[VOZ] 🔊 TTS ...`). `DEBUG` es ahora un ajuste editable en caliente (`settings_service`, con valor inicial tomado del `.env`), así que también se puede activar/desactivar desde la pestaña "Sistema" del menú de configuración sin reiniciar. **A diferencia de la mayoría de flags de desarrollo, `DEBUG` también es visible para el niño**: cuando está en `true`, `rag_service.responder` incluye además `fuentes` en las respuestas de `/api/ask` fundamentadas en el RAG, y el chat (`Chat.tsx`) muestra un desplegable `<details>` "📚 ¿De dónde lo he sacado?" con ellas (ver "El Evaluator" más abajo). Déjalo en `false` para la versión de cara al niño — tanto las trazas de consola como ese desplegable. El botón de diagnóstico "Probar conexión" del frontend se controla aparte con `VITE_DEBUG=true` en `frontend-react/.env`.
+**Logging (Hito 1).** El backend usa el módulo `logging` (ya no `print()`), configurado en `backend/logging_config.py`: formato con marca de tiempo y nivel por `LOG_LEVEL` (`DEBUG`/`INFO`/`WARNING`/`ERROR`, por defecto `INFO`). `LOG_LEVEL` controla el *detalle* de los logs y es independiente del ajuste de producto `DEBUG`. Activa `DEBUG=true` para emitir en la **consola del backend** trazas de los prompts, del razonamiento del RAG y de la voz (`[VOZ] 🎙️ STT ...` / `[VOZ] 🔊 TTS ...`); al activarlo, `logging_config.aplicar_nivel_debug()` baja el logger `backend` a nivel `DEBUG` para que esas trazas se vean (y `settings_service.set_many` lo resincroniza al cambiar `DEBUG` en caliente). `DEBUG` es un ajuste editable en caliente (`settings_service`, con valor inicial tomado del `.env`), así que también se puede activar/desactivar desde la pestaña "Sistema" del menú de configuración sin reiniciar. **A diferencia de la mayoría de flags de desarrollo, `DEBUG` también es visible para el niño**: cuando está en `true`, `rag_service.responder` incluye además `fuentes` en las respuestas de `/api/ask` fundamentadas en el RAG, y el chat (`Chat.tsx`) muestra un desplegable `<details>` "📚 ¿De dónde lo he sacado?" con ellas (ver "El Evaluator" más abajo). Déjalo en `false` para la versión de cara al niño — tanto las trazas de consola como ese desplegable. El botón de diagnóstico "Probar conexión" del frontend se controla aparte con `VITE_DEBUG=true` en `frontend-react/.env`.
 
 ## Arquitectura
 

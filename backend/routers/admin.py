@@ -93,8 +93,13 @@ def exportar():
 
 # Campos editables al importar (los que aceptan crear/actualizar de cada servicio).
 _CAMPOS_PERSONAJE = (
-    "nombre", "categoria", "emoji", "prompt_imagen", "voz_id",
-    "prompt_sistema_override", "activo",
+    "nombre",
+    "categoria",
+    "emoji",
+    "prompt_imagen",
+    "voz_id",
+    "prompt_sistema_override",
+    "activo",
 )
 _CAMPOS_UBICACION = ("nombre", "emoji", "prompt_imagen", "activo")
 

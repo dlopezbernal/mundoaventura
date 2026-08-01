@@ -168,8 +168,8 @@ def guardar(cambios: dict[str, str]) -> list[dict]:
     for proveedor, clave in cambios.items():
         variable = _PROVEEDORES[proveedor]["variable"]
         limpio = clave.strip()
-        os.environ[variable] = limpio          # lo lee la librería replicate en cada llamada
-        setattr(config, variable, limpio)       # lo leen translation/voice_service
+        os.environ[variable] = limpio  # lo lee la librería replicate en cada llamada
+        setattr(config, variable, limpio)  # lo leen translation/voice_service
     translation_service.reiniciar()
     voice_service.reiniciar()
 
