@@ -125,6 +125,28 @@ literales promedian 0,736, pegadas al umbral BAJO (0,75).
 - Determinismo sujeto al LLM alojado: a `temperature=0` es casi determinista, no
   garantizado al 100 % (por eso se reporta σ).
 
+## 9. H4 — Mejoras de retrieval (tabla acumulada)
+
+Cada sub-hito de H4 se mide contra la línea base y se acumula aquí. Cambio por
+sub-rama, con su ADR (`docs/decisiones/ADR-004…`).
+
+| Métrica | Baseline | H4.1 +embeddings | H4.2 +chunking | H4.3 +reranker | H4.4 −DeepL |
+|---|---|---|---|---|---|
+| Backend | minilm-en (0,75) | multi-minilm (0,80) | — | — | — |
+| **recall@3 chunk** | 78,2 % | **81,8 %** | | | |
+| **lat. retrieval (ms)** | 191,7 | **27,3** | | | |
+| Acierto de ruteo | 66,7 % | 70,0 % | | | |
+| Español | 99 % | 100 % | | | |
+| Roto de personaje | 0 % | 0 % | | | |
+
+**H4.1 (embeddings multilingües, `multi-minilm`):** recall@3 a nivel de chunk sube
+78,2 → 81,8 %, y la latencia de retrieval cae **7×** (191 → 27 ms: `fastembed` embebe
+la consulta mucho más rápido que la embedding-function por defecto de Chroma). Al
+mismo umbral que la baseline (0,75) el ruteo ya mejora (66,7 → 70 %), efecto puro del
+embedding. El umbral se recalibra a 0,80 (equilibrado; ver ADR-004). Nota: el recall
+de FICHERO sigue saturado al 100 % (poco discriminante) — por eso la métrica que
+gobierna H4 es el recall de **chunk**.
+
 ## 8. Cómo reproducir
 
 ```powershell
