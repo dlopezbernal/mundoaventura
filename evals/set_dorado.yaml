@@ -1,0 +1,672 @@
+# Set dorado — preguntas de CALIDAD (Hito 3)
+# ============================================
+# 20 preguntas por personaje activo, con la distribución del doc de H3:
+#   6 literal · 5 inferencial · 4 fuera_dominio · 3 sin_respuesta · 2 ambigua
+#
+# Escritas en ESPAÑOL INFANTIL REAL a propósito: sin acentos, con faltas, frases
+# cortas y directas, vocabulario de niño ("bicho", "malo", "bibes"). Si sonaran a
+# adulto correcto, estaríamos midiendo un usuario que no existe.
+#
+# origen_esperado: lo que se espera que decida el Evaluator con la config por
+#   defecto (PERMITIR_CONOCIMIENTO_GENERAL=true → las de "sin respuesta" caen en
+#   GENERAL). Las ambiguas usan "cualquiera": solo se mide que no rompan.
+# chunk_esperado: fichero fuente donde vive la respuesta (para recall@3). Solo en
+#   literal/inferencial; vacío en las demás.
+
+# ─────────────────────────── T-REX ───────────────────────────
+- id: trex-01
+  personaje_id: t-rex
+  pregunta: "k comias tu?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+  notas: "dieta carnívora; escrito con faltas a propósito"
+- id: trex-02
+  personaje_id: t-rex
+  pregunta: "cuanto medias de largo?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+- id: trex-03
+  personaje_id: t-rex
+  pregunta: "cuando bibias tu bicho?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+  notas: "Cretácico, hace ~66 millones de años"
+- id: trex-04
+  personaje_id: t-rex
+  pregunta: "tenias los bracitos pekeños?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+- id: trex-05
+  personaje_id: t-rex
+  pregunta: "tu mordisco era muy fuerte?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+- id: trex-06
+  personaje_id: t-rex
+  pregunta: "kien te descubrio?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+  notas: "Barnum Brown en 1902"
+- id: trex-07
+  personaje_id: t-rex
+  pregunta: "eras cazador o comias bichos ya muertos?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+  notas: "cazador o carroñero, puede que ambos"
+- id: trex-08
+  personaje_id: t-rex
+  pregunta: "por k tenias la cabeza tan ancha pero el morro fino?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+  notas: "visión binocular"
+- id: trex-09
+  personaje_id: t-rex
+  pregunta: "como se llama el t rex mas grande k an encontrado?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+  notas: "Scotty"
+- id: trex-10
+  personaje_id: t-rex
+  pregunta: "por k os extinguisteis los dinos?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+- id: trex-11
+  personaje_id: t-rex
+  pregunta: "podias correr rapido con esas patas?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: tyrannosaurus_rex_simple.md
+  notas: "Jane ~20-30 mph"
+- id: trex-12
+  personaje_id: t-rex
+  pregunta: "te gusta el futbol?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: trex-13
+  personaje_id: t-rex
+  pregunta: "sabes bailar?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: trex-14
+  personaje_id: t-rex
+  pregunta: "tienes miedo a la oscuridad?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: trex-15
+  personaje_id: t-rex
+  pregunta: "k comes en navidad?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: trex-16
+  personaje_id: t-rex
+  pregunta: "kien gano la liga este año?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: trex-17
+  personaje_id: t-rex
+  pregunta: "ke hora es ahora?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: trex-18
+  personaje_id: t-rex
+  pregunta: "cuanto cuesta un movil nuevo?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: trex-19
+  personaje_id: t-rex
+  pregunta: "y eso por ke"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
+- id: trex-20
+  personaje_id: t-rex
+  pregunta: "pero pero y si te pillan?"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
+
+# ─────────────────────────── TRICERATOPS ───────────────────────────
+- id: tri-01
+  personaje_id: triceratops
+  pregunta: "k comias tu?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+  notas: "herbívoro: plantas, helechos, hojas"
+- id: tri-02
+  personaje_id: triceratops
+  pregunta: "cuantos cuernos tenias?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+- id: tri-03
+  personaje_id: triceratops
+  pregunta: "para k usabas los cuernos?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+  notas: "defenderse y presumir, no cazar"
+- id: tri-04
+  personaje_id: triceratops
+  pregunta: "eras muy grande?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+  notas: "~9 metros, pesaba como un elefante"
+- id: tri-05
+  personaje_id: triceratops
+  pregunta: "donde bibias?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+  notas: "Norteamérica"
+- id: tri-06
+  personaje_id: triceratops
+  pregunta: "kien era tu enemigo malo?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+  notas: "el T-Rex"
+- id: tri-07
+  personaje_id: triceratops
+  pregunta: "como cortabas las plantas duras?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+  notas: "pico como el de un loro"
+- id: tri-08
+  personaje_id: triceratops
+  pregunta: "tu eras cazador?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+  notas: "no, herbívoro; cuernos para defensa"
+- id: tri-09
+  personaje_id: triceratops
+  pregunta: "como te defendias del t rex?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+- id: tri-10
+  personaje_id: triceratops
+  pregunta: "bibias hace mucho mucho tiempo?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+  notas: "final del Cretácico, ~66 millones de años"
+- id: tri-11
+  personaje_id: triceratops
+  pregunta: "el t rex te podia comer a ti?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: triceratops_ejemplo.md
+- id: tri-12
+  personaje_id: triceratops
+  pregunta: "te gustan los helados?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: tri-13
+  personaje_id: triceratops
+  pregunta: "sabes nadar?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: tri-14
+  personaje_id: triceratops
+  pregunta: "tienes amigos para jugar?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: tri-15
+  personaje_id: triceratops
+  pregunta: "te gusta ver la tele?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: tri-16
+  personaje_id: triceratops
+  pregunta: "k dia es hoy?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: tri-17
+  personaje_id: triceratops
+  pregunta: "cuanto cuesta un coche?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: tri-18
+  personaje_id: triceratops
+  pregunta: "kien es el presidente ahora?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: tri-19
+  personaje_id: triceratops
+  pregunta: "y despues k paso"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
+- id: tri-20
+  personaje_id: triceratops
+  pregunta: "eso por k"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
+
+# ─────────────────────────── SHERLOCK HOLMES ───────────────────────────
+- id: sher-01
+  personaje_id: sherlock_holmes
+  pregunta: "donde bibes tu?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "221B Baker Street, Londres"
+- id: sher-02
+  personaje_id: sherlock_holmes
+  pregunta: "kien es tu amigo?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "el doctor Watson"
+- id: sher-03
+  personaje_id: sherlock_holmes
+  pregunta: "en k trabajas tu?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "detective"
+- id: sher-04
+  personaje_id: sherlock_holmes
+  pregunta: "kien te invento?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "Arthur Conan Doyle en 1887"
+- id: sher-05
+  personaje_id: sherlock_holmes
+  pregunta: "k usas para mirar las pistas?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "lupa"
+- id: sher-06
+  personaje_id: sherlock_holmes
+  pregunta: "k gorro llevas puesto?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "gorra de cazador (deerstalker)"
+- id: sher-07
+  personaje_id: sherlock_holmes
+  pregunta: "como resuelbes los misterios?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "observación y deducción"
+- id: sher-08
+  personaje_id: sherlock_holmes
+  pregunta: "tu eres una persona de verdad?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "no, personaje de ficción"
+- id: sher-09
+  personaje_id: sherlock_holmes
+  pregunta: "por k te fijas en cosas tan pekeñas?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "ve detalles que los demás no ven"
+- id: sher-10
+  personaje_id: sherlock_holmes
+  pregunta: "en k ciudad trabajas tu?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "Londres"
+- id: sher-11
+  personaje_id: sherlock_holmes
+  pregunta: "kien escribio tus aventuras?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: sherlock_base.md
+  notas: "Arthur Conan Doyle"
+- id: sher-12
+  personaje_id: sherlock_holmes
+  pregunta: "te gusta el futbol?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: sher-13
+  personaje_id: sherlock_holmes
+  pregunta: "sabes cocinar?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: sher-14
+  personaje_id: sherlock_holmes
+  pregunta: "k musica te gusta?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: sher-15
+  personaje_id: sherlock_holmes
+  pregunta: "tienes mascota?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: sher-16
+  personaje_id: sherlock_holmes
+  pregunta: "kien gano el partido de ayer?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: sher-17
+  personaje_id: sherlock_holmes
+  pregunta: "k tiempo ba a acer mañana?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: sher-18
+  personaje_id: sherlock_holmes
+  pregunta: "cuanto cuesta una casa?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: sher-19
+  personaje_id: sherlock_holmes
+  pregunta: "y eso"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
+- id: sher-20
+  personaje_id: sherlock_holmes
+  pregunta: "pero como lo sabes tu"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
+
+# ─────────────────────────── LEONARDO DA VINCI ───────────────────────────
+- id: leo-01
+  personaje_id: leonardo_da_vinci
+  pregunta: "k cuadros pintaste tu?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: leonardo_ejemplo.md
+  notas: "la Gioconda (Mona Lisa) y la Última Cena"
+- id: leo-02
+  personaje_id: leonardo_da_vinci
+  pregunta: "cuando naciste tu?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: leonardo_ejemplo.md
+  notas: "1452 en Vinci"
+- id: leo-03
+  personaje_id: leonardo_da_vinci
+  pregunta: "por k escribias al reves?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: leonardo_ejemplo.md
+  notas: "escritura en espejo"
+- id: leo-04
+  personaje_id: leonardo_da_vinci
+  pregunta: "k inventos hiciste?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: leonardo_ejemplo.md
+  notas: "máquinas voladoras, helicóptero, paracaídas"
+- id: leo-05
+  personaje_id: leonardo_da_vinci
+  pregunta: "de donde eras tu?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: leonardo_ejemplo.md
+  notas: "Vinci, Italia"
+- id: leo-06
+  personaje_id: leonardo_da_vinci
+  pregunta: "cuando te moriste?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: leonardo_ejemplo.md
+  notas: "1519"
+- id: leo-07
+  personaje_id: leonardo_da_vinci
+  pregunta: "por k te gustaba tanto la naturaleza?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: leonardo_ejemplo.md
+  notas: "estudiaba agua, luz, pájaros, cuerpo humano"
+- id: leo-08
+  personaje_id: leonardo_da_vinci
+  pregunta: "tu eras solo pintor?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: leonardo_ejemplo.md
+  notas: "también inventor y científico"
+- id: leo-09
+  personaje_id: leonardo_da_vinci
+  pregunta: "kien te enseño a pintar?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: leonardo_da_vinci_es.en.md
+  notas: "Verrocchio"
+- id: leo-10
+  personaje_id: leonardo_da_vinci
+  pregunta: "para kien trabajaste en milan?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: leonardo_da_vinci_es.en.md
+  notas: "Ludovico Sforza"
+- id: leo-11
+  personaje_id: leonardo_da_vinci
+  pregunta: "por k kedan tan pocos cuadros tuyos?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: leonardo_da_vinci_es.en.md
+  notas: "solo ~20; experimentaba mucho"
+- id: leo-12
+  personaje_id: leonardo_da_vinci
+  pregunta: "te gusta la pizza?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: leo-13
+  personaje_id: leonardo_da_vinci
+  pregunta: "sabes montar en bici?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: leo-14
+  personaje_id: leonardo_da_vinci
+  pregunta: "tienes algun animal en casa?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: leo-15
+  personaje_id: leonardo_da_vinci
+  pregunta: "te gustan los videojuegos?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: leo-16
+  personaje_id: leonardo_da_vinci
+  pregunta: "k pelicula es la mejor de este año?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: leo-17
+  personaje_id: leonardo_da_vinci
+  pregunta: "kien gano el mundial?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: leo-18
+  personaje_id: leonardo_da_vinci
+  pregunta: "cuanto cuesta un ordenador?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: leo-19
+  personaje_id: leonardo_da_vinci
+  pregunta: "y eso como se hace"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
+- id: leo-20
+  personaje_id: leonardo_da_vinci
+  pregunta: "por k tu"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
+
+# ─────────────────────────── PETER PAN ───────────────────────────
+- id: pan-01
+  personaje_id: peter_pan
+  pregunta: "donde bibes tu?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_base.md
+  notas: "Nunca Jamás (Neverland)"
+- id: pan-02
+  personaje_id: peter_pan
+  pregunta: "kien es tu ada amiga?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_base.md
+  notas: "Campanilla (Tinker Bell)"
+- id: pan-03
+  personaje_id: peter_pan
+  pregunta: "kien es tu enemigo malo?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_base.md
+  notas: "el Capitán Garfio"
+- id: pan-04
+  personaje_id: peter_pan
+  pregunta: "como buelas tu?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_base.md
+  notas: "polvo de hada"
+- id: pan-05
+  personaje_id: peter_pan
+  pregunta: "kien te invento?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_base.md
+  notas: "J. M. Barrie en 1904"
+- id: pan-06
+  personaje_id: peter_pan
+  pregunta: "como se llaman los niños k biben contigo?"
+  tipo: literal
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_base.md
+  notas: "los Niños Perdidos (Lost Boys)"
+- id: pan-07
+  personaje_id: peter_pan
+  pregunta: "por k el capitan garfio te odia tanto?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_es.en.md
+  notas: "Peter le cortó la mano"
+- id: pan-08
+  personaje_id: peter_pan
+  pregunta: "k le paso a la mano del garfio?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_es.en.md
+  notas: "se la cortó Peter y se la comió un cocodrilo"
+- id: pan-09
+  personaje_id: peter_pan
+  pregunta: "por k no kieres acerte mayor?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_es.en.md
+  notas: "nunca crece, teme el mundo adulto"
+- id: pan-10
+  personaje_id: peter_pan
+  pregunta: "k ropa llevas puesta?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_base.md
+  notas: "ropa de hojas verdes"
+- id: pan-11
+  personaje_id: peter_pan
+  pregunta: "k arma llevas tu?"
+  tipo: inferencial
+  origen_esperado: RAG
+  chunk_esperado: peter_pan_base.md
+  notas: "una daga pequeña"
+- id: pan-12
+  personaje_id: peter_pan
+  pregunta: "te gusta el cole?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: pan-13
+  personaje_id: peter_pan
+  pregunta: "sabes jugar a la play?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: pan-14
+  personaje_id: peter_pan
+  pregunta: "k comes de desayuno?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: pan-15
+  personaje_id: peter_pan
+  pregunta: "tienes hermanos?"
+  tipo: fuera_dominio
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: pan-16
+  personaje_id: peter_pan
+  pregunta: "k dia es hoy?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: pan-17
+  personaje_id: peter_pan
+  pregunta: "kien gano la liga este año?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: pan-18
+  personaje_id: peter_pan
+  pregunta: "cuanto cuesta un juguete?"
+  tipo: sin_respuesta
+  origen_esperado: GENERAL
+  chunk_esperado: null
+- id: pan-19
+  personaje_id: peter_pan
+  pregunta: "y luego k"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
+- id: pan-20
+  personaje_id: peter_pan
+  pregunta: "pero pero por k"
+  tipo: ambigua
+  origen_esperado: cualquiera
+  chunk_esperado: null
