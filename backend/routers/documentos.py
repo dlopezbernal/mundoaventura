@@ -30,6 +30,8 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 
+from backend import config
+from backend.routers.limites import leer_con_limite
 from backend.schemas.documentos import (
     DocumentoContenidoRequest,
     DocumentoCopiarRequest,
@@ -62,7 +64,13 @@ async def subir_documento(
     # Lectura de los ficheros async (rápida); el trabajo pesado de subir
     # (traducción DeepL + reindexado) se delega al threadpool para no bloquear el
     # event loop. Ver docs/mediciones/H2-concurrencia.md.
-    pares = [(archivo.filename or "documento", await archivo.read()) for archivo in archivos]
+    pares = [
+        (
+            archivo.filename or "documento",
+            await leer_con_limite(archivo, config.MAX_DOCUMENTO_MB, "documento"),
+        )
+        for archivo in archivos
+    ]
     if len(pares) == 1:
         nombre, contenido = pares[0]
         try:

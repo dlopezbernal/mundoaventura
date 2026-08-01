@@ -12,6 +12,8 @@ Dos puertas de entrada (la lógica vive en services/generation_service.py):
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
+from backend import config
+from backend.routers.limites import leer_con_limite
 from backend.schemas.generation import GenerateRequest, GenerateResponse
 from backend.services import generation_service
 
@@ -46,7 +48,7 @@ async def generate_on_photo(
     # La lectura del fichero (I/O local rápida) se queda async; la generación en
     # Replicate (I/O de red LENTA y bloqueante) se delega al threadpool con
     # run_in_threadpool para no congelar el event loop mientras dura la llamada.
-    image_bytes = await image.read()
+    image_bytes = await leer_con_limite(image, config.MAX_IMAGEN_MB, "imagen")
     try:
         result = await run_in_threadpool(
             generation_service.generar_en_foto,

@@ -212,6 +212,18 @@ HTTP_BACKOFF_BASE: float = float(os.getenv("HTTP_BACKOFF_BASE", "0.5"))
 HTTP_BACKOFF_MAX: float = float(os.getenv("HTTP_BACKOFF_MAX", "8"))
 
 
+# ---------------------------------------------------------------------------
+# 3e) Límites de tamaño de las subidas (Hito 2)
+# ---------------------------------------------------------------------------
+# Los endpoints multipart (foto, audio, documentos) cargaban el fichero entero en
+# memoria sin comprobar nada: una URL pública podía subir un fichero gigante y
+# tumbar el proceso. Se leen por trozos con un tope; por encima → HTTP 413. En MB,
+# configurables desde el .env.
+MAX_IMAGEN_MB: float = float(os.getenv("MAX_IMAGEN_MB", "10"))
+MAX_AUDIO_MB: float = float(os.getenv("MAX_AUDIO_MB", "5"))
+MAX_DOCUMENTO_MB: float = float(os.getenv("MAX_DOCUMENTO_MB", "20"))
+
+
 def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
     """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""
     return os.getenv(nombre, por_defecto).strip().lower() in ("1", "true", "yes", "on")
