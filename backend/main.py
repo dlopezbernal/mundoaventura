@@ -26,7 +26,7 @@ from backend import config, logging_config, ratelimit, seed
 from backend.routers import admin as admin_router
 from backend.routers import apis as apis_router
 from backend.routers import config as config_router
-from backend.routers import conversacion, generation, transcription
+from backend.routers import conversacion, errores, generation, transcription
 from backend.routers import documentos as documentos_router
 from backend.routers import personajes as personajes_router
 from backend.routers import ubicaciones as ubicaciones_router
@@ -124,6 +124,10 @@ app = FastAPI(
 # RateLimitExceeded a una respuesta amable (en personaje en el chat). Ver ratelimit.py.
 app.state.limiter = ratelimit.limiter
 app.add_exception_handler(RateLimitExceeded, ratelimit.manejar_rate_limit)
+
+# Red de seguridad: cualquier excepción NO controlada en cualquier router se
+# convierte en un 500 genérico + error_id (el detalle real se loguea, no se filtra).
+app.add_exception_handler(Exception, errores.manejar_excepcion)
 
 # ---------------------------------------------------------------------------
 # 2) CORS — permitir que el frontend se conecte

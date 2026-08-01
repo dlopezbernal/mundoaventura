@@ -14,6 +14,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from backend import config
 from backend.ratelimit import limiter
+from backend.routers import errores
 from backend.routers.limites import leer_con_limite
 from backend.schemas.generation import GenerateRequest, GenerateResponse
 from backend.services import cuota_service, generation_service
@@ -46,7 +47,7 @@ def generate(request: Request, req: GenerateRequest):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error al generar la imagen: {exc}") from exc
+        raise errores.error_500(exc, "generar la imagen") from exc
 
     cuota_service.registrar()  # solo se cuenta la generación que sale bien
     return result
@@ -75,7 +76,7 @@ async def generate_on_photo(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error al generar la imagen: {exc}") from exc
+        raise errores.error_500(exc, "generar la imagen") from exc
 
     cuota_service.registrar()
     return result

@@ -14,6 +14,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from backend import config
 from backend.ratelimit import limiter
+from backend.routers import errores
 from backend.routers.limites import leer_con_limite
 from backend.services import voice_service
 
@@ -33,6 +34,6 @@ async def transcribe(request: Request, audio: UploadFile = File(...)):
         # Falta la clave o el audio no se pudo transcribir -> 400.
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Error al transcribir: {exc}") from exc
+        raise errores.error_500(exc, "transcribir el audio") from exc
 
     return {"texto": texto}

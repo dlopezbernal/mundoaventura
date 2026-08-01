@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Request
 
 from backend import config
 from backend.ratelimit import limiter
+from backend.routers import errores
 from backend.schemas.conversacion import AskRequest, AskResponse
 from backend.services import rag_service
 
@@ -40,9 +41,8 @@ def ask(request: Request, req: AskRequest):
         # Personaje inexistente o falta el token -> 400 (petición incorrecta).
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:
-        # Cualquier otro fallo (red, LLM, ChromaDB) -> 500.
-        raise HTTPException(
-            status_code=500, detail=f"Error al generar la respuesta: {exc}"
-        ) from exc
+        # Cualquier otro fallo (red, LLM, ChromaDB) -> 500 genérico + error_id (el
+        # detalle real se registra en el servidor, no se filtra al cliente).
+        raise errores.error_500(exc, "generar la respuesta del chat") from exc
 
     return result
