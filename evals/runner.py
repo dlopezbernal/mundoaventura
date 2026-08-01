@@ -32,6 +32,7 @@ from datetime import date
 from pathlib import Path
 
 from backend.services import (
+    embeddings,
     personajes_service,
     rag_service,
     settings_service,
@@ -53,14 +54,21 @@ PRECIO_SALIDA_USD_M = 0.25
 # Etapas (reutilizan rag_service en solo-lectura)
 # ---------------------------------------------------------------------------
 def _retrieval(personaje_id: str, pregunta_en: str, k: int) -> tuple[list[str], list[float], list]:
-    """Recupera top-k de ChromaDB pidiendo también las fuentes (para recall@3)."""
+    """Recupera top-k de ChromaDB pidiendo también las fuentes (para recall@3).
+
+    Respeta el backend de embeddings vigente: consulta por vector propio (multilingüe)
+    o por texto (backend original que delega en Chroma).
+    """
     col = rag_service._get_collection()
-    res = col.query(
-        query_texts=[pregunta_en],
-        n_results=k,
-        where={"personaje_id": personaje_id},
-        include=["documents", "distances", "metadatas"],
-    )
+    comun = {
+        "n_results": k,
+        "where": {"personaje_id": personaje_id},
+        "include": ["documents", "distances", "metadatas"],
+    }
+    if embeddings.usa_manuales():
+        res = col.query(query_embeddings=[embeddings.embed_query(pregunta_en)], **comun)
+    else:
+        res = col.query(query_texts=[pregunta_en], **comun)
     docs = (res.get("documents") or [[]])[0]
     dists = (res.get("distances") or [[]])[0]
     metas = (res.get("metadatas") or [[]])[0]
@@ -102,6 +110,8 @@ def _origen_de(es_rag: bool) -> str:
 def config_evaluacion() -> dict:
     """Config vigente que condiciona el resultado (para archivar junto a la corrida)."""
     return {
+        "embedding_backend": embeddings.backend_actual(),
+        "coleccion": embeddings.coleccion_actual(),
         "evaluator_mode": settings_service.get("EVALUATOR_MODE"),
         "umbral_bajo": settings_service.get("EVALUATOR_UMBRAL_BAJO"),
         "umbral_alto": settings_service.get("EVALUATOR_UMBRAL_ALTO"),
@@ -154,6 +164,7 @@ def evaluar_pregunta(
         t_ret = 0.0
 
     recall = metricas.recall_at_k(preg.chunk_esperado, fuentes)
+    recall_ch = metricas.recall_chunk(preg.respuesta_contiene, chunks)
     dist_min = round(min(dists), 4) if dists else None
 
     filas: list[dict] = []
@@ -165,6 +176,7 @@ def evaluar_pregunta(
             "origen_esperado": preg.origen_esperado.value,
             "rep": rep,
             "recall_at3": recall,
+            "recall_chunk": recall_ch,
             "distancia": dist_min,
             "lat_traduccion_ms": round(t_trad, 1),
             "lat_retrieval_ms": round(t_ret, 1),
@@ -238,12 +250,14 @@ def resumir(filas: list[dict]) -> dict:
     ok = [f for f in filas if not f["error"]]
     con_acierto = [f for f in ok if f["acierto_origen"] is not None]
     con_recall = [f for f in ok if f["recall_at3"] is not None]
+    con_recall_ch = [f for f in ok if f.get("recall_chunk") is not None]
     infl_media, infl_desv = _media_desv([f["inflesz"] for f in ok])
     return {
         "n_filas": len(filas),
         "n_error": len(filas) - len(ok),
         "acierto_origen_pct": _pct([f["acierto_origen"] for f in con_acierto]),
         "recall_at3_pct": _pct([f["recall_at3"] for f in con_recall]),
+        "recall_chunk_pct": _pct([f["recall_chunk"] for f in con_recall_ch]),
         "es_espanol_pct": _pct([f["es_espanol"] for f in ok]),
         "roto_pct": _pct([f["n_roto"] > 0 for f in ok]),
         "inflesz_media": infl_media,
@@ -275,6 +289,7 @@ _COLUMNAS = [
     "metodo",
     "distancia",
     "recall_at3",
+    "recall_chunk",
     "idioma",
     "es_espanol",
     "palabras",

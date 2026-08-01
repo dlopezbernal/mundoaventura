@@ -69,6 +69,20 @@ def test_recall_at_k(esperado, fuentes, resultado):
     assert metricas.recall_at_k(esperado, fuentes) is resultado
 
 
+@pytest.mark.parametrize(
+    ("contiene", "chunks", "resultado"),
+    [
+        ("Baker Street", ["He lives at 221B Baker Street"], True),
+        ("scaveng", ["hunting or scavenging behaviour"], True),  # coincide por raíz
+        ("Neverland", ["He lives in London"], False),
+        (["Tinker Bell", "Tink"], ["his fairy Tink flew away"], True),  # lista: cualquiera
+        (None, ["texto"], None),  # sin respuesta_contiene → no aplica
+    ],
+)
+def test_recall_chunk(contiene, chunks, resultado):
+    assert metricas.recall_chunk(contiene, chunks) is resultado
+
+
 def test_contar_basico():
     assert metricas.contar_palabras("hola mundo cruel") == 3
     assert metricas.contar_frases("Uno. Dos! Tres?") == 3
@@ -98,6 +112,7 @@ def test_set_dorado_literales_tienen_chunk_esperado():
     for p in esquema.cargar_set_dorado():
         if p.tipo.value in ("literal", "inferencial"):
             assert p.chunk_esperado, f"{p.id}: literal/inferencial sin chunk_esperado"
+            assert p.respuesta_contiene, f"{p.id}: literal/inferencial sin respuesta_contiene"
         else:
             assert p.chunk_esperado is None, (
                 f"{p.id}: {p.tipo.value} no debería tener chunk_esperado"
