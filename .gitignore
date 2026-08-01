@@ -52,3 +52,7 @@ Thumbs.db
 # ─── Claude Code / Playwright MCP ────────────────────────────────
 # Snapshots y logs de consola que deja cada navegación del MCP de Playwright.
 .playwright-mcp/
+
+# Evals: los resultados de cada corrida no se versionan (salvo la línea base).
+evals/resultados/*
+!evals/resultados/BASELINE.csv

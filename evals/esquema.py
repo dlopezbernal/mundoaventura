@@ -66,9 +66,10 @@ class PreguntaDorada(BaseModel):
     pregunta: str = Field(min_length=1)
     tipo: TipoPregunta
     origen_esperado: OrigenEsperado
-    # Fichero de documento donde está la respuesta (para medir recall@3). Solo tiene
-    # sentido en literal/inferencial; en las demás va vacío (None).
-    chunk_esperado: str | None = None
+    # Fichero(s) de documento donde está la respuesta (para medir recall@3). Puede ser
+    # uno o una lista (cuando el mismo dato vive en varios ficheros del personaje, y el
+    # retriever puede traer cualquiera). Solo en literal/inferencial; en las demás, None.
+    chunk_esperado: str | list[str] | None = None
     notas: str = ""
 
 
