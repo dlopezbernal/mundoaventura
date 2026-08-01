@@ -224,6 +224,20 @@ MAX_AUDIO_MB: float = float(os.getenv("MAX_AUDIO_MB", "5"))
 MAX_DOCUMENTO_MB: float = float(os.getenv("MAX_DOCUMENTO_MB", "20"))
 
 
+# ---------------------------------------------------------------------------
+# 3f) Candado del túnel (Hito 2)
+# ---------------------------------------------------------------------------
+# Los endpoints del niño (chat, generación, voz) son públicos POR DISEÑO (no puede
+# haber un PIN delante de un niño de 9 años). Pero el despliegue es un túnel público
+# (ngrok/Colab) que se escanea solo en horas: sin protección, /api/generate-on-photo
+# es una tarjeta de crédito abierta a internet. La defensa NO es autenticación
+# fuerte; es un CANDADO contra escaneo:
+#   - ACCESS_CODE: un código compartido que el frontend manda en la cabecera
+#     X-Access-Code (comparado con hmac.compare_digest). VACÍO = candado
+#     DESACTIVADO (cómodo en local, igual criterio que CORS_ORIGINS="*").
+ACCESS_CODE: str = os.getenv("ACCESS_CODE", "").strip()
+
+
 def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
     """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""
     return os.getenv(nombre, por_defecto).strip().lower() in ("1", "true", "yes", "on")
