@@ -99,7 +99,9 @@ def test_set_dorado_literales_tienen_chunk_esperado():
         if p.tipo.value in ("literal", "inferencial"):
             assert p.chunk_esperado, f"{p.id}: literal/inferencial sin chunk_esperado"
         else:
-            assert p.chunk_esperado is None, f"{p.id}: {p.tipo.value} no debería tener chunk_esperado"
+            assert p.chunk_esperado is None, (
+                f"{p.id}: {p.tipo.value} no debería tener chunk_esperado"
+            )
 
 
 def test_set_seguridad_carga():
