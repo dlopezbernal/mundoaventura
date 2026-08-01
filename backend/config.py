@@ -186,6 +186,32 @@ STT_LANG: str = os.getenv("STT_LANG", "es").strip()
 MAX_PERSONAJES: int = int(os.getenv("MAX_PERSONAJES", "10"))
 
 
+# ---------------------------------------------------------------------------
+# 3d) Resiliencia de red: timeouts y reintentos (Hito 2)
+# ---------------------------------------------------------------------------
+# Sin timeout, una llamada colgada a un proveedor deja la petición esperando para
+# siempre (y ocupa un hilo del threadpool). Sin reintentos, un 429/5xx puntual del
+# free tier tumba la petición. Todos los valores se pueden ajustar desde el .env.
+#
+# Timeout (segundos) de cada cliente de proveedor:
+#   - Replicate genera imágenes/LLM: puede tardar bastante → margen amplio.
+#   - ElevenLabs (STT/TTS) es más rápido.
+#   - DeepL gestiona su PROPIO timeout + backoff internamente (deepl.http_client);
+#     aquí solo fijamos su timeout de conexión de forma explícita (ver translation_service).
+REPLICATE_TIMEOUT: float = float(os.getenv("REPLICATE_TIMEOUT", "120"))
+ELEVENLABS_TIMEOUT: float = float(os.getenv("ELEVENLABS_TIMEOUT", "60"))
+DEEPL_TIMEOUT: float = float(os.getenv("DEEPL_TIMEOUT", "10"))
+
+# Reintentos con backoff exponencial + jitter ante errores TRANSITORIOS (429 y 5xx,
+# más timeouts/errores de conexión). HTTP_MAX_INTENTOS es el nº TOTAL de intentos
+# (p. ej. 3 = 1 original + 2 reintentos). La espera del intento n es
+# BACKOFF_BASE * 2^(n-1) segundos (± jitter), tope HTTP_BACKOFF_MAX. Solo aplica a
+# Replicate y ElevenLabs: DeepL ya reintenta por su cuenta (no lo duplicamos).
+HTTP_MAX_INTENTOS: int = int(os.getenv("HTTP_MAX_INTENTOS", "3"))
+HTTP_BACKOFF_BASE: float = float(os.getenv("HTTP_BACKOFF_BASE", "0.5"))
+HTTP_BACKOFF_MAX: float = float(os.getenv("HTTP_BACKOFF_MAX", "8"))
+
+
 def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
     """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""
     return os.getenv(nombre, por_defecto).strip().lower() in ("1", "true", "yes", "on")

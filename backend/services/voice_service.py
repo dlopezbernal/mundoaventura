@@ -18,7 +18,7 @@ import logging
 from elevenlabs.client import ElevenLabs
 
 from backend import config
-from backend.services import settings_service
+from backend.services import resiliencia, settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -52,7 +52,7 @@ def _get_client() -> ElevenLabs:
             "la provee ElevenLabs. Consigue una clave en https://elevenlabs.io y "
             "añádela al .env."
         )
-    _client = ElevenLabs(api_key=config.ELEVENLABS_API_KEY)
+    _client = ElevenLabs(api_key=config.ELEVENLABS_API_KEY, timeout=config.ELEVENLABS_TIMEOUT)
     return _client
 
 
@@ -66,10 +66,13 @@ def transcribir(audio_bytes: bytes) -> str:
     try:
         modelo_stt = settings_service.get("ELEVENLABS_STT_MODEL")
         idioma = settings_service.get("STT_LANG")
-        resultado = client.speech_to_text.convert(
-            file=io.BytesIO(audio_bytes),
-            model_id=modelo_stt,
-            language_code=idioma,
+        resultado = resiliencia.reintentar(
+            lambda: client.speech_to_text.convert(
+                file=io.BytesIO(audio_bytes),
+                model_id=modelo_stt,
+                language_code=idioma,
+            ),
+            etiqueta="ElevenLabs · STT",
         )
         texto = (resultado.text or "").strip()
     except Exception as exc:
@@ -94,11 +97,14 @@ def sintetizar(texto: str, voz_id: str) -> bytes:
     """
     client = _get_client()
     try:
-        stream = client.text_to_speech.convert(
-            voice_id=voz_id,
-            model_id=settings_service.get("ELEVENLABS_TTS_MODEL"),
-            text=texto,
-            output_format=settings_service.get("TTS_OUTPUT_FORMAT"),
+        stream = resiliencia.reintentar(
+            lambda: client.text_to_speech.convert(
+                voice_id=voz_id,
+                model_id=settings_service.get("ELEVENLABS_TTS_MODEL"),
+                text=texto,
+                output_format=settings_service.get("TTS_OUTPUT_FORMAT"),
+            ),
+            etiqueta="ElevenLabs · TTS",
         )
         # convert() devuelve un iterador de trozos de bytes; algunos SDK devuelven
         # los bytes ya unidos. Cubrimos ambos casos.

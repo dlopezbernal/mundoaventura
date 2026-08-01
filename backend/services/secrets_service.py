@@ -24,7 +24,7 @@ import os
 import shutil
 
 from backend import config
-from backend.services import translation_service, voice_service
+from backend.services import replicate_client, translation_service, voice_service
 
 # Metadatos de cada proveedor: variable del .env, nombre visible y enlace de alta.
 _PROVEEDORES: dict[str, dict[str, str]] = {
@@ -168,10 +168,12 @@ def guardar(cambios: dict[str, str]) -> list[dict]:
     for proveedor, clave in cambios.items():
         variable = _PROVEEDORES[proveedor]["variable"]
         limpio = clave.strip()
-        os.environ[variable] = limpio  # lo lee la librería replicate en cada llamada
-        setattr(config, variable, limpio)  # lo leen translation/voice_service
+        os.environ[variable] = limpio  # respaldo (algunas libs lo leen del entorno)
+        setattr(config, variable, limpio)  # lo leen los clientes perezosos de los servicios
+    # Invalidar los 3 clientes perezosos para que la siguiente petición use la clave nueva.
     translation_service.reiniciar()
     voice_service.reiniciar()
+    replicate_client.reiniciar()
 
     return estado()
 

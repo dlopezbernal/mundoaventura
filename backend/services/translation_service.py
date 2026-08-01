@@ -57,6 +57,11 @@ def _get_translator() -> deepl.Translator:
             "clave gratis en https://www.deepl.com/pro-api y añádela al .env."
         )
 
+    # Timeout EXPLÍCITO de DeepL: su SDK ya gestiona timeout + backoff exponencial
+    # con jitter sobre 429/5xx internamente (deepl.http_client._BackoffTimer), así que
+    # NO lo envolvemos en resiliencia.reintentar (sería duplicar). Lo único que fijamos
+    # aquí es su timeout de conexión, de forma explícita y configurable (config.DEEPL_TIMEOUT).
+    deepl.http_client.min_connection_timeout = config.DEEPL_TIMEOUT
     try:
         translator = deepl.Translator(config.DEEPL_API_KEY)
         translator.get_usage()  # comprueba que la clave funciona y hay conexión
