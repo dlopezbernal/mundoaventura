@@ -43,6 +43,11 @@ import type {
 // en VITE_BACKEND_URL (ver .env.example).
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL ?? "").replace(/\/+$/, "");
 
+// Código de acceso del túnel (Hito 2). Si el backend tiene ACCESS_CODE configurado,
+// los endpoints del niño (chat/generación/voz) exigen esta cabecera. Vacío = el
+// backend no tiene candado (dev). Se define en frontend-react/.env (VITE_ACCESS_CODE).
+const ACCESS_CODE = (import.meta.env.VITE_ACCESS_CODE ?? "").trim();
+
 // Timeouts (ms), equivalentes a los del cliente Flet.
 const TIMEOUT_HEALTH = 10_000;
 const TIMEOUT_GENERATE = 120_000;
@@ -108,6 +113,9 @@ async function fetchBackend(
   // del flujo del niño lo ignoran, y los protegidos lo exigen.
   const headers: Record<string, string> = { ...((options.headers as Record<string, string>) ?? {}) };
   if (_adminToken) headers["X-Admin-Token"] = _adminToken;
+  // Candado del túnel: los endpoints del niño lo exigen si el backend tiene
+  // ACCESS_CODE; los demás lo ignoran. Enviarlo en todas es inofensivo.
+  if (ACCESS_CODE) headers["X-Access-Code"] = ACCESS_CODE;
 
   let response: Response;
   try {
@@ -141,6 +149,11 @@ async function fetchBackend(
       } catch {
         detail = "";
       }
+    }
+    // 429 (rate limit / cupo diario agotado): el backend manda un mensaje amable y
+    // en personaje. Se muestra TAL CUAL, sin el prefijo "Algo ha salido mal".
+    if (response.status === 429 && detail) {
+      throw new BackendError(detail, 429);
     }
     throw new BackendError(
       `Algo ha salido mal: ${detail || `error ${response.status}`}`,

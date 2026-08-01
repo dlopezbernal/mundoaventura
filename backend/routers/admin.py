@@ -17,9 +17,9 @@ Los endpoints públicos son los mínimos para arrancar/entrar; el resto exige el
 token (dependencia requiere_admin). Los SECRETOS (claves API) nunca se exportan.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from backend.schemas.admin import AdminCambiar, AdminPin, ImportRequest
 from backend.services import (
@@ -52,10 +52,17 @@ def setup(req: AdminPin):
 
 
 @router.post("/login")
-def login(req: AdminPin):
-    """Valida el PIN y devuelve un token de sesión. 400 si el PIN es incorrecto."""
+def login(req: AdminPin, request: Request):
+    """Valida el PIN y devuelve un token de sesión.
+
+    400 si el PIN es incorrecto; 429 si la IP está temporalmente bloqueada por
+    demasiados intentos fallidos (anti-fuerza-bruta, ver admin_service).
+    """
+    ip = request.client.host if request.client else "?"
     try:
-        token = admin_service.login(req.pin)
+        token = admin_service.login(req.pin, ip)
+    except admin_service.BloqueoLoginError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "token": token}
@@ -84,7 +91,7 @@ def exportar():
     ajustes = {e["clave"]: e["valor"] for e in settings_service.exportar()}
     return {
         "version": 1,
-        "exportado_en": datetime.utcnow().isoformat(),
+        "exportado_en": datetime.now(UTC).isoformat(),
         "ajustes": ajustes,
         "personajes": personajes_service.listar(incluir_inactivos=True),
         "ubicaciones": ubicaciones_service.listar(incluir_inactivos=True),

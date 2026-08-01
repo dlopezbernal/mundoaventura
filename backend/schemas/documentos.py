@@ -18,7 +18,7 @@ class DocumentoUrlRequest(BaseModel):
     (ver documentos_service._preparar_texto) y se traduce si no está en inglés.
     """
 
-    url: str = Field(description="URL del artículo de Wikipedia a ingerir.")
+    url: str = Field(max_length=2000, description="URL del artículo de Wikipedia a ingerir.")
     sobrescribir: bool = Field(
         default=False,
         description="Forzar sobrescritura si ya existe un documento con ese nombre.",

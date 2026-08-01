@@ -186,6 +186,78 @@ STT_LANG: str = os.getenv("STT_LANG", "es").strip()
 MAX_PERSONAJES: int = int(os.getenv("MAX_PERSONAJES", "10"))
 
 
+# ---------------------------------------------------------------------------
+# 3d) Resiliencia de red: timeouts y reintentos (Hito 2)
+# ---------------------------------------------------------------------------
+# Sin timeout, una llamada colgada a un proveedor deja la petición esperando para
+# siempre (y ocupa un hilo del threadpool). Sin reintentos, un 429/5xx puntual del
+# free tier tumba la petición. Todos los valores se pueden ajustar desde el .env.
+#
+# Timeout (segundos) de cada cliente de proveedor:
+#   - Replicate genera imágenes/LLM: puede tardar bastante → margen amplio.
+#   - ElevenLabs (STT/TTS) es más rápido.
+#   - DeepL gestiona su PROPIO timeout + backoff internamente (deepl.http_client);
+#     aquí solo fijamos su timeout de conexión de forma explícita (ver translation_service).
+REPLICATE_TIMEOUT: float = float(os.getenv("REPLICATE_TIMEOUT", "120"))
+ELEVENLABS_TIMEOUT: float = float(os.getenv("ELEVENLABS_TIMEOUT", "60"))
+DEEPL_TIMEOUT: float = float(os.getenv("DEEPL_TIMEOUT", "10"))
+
+# Reintentos con backoff exponencial + jitter ante errores TRANSITORIOS (429 y 5xx,
+# más timeouts/errores de conexión). HTTP_MAX_INTENTOS es el nº TOTAL de intentos
+# (p. ej. 3 = 1 original + 2 reintentos). La espera del intento n es
+# BACKOFF_BASE * 2^(n-1) segundos (± jitter), tope HTTP_BACKOFF_MAX. Solo aplica a
+# Replicate y ElevenLabs: DeepL ya reintenta por su cuenta (no lo duplicamos).
+HTTP_MAX_INTENTOS: int = int(os.getenv("HTTP_MAX_INTENTOS", "3"))
+HTTP_BACKOFF_BASE: float = float(os.getenv("HTTP_BACKOFF_BASE", "0.5"))
+HTTP_BACKOFF_MAX: float = float(os.getenv("HTTP_BACKOFF_MAX", "8"))
+
+
+# ---------------------------------------------------------------------------
+# 3e) Límites de tamaño de las subidas (Hito 2)
+# ---------------------------------------------------------------------------
+# Los endpoints multipart (foto, audio, documentos) cargaban el fichero entero en
+# memoria sin comprobar nada: una URL pública podía subir un fichero gigante y
+# tumbar el proceso. Se leen por trozos con un tope; por encima → HTTP 413. En MB,
+# configurables desde el .env.
+MAX_IMAGEN_MB: float = float(os.getenv("MAX_IMAGEN_MB", "10"))
+MAX_AUDIO_MB: float = float(os.getenv("MAX_AUDIO_MB", "5"))
+MAX_DOCUMENTO_MB: float = float(os.getenv("MAX_DOCUMENTO_MB", "20"))
+
+
+# ---------------------------------------------------------------------------
+# 3f) Candado del túnel (Hito 2)
+# ---------------------------------------------------------------------------
+# Los endpoints del niño (chat, generación, voz) son públicos POR DISEÑO (no puede
+# haber un PIN delante de un niño de 9 años). Pero el despliegue es un túnel público
+# (ngrok/Colab) que se escanea solo en horas: sin protección, /api/generate-on-photo
+# es una tarjeta de crédito abierta a internet. La defensa NO es autenticación
+# fuerte; es un CANDADO contra escaneo:
+#   - ACCESS_CODE: un código compartido que el frontend manda en la cabecera
+#     X-Access-Code (comparado con hmac.compare_digest). VACÍO = candado
+#     DESACTIVADO (cómodo en local, igual criterio que CORS_ORIGINS="*").
+ACCESS_CODE: str = os.getenv("ACCESS_CODE", "").strip()
+
+# Rate limit por IP (slowapi). Formato "N/unidad" (ej. "30/minute"). Generoso para
+# el chat, restrictivo para la generación de imagen (lo caro). Al superarlo, el
+# personaje responde "en personaje" (chat) o se devuelve un aviso amable (imagen),
+# nunca un 429 crudo en la cara del niño.
+RATE_LIMIT_ASK: str = os.getenv("RATE_LIMIT_ASK", "30/minute").strip()
+RATE_LIMIT_GENERATE: str = os.getenv("RATE_LIMIT_GENERATE", "10/minute").strip()
+RATE_LIMIT_TRANSCRIBE: str = os.getenv("RATE_LIMIT_TRANSCRIBE", "20/minute").strip()
+
+# Tope DIARIO de generaciones de imagen (por día natural, contado en SQLite). Es un
+# techo duro de coste, complementario al rate limit por minuto. <= 0 = sin tope.
+MAX_IMAGENES_DIA: int = int(os.getenv("MAX_IMAGENES_DIA", "50"))
+
+# Mensaje amable (en personaje) cuando se agota el cupo o el rate limit. Un 429 crudo
+# delante de un niño de 9 años es un fallo de producto.
+MENSAJE_LIMITE: str = os.getenv(
+    "MENSAJE_LIMITE",
+    "¡Uf! Mi máquina del tiempo necesita descansar un ratito. "
+    "Vuelve a intentarlo dentro de un momento, ¿vale?",
+).strip()
+
+
 def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
     """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""
     return os.getenv(nombre, por_defecto).strip().lower() in ("1", "true", "yes", "on")

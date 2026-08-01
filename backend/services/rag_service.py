@@ -29,11 +29,11 @@ import base64
 import logging
 
 import chromadb
-import replicate
 
 from backend import config, debug_log
 from backend.services import (
     personajes_service,
+    replicate_client,
     settings_service,
     translation_service,
     voice_service,
@@ -230,7 +230,7 @@ def _llamar_llm(
     if temperature is None:
         temperature = settings_service.get("LLM_TEMPERATURE")
 
-    salida = replicate.run(
+    salida = replicate_client.run(
         modelo_llm,
         input={
             "prompt": user,
@@ -238,6 +238,7 @@ def _llamar_llm(
             "max_tokens": max_tokens or settings_service.get("LLM_MAX_TOKENS"),
             "temperature": temperature,
         },
+        etiqueta=f"Replicate · {etiqueta}",
     )
     # salida es un iterable de strings -> los concatenamos en un único texto.
     return "".join(salida).strip()

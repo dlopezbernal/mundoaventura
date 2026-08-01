@@ -37,10 +37,13 @@ import base64
 import logging
 import re
 
-import replicate
-
 from backend import config, debug_log
-from backend.services import personajes_service, settings_service, ubicaciones_service
+from backend.services import (
+    personajes_service,
+    replicate_client,
+    settings_service,
+    ubicaciones_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +119,7 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     modelo = settings_service.get("REPLICATE_MODEL")
     debug_log.trazar_prompt(f"Replicate · escena ({modelo})", prompt=prompt)
 
-    output = replicate.run(
+    output = replicate_client.run(
         modelo,
         input={
             "prompt": prompt,
@@ -126,6 +129,7 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
             # FLUX schnell está destilado para 4 pasos: óptimo y ultra rápido.
             "num_inference_steps": settings_service.get("IMG_NUM_STEPS"),
         },
+        etiqueta="Replicate · escena",
     )
 
     return {
@@ -177,7 +181,7 @@ def generar_en_foto(
     # Pasamos la imagen como data URI (forma fiable de mandar bytes a Replicate).
     data_uri = f"data:{mime};base64,{base64.b64encode(image_bytes).decode('utf-8')}"
 
-    output = replicate.run(
+    output = replicate_client.run(
         modelo_edicion,
         input={
             "prompt": instruccion,
@@ -185,6 +189,7 @@ def generar_en_foto(
             "output_format": settings_service.get("IMG_OUTPUT_FORMAT"),
             # aspect_ratio por defecto "match_input_image": respeta la foto original.
         },
+        etiqueta="Replicate · edición foto",
     )
 
     return {

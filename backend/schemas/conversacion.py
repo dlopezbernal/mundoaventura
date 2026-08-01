@@ -18,9 +18,15 @@ class AskRequest(BaseModel):
     """Petición del endpoint POST /api/ask."""
 
     personaje_id: str = Field(
-        ..., description="Identificador del personaje al que se pregunta (ej. 't-rex')."
+        ...,
+        max_length=100,
+        description="Identificador del personaje al que se pregunta (ej. 't-rex').",
     )
-    pregunta: str = Field(..., min_length=1, description="La pregunta del niño, en texto.")
+    # max_length=500: sin tope se pueden mandar megas de texto al LLM (coste y abuso).
+    # Una pregunta de un niño cabe de sobra; por encima → HTTP 422.
+    pregunta: str = Field(
+        ..., min_length=1, max_length=500, description="La pregunta del niño, en texto."
+    )
 
 
 class AskResponse(BaseModel):

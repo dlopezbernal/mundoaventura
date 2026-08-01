@@ -27,8 +27,11 @@ con fiabilidad "¿sobrescribir?" de cualquier otro error de validación.
 """
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import FileResponse
 
+from backend import config
+from backend.routers.limites import leer_con_limite
 from backend.schemas.documentos import (
     DocumentoContenidoRequest,
     DocumentoCopiarRequest,
@@ -58,12 +61,25 @@ async def subir_documento(
     anterior). Con varios, `{"documentos": [...], "errores": [...]}` (mejor
     esfuerzo: un fichero inválido no aborta el resto).
     """
-    pares = [(archivo.filename or "documento", await archivo.read()) for archivo in archivos]
+    # Lectura de los ficheros async (rápida); el trabajo pesado de subir
+    # (traducción DeepL + reindexado) se delega al threadpool para no bloquear el
+    # event loop. Ver docs/mediciones/H2-concurrencia.md.
+    pares = [
+        (
+            archivo.filename or "documento",
+            await leer_con_limite(archivo, config.MAX_DOCUMENTO_MB, "documento"),
+        )
+        for archivo in archivos
+    ]
     if len(pares) == 1:
         nombre, contenido = pares[0]
         try:
-            documento = documentos_service.subir(
-                personaje_id, nombre, contenido, sobrescribir=sobrescribir
+            documento = await run_in_threadpool(
+                documentos_service.subir,
+                personaje_id,
+                nombre,
+                contenido,
+                sobrescribir=sobrescribir,
             )
         except documentos_service.ConflictoDocumentoError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
@@ -71,7 +87,9 @@ async def subir_documento(
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return {"ok": True, "documento": documento}
 
-    resultado = documentos_service.subir_varios(personaje_id, pares, sobrescribir=sobrescribir)
+    resultado = await run_in_threadpool(
+        documentos_service.subir_varios, personaje_id, pares, sobrescribir=sobrescribir
+    )
     return {"ok": True, **resultado}
 
 

@@ -21,7 +21,7 @@ REINDEXAR ChromaDB, un texto de ayuda en español y, si aplica, rango/opciones p
 validar. Esta especificación alimentará también la pantalla de ajustes (Hito 3).
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlmodel import select
@@ -469,7 +469,7 @@ def set_many(cambios: dict[str, Any]) -> list[str]:
                 fila = Setting(clave=clave, valor=serial, tipo=spec["tipo"])
             else:
                 fila.valor = serial
-                fila.actualizado_en = datetime.utcnow()
+                fila.actualizado_en = datetime.now(UTC)
             sesion.add(fila)
             if spec.get("requires_reindex"):
                 reindex.append(clave)

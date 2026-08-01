@@ -10,7 +10,8 @@ Cuatro puertas de entrada (la lógica vive en services/secrets_service.py):
   POST /api/apis/{proveedor}/reveal  → devuelve la clave completa (icono del ojo 👁).
 
 Las claves NUNCA se devuelven completas salvo en /reveal (petición explícita y
-aparte). El control de acceso admin a esta zona llega en el Hito 7.
+aparte). Toda esta zona va detrás del PIN de adulto (requiere_admin, aplicado en
+bloque desde main.py).
 """
 
 from fastapi import APIRouter, HTTPException

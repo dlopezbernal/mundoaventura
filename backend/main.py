@@ -20,16 +20,22 @@ from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi.errors import RateLimitExceeded
 
-from backend import config, logging_config, seed
+from backend import config, logging_config, ratelimit, seed
 from backend.routers import admin as admin_router
 from backend.routers import apis as apis_router
 from backend.routers import config as config_router
-from backend.routers import conversacion, generation, transcription
+from backend.routers import conversacion, errores, generation, transcription
 from backend.routers import documentos as documentos_router
 from backend.routers import personajes as personajes_router
 from backend.routers import ubicaciones as ubicaciones_router
-from backend.services import admin_service, translation_service, voice_service
+from backend.services import (
+    acceso_service,
+    admin_service,
+    translation_service,
+    voice_service,
+)
 
 # Configurar el logging ANTES que nada, para que cualquier mensaje del arranque
 # (incluido el fallo del apaño de encoding de abajo) salga ya con formato.
@@ -39,6 +45,10 @@ logger = logging.getLogger(__name__)
 # Dependencia que exige el PIN de adulto (token de sesión) en los endpoints
 # sensibles del área de configuración. Los del flujo del niño no la llevan.
 _admin = [Depends(admin_service.requiere_admin)]
+
+# Candado del túnel: código de acceso compartido para los endpoints del niño que
+# CUESTAN dinero (generación, chat, voz). Desactivado si ACCESS_CODE está vacío.
+_acceso = [Depends(acceso_service.requiere_codigo_acceso)]
 
 # En Windows la consola puede usar cp1252 y romper al emitir emojis (✅, ⚠️...) en
 # los logs de arranque. Forzamos UTF-8 en la salida para que ningún mensaje falle
@@ -110,6 +120,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Rate limit por IP (slowapi): el limiter va en app.state y el handler traduce el
+# RateLimitExceeded a una respuesta amable (en personaje en el chat). Ver ratelimit.py.
+app.state.limiter = ratelimit.limiter
+app.add_exception_handler(RateLimitExceeded, ratelimit.manejar_rate_limit)
+
+# Red de seguridad: cualquier excepción NO controlada en cualquier router se
+# convierte en un 500 genérico + error_id (el detalle real se loguea, no se filtra).
+app.add_exception_handler(Exception, errores.manejar_excepcion)
+
 # ---------------------------------------------------------------------------
 # 2) CORS — permitir que el frontend se conecte
 # ---------------------------------------------------------------------------
@@ -136,12 +155,14 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # 3) Enchufar los routers (los endpoints de cada fase)
 # ---------------------------------------------------------------------------
+# Endpoints del niño que cuestan dinero (generación, chat, voz): van detrás del
+# candado del túnel (X-Access-Code). Los catálogos (GET) se dejan públicos aparte.
 # Generación de la escena (ubicación + personaje) con Replicate.
-app.include_router(generation.router)
+app.include_router(generation.router, dependencies=_acceso)
 # Conversación con el personaje (RAG: ChromaDB + LLM en Replicate).
-app.include_router(conversacion.router)
+app.include_router(conversacion.router, dependencies=_acceso)
 # Transcripción de voz (STT): la pregunta hablada del niño → texto (ElevenLabs Scribe).
-app.include_router(transcription.router)
+app.include_router(transcription.router, dependencies=_acceso)
 # Admin: acceso con PIN de adulto + import/export (endpoints públicos mínimos
 # para arrancar; los sensibles se protegen dentro del propio router).
 app.include_router(admin_router.router)
