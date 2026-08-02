@@ -386,6 +386,9 @@ def _imprimir(res: dict) -> None:
 
 
 def main() -> None:
+    from evals import forzar_utf8_consola
+
+    forzar_utf8_consola()
     parser = argparse.ArgumentParser(description="Compara los candidatos de H6 (puertas→pesos).")
     parser.add_argument("--manuales", type=Path, default=None, help="YAML de inputs de juicio.")
     args = parser.parse_args()

@@ -174,6 +174,9 @@ def _cmd_fidelidad(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
+    from evals import forzar_utf8_consola
+
+    forzar_utf8_consola()
     parser = argparse.ArgumentParser(description="Juez LLM de fidelidad al contexto (H6).")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
