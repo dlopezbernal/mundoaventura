@@ -42,6 +42,7 @@ class InfoLLM(TypedDict):
     model: str
     base_url: str
 
+
 _PROVEEDORES_VALIDOS = ("replicate", "openai")
 
 # Cliente openai-compatible, creado una sola vez (singleton perezoso). Se recrea con

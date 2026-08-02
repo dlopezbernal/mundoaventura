@@ -206,7 +206,11 @@ def test_info_no_expone_la_clave(monkeypatch):
         settings_service,
         "get",
         _stub_settings(
-            {"LLM_PROVIDER": "openai", "LLM_MODEL": "llama3", "LLM_BASE_URL": "http://localhost:11434/v1"}
+            {
+                "LLM_PROVIDER": "openai",
+                "LLM_MODEL": "llama3",
+                "LLM_BASE_URL": "http://localhost:11434/v1",
+            }
         ),
     )
     info = llm_service.info()
