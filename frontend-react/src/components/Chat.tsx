@@ -78,6 +78,11 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
   const [micEstado, setMicEstado] = useState<MicEstado>(() =>
     micSoportado() ? "reposo" : "no-disponible",
   );
+  // Tras transcribir, NO se envía solo: se muestra el texto y un "¿has dicho esto?"
+  // para que el niño confirme o corrija. Todos los ASR fallan con voces infantiles,
+  // así que confirmar es más barato que responder a la pregunta equivocada — y el
+  // niño ve que la máquina le ha entendido (buena pedagogía).
+  const [confirmandoVoz, setConfirmandoVoz] = useState(false);
   const historialRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -170,6 +175,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
     event.preventDefault(); // Enter en el input también envía
     const texto = pregunta.trim();
     if (!texto || ocupado) return;
+    setConfirmandoVoz(false); // enviar a mano también cierra el "¿has dicho esto?"
     setPregunta("");
     void enviarPregunta(texto);
   }
@@ -209,7 +215,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
       grabacionRef.current = null;
       if (grabacion.cancelada) return;
       const tipo = recorder.mimeType || "audio/webm";
-      void transcribirYEnviar(new Blob(grabacion.chunks, { type: tipo }), tipo);
+      void transcribirYConfirmar(new Blob(grabacion.chunks, { type: tipo }), tipo);
     };
 
     recorder.start();
@@ -230,7 +236,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
     }
   }
 
-  async function transcribirYEnviar(blob: Blob, tipo: string) {
+  async function transcribirYConfirmar(blob: Blob, tipo: string) {
     try {
       const ext = tipo.includes("ogg") ? "ogg" : tipo.includes("mp4") ? "m4a" : "webm";
       const texto = (await transcribe(blob, `grabacion.${ext}`)).trim();
@@ -238,14 +244,31 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
         burbujaError("No te oí bien. Prueba otra vez. 🎤");
         return;
       }
-      // La pregunta hablada entra al MISMO flujo que una escrita.
-      await enviarPregunta(texto);
+      // NO se envía aún: el texto entra en el input (editable) y se pide confirmación.
+      setPregunta(texto);
+      setConfirmandoVoz(true);
     } catch {
-      // El backend (Scribe) rechazó o no pudo transcribir el audio.
+      // El backend rechazó o no pudo transcribir el audio.
       burbujaError("No pude escucharte bien. Inténtalo otra vez. 🎤");
     } finally {
       setMicEstado("reposo");
     }
+  }
+
+  /** El niño confirma lo transcrito (quizá ya editado): entra al flujo normal. */
+  function confirmarVoz() {
+    const texto = pregunta.trim();
+    if (!texto) return;
+    setConfirmandoVoz(false);
+    setPregunta("");
+    void enviarPregunta(texto);
+  }
+
+  /** El niño dice "no era eso": descarta el texto y vuelve a grabar. */
+  function repetirVoz() {
+    setConfirmandoVoz(false);
+    setPregunta("");
+    void empezarGrabacion();
   }
 
   function onMicClick() {
@@ -319,6 +342,32 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
       </div>
 
       <QuickChips disabled={ocupado} onElegir={onChip} />
+
+      {confirmandoVoz && (
+        <div className={styles.confirmVoz} role="status">
+          <span className={styles.confirmTexto}>
+            👂 ¿Has dicho esto? Puedes cambiarlo abajo antes de preguntar.
+          </span>
+          <div className={styles.confirmBotones}>
+            <button
+              type="button"
+              className={styles.confirmSi}
+              onClick={confirmarVoz}
+              disabled={pensando || !pregunta.trim()}
+            >
+              ✅ Sí, preguntar
+            </button>
+            <button
+              type="button"
+              className={styles.confirmNo}
+              onClick={repetirVoz}
+              disabled={pensando}
+            >
+              🔁 Repetir
+            </button>
+          </div>
+        </div>
+      )}
 
       <form className={styles.form} onSubmit={onSubmit}>
         <input
