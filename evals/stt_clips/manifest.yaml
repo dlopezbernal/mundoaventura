@@ -1,0 +1,21 @@
+# evals/stt_clips/manifest.yaml — Clips para la comparativa STT (Hito 7)
+# ========================================================================
+#
+# Lista de clips de audio con su transcripción de REFERENCIA hecha a mano. La usa
+# `evals/stt.py` para medir el WER de cada proveedor. Las rutas de `audio` son
+# relativas a ESTA carpeta.
+#
+# Objetivo del doc H7 §3: ~20 clips, preferiblemente con VOCES INFANTILES (es el
+# caso de uso real y donde todos los ASR flojean). Grábalos tú (móvil o el propio
+# micro de la app) en formato webm/ogg/mp3/wav; faster-whisper y Scribe deducen el
+# formato de los bytes.
+#
+# Está VACÍO a propósito (el sandbox no tiene audio): rellénalo en tu máquina.
+# Ejemplo de una entrada:
+#
+# - audio: clip01.webm
+#   referencia: "hola tirano rex por qué tienes los brazos tan pequeños"
+# - audio: clip02.webm
+#   referencia: "cuántos años vivías en la prehistoria"
+
+[]
