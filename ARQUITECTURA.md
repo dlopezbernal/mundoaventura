@@ -55,6 +55,14 @@ Niño (SPA React)   Backend (FastAPI)         Nube
 Una pregunta **escrita** salta `/api/transcribe`: va directa a `/api/ask` y la
 respuesta vuelve igualmente con `audio_base64` (toda respuesta se habla).
 
+> **Streaming de la respuesta (Hito 8):** junto al `/api/ask` JSON (de una vez, que
+> el runner sigue usando) hay `POST /api/ask/stream` (**SSE**), que emite `fuentes` →
+> `token` (texto según lo genera el LLM) → `audio_chunk` (voz **por frases**, en cuanto
+> cierra cada una) → `fin`. Así el niño empieza a leer/oír a ~1–2 s en vez de esperar
+> ~7–12 s en blanco. `rag_service` cede el texto (`responder_streaming`), `chat_service`
+> orquesta el TTS por frases con **caché en disco** (`audio_cache`), y `Chat.tsx` pinta
+> incremental con una cola de audio. Un fallo de TTS degrada a solo-texto.
+
 En el frontend, la voz usa las **APIs estándar del navegador**, sin librerías:
 la pregunta se graba con **`MediaRecorder`** (`getUserMedia`), que produce
 webm/opus en Chrome y ogg/opus en Firefox — ambos aceptados por Scribe, que
