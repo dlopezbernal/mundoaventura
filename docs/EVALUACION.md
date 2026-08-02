@@ -130,14 +130,19 @@ literales promedian 0,736, pegadas al umbral BAJO (0,75).
 Cada sub-hito de H4 se mide contra la línea base y se acumula aquí. Cambio por
 sub-rama, con su ADR (`docs/decisiones/ADR-004…`).
 
-| Métrica | Baseline | H4.1 +embeddings | H4.2 +chunking | H4.3 +reranker | H4.4 −DeepL |
+| Métrica | Baseline | H4.1 +embeddings | H4.2 +chunking | H4.3 +reranker | H4.4 −DeepL (descartado) |
 |---|---|---|---|---|---|
-| Config | minilm-en (0,75) | multi-minilm (0,80) | + estructura | + jina-v2 (k=5, u=−2,75) | — |
-| **recall@3 chunk** | 78,2 % | 81,8 % | 83,6 % | **90,9 %** | |
-| **lat. retrieval (ms)** | 191,7 | 27,3 | ~8 | **~665** | |
-| Acierto de ruteo | 66,7 % | 70,0 % | 71,1 % | **82,2 %** | |
-| Español | 99 % | 100 % | 100 % | 100 % | |
-| Roto de personaje | 0 % | 0 % | 0 % | 0 % | |
+| Config | minilm-en (0,75) | multi-minilm (0,80) | + estructura | + jina-v2 (k=5, u=−2,75) | español directo |
+| **recall@3 chunk** | 78,2 % | 81,8 % | 83,6 % | **90,9 %** | 85,5 % (−5,4) |
+| **lat. retrieval (ms)** | 191,7 | 27,3 | ~8 | **~665** | ~665 (=) |
+| Acierto de ruteo | 66,7 % | 70,0 % | 71,1 % | **82,2 %** | 71,1 % (−11,1) |
+| Español | 99 % | 100 % | 100 % | 100 % | — |
+| Roto de personaje | 0 % | 0 % | 0 % | 0 % | — |
+
+**H4 se cierra en H4.3.** La configuración recomendada de H4 es
+**multi-minilm + estructura + reranker jina-v2 (candidatos 5, umbral −2,75)**, que
+sube el recall de chunk 78,2 → **90,9 %** y el ruteo 66,7 → **82,2 %** (equilibrado)
+sobre la línea base.
 
 **H4.1 (embeddings multilingües, `multi-minilm`):** recall@3 a nivel de chunk sube
 78,2 → 81,8 %, y la latencia de retrieval cae **7×** (191 → 27 ms: `fastembed` embebe
@@ -166,6 +171,19 @@ latencia de retrieval sube a ~665 ms en CPU (un cross-encoder es más caro que u
 búsqueda vectorial), aceptable para esta app (no es tiempo real) y revertible en caliente
 (`RERANKER=off`). No exige reindexar (reordena en consulta). El default de código sigue
 `off` (baseline reproducible); la config recomendada de H4 lo activa.
+
+**H4.4 (quitar DeepL) — DESCARTADO con datos.** La hipótesis era que, con la pila
+multilingüe (embeddings + reranker), consultar en **español directo** igualaría a
+traducir la pregunta a inglés, quitando la dependencia de DeepL. Medido
+(retrieval-only, misma colección y reranker): el español directo **regresa** el
+retrieval — recall de chunk 90,9 → **85,5 %** (−5,4) y ruteo 82,2 → **71,1 %** (−11,1).
+Motivo: el corpus es inglés (Wikipedia), así que traducir la pregunta la mantiene
+*monolingüe EN-EN* (casa mejor que cross-lingual ES→EN), y DeepL además **normaliza las
+faltas** del español infantil. Y el argumento de latencia ya no aplica: el reranker
+(~665 ms) domina, y la llamada a DeepL (~150 ms) es ruido a su lado. Conclusión: **se
+mantiene DeepL** (el dato defiende la traducción) y H4 se congela en H4.3, en línea con
+el "Plan B" de `docs/H4-retrieval.md`. Retomar solo tendría sentido con un corpus en
+español (retrieval monolingüe ES-ES), trabajo futuro.
 
 ## 8. Cómo reproducir
 
