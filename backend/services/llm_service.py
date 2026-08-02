@@ -18,7 +18,7 @@ Dos dialectos detrás de la misma interfaz (`LLM_PROVIDER`):
 
 Interfaz pública:
   completar(system, user, max_tokens=None, temperature=None, etiqueta="LLM") -> str
-  completar_streaming(...) -> Iterator[str]   # esqueleto; lo consumirá H8
+  completar_streaming(...) -> Iterator[str]   # streaming real de tokens (Hito 8)
   info() -> dict   # proveedor, modelo, base_url (NUNCA la clave)
 
 El modelo, el proveedor y la base_url son ajustes en caliente (`settings_service`);
@@ -151,13 +151,63 @@ def completar_streaming(
     temperature: float | None = None,
     etiqueta: str = "LLM",
 ) -> Iterator[str]:
-    """Genera la respuesta en trocitos (para H8, streaming al frontend).
+    """Genera la respuesta en TROCITOS según van llegando (streaming, Hito 8).
 
-    ESQUELETO por ahora: emite el texto completo como un único trozo, para que la
-    interfaz exista sin cambiar el comportamiento. H8 la implementará de verdad
-    (con `stream=True` en openai y el iterador nativo de Replicate).
+    Cede cada fragmento de texto en cuanto el proveedor lo produce, para que el chat
+    empiece a mostrar/hablar mientras el LLM sigue generando (baja la latencia
+    PERCIBIDA). El endpoint JSON (`completar`) sigue existiendo intacto para el runner
+    y la compatibilidad. Despacha por el mismo `LLM_PROVIDER` que `completar`.
     """
-    yield completar(system, user, max_tokens, temperature, etiqueta)
+    max_tokens, temperature = _resolver_generacion(max_tokens, temperature)
+    if _provider() == "openai":
+        yield from _stream_openai(system, user, max_tokens, temperature, etiqueta)
+    else:
+        yield from _stream_replicate(system, user, max_tokens, temperature, etiqueta)
+
+
+def _stream_replicate(
+    system: str, user: str, max_tokens: int, temperature: float, etiqueta: str
+) -> Iterator[str]:
+    """Streaming en Replicate: `run` ya devuelve un ITERADOR de trozos; los cedemos."""
+    modelo = _modelo()
+    debug_log.trazar_prompt(f"Replicate · {etiqueta} (stream, {modelo})", system=system, user=user)
+    salida = replicate_client.run(
+        modelo,
+        input={
+            "prompt": user,
+            "system_prompt": system,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+        },
+        etiqueta=f"Replicate · {etiqueta} (stream)",
+    )
+    for trozo in salida:
+        if trozo:
+            yield str(trozo)
+
+
+def _stream_openai(
+    system: str, user: str, max_tokens: int, temperature: float, etiqueta: str
+) -> Iterator[str]:
+    """Streaming openai-compatible: `stream=True` cede deltas de contenido."""
+    modelo = _modelo()
+    debug_log.trazar_prompt(
+        f"OpenAI-compat · {etiqueta} (stream, {modelo})", system=system, user=user
+    )
+    stream = _cliente_openai().chat.completions.create(
+        model=modelo,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ],
+        max_tokens=max_tokens,
+        temperature=temperature,
+        stream=True,
+    )
+    for evento in stream:
+        delta = evento.choices[0].delta.content if evento.choices else None
+        if delta:
+            yield delta
 
 
 def info() -> dict:

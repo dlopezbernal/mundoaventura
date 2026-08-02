@@ -26,6 +26,7 @@ Decisiones para mantenerlo simple y sin GPU local:
 """
 
 import logging
+from collections.abc import Iterator
 from typing import TypedDict
 
 from backend import config
@@ -363,16 +364,19 @@ def _decidir_origen(
     return _evaluar_relevancia(contexto, pregunta), MetodoDecision.LLM, mejor_dist, None
 
 
-def responder(personaje_id: str, pregunta: str) -> RespuestaRAG:
-    """Genera la respuesta de TEXTO del personaje (RAG). SIN voz (Hito 5).
+def _preparar(personaje_id: str, pregunta: str) -> dict:
+    """Fase COMÚN de responder/responder_streaming (todo menos generar el texto final).
 
-    La síntesis de voz (TTS) ya NO vive aquí: este servicio recupera y genera
-    TEXTO, y no tiene por qué saber que existe ElevenLabs. El orquestador
-    `chat_service.responder` añade el audio sobre este resultado (subir el TTS un
-    nivel era la fuga de capas principal del backend, y estorba al streaming de H8).
+    Valida, traduce (ES→EN), recupera, decide el origen (Evaluator+Router) y construye
+    el prompt (o el texto fijo de SIN_INFO). NO llama al LLM de generación: eso lo hace
+    quien llame, de golpe (`responder`) o en streaming (`responder_streaming`). Así la
+    lógica de decisión vive en un solo sitio y las dos salidas no divergen.
 
-    Lanza ValueError (→ 400 en el router) si el personaje no existe o falta el
-    token de Replicate.
+    Devuelve un dict con: origen/metodo/distancia/rerank_score/pregunta_traducida/
+    fuentes/nombre y, según el camino, (system, user, etiqueta) para generar o
+    `respuesta_fija` (SIN_INFO).
+
+    Lanza ValueError (→ 400 en el router) si el personaje no existe o falta el token.
     """
     ficha_personaje = personajes_service.obtener(personaje_id)
     if ficha_personaje is None:
@@ -385,76 +389,136 @@ def responder(personaje_id: str, pregunta: str) -> RespuestaRAG:
 
     nombre = ficha_personaje["nombre"]
 
-    # 0) TRADUCCIÓN (OBLIGATORIA): la enciclopedia está en inglés, así que
-    #    traducimos la pregunta ES→EN. La versión en inglés (pregunta_en) se usa en
-    #    TODAS las peticiones al modelo —retrieval, Evaluator y generación—, porque
-    #    Llama 3 entiende y obedece mejor en inglés. Si DeepL no está disponible,
-    #    traducir_es_en lanza TranslationError (subclase de ValueError) → el router
-    #    responde 400 con un mensaje claro, en vez de dar una respuesta mala.
-    #    (Solo se traduce la pregunta del niño; la RESPUESTA del personaje va en español.)
+    # 0) TRADUCCIÓN (OBLIGATORIA): la enciclopedia está en inglés, así que traducimos
+    #    la pregunta ES→EN. La versión en inglés (pregunta_en) se usa en TODAS las
+    #    peticiones al modelo (retrieval, Evaluator y generación): Llama 3 entiende y
+    #    obedece mejor en inglés. Si DeepL no está, lanza TranslationError (→ 400).
+    #    (Solo se traduce la pregunta; la RESPUESTA del personaje va en español.)
     pregunta_en = translation_service.traducir_es_en(pregunta)
 
-    # 1) RETRIEVAL (+ RERANK si está activo): recuperar las fichas candidatas, sus
-    #    distancias y —si hay reranker— sus puntuaciones (con la pregunta YA en inglés).
+    # 1) RETRIEVAL (+ RERANK si está activo).
     contexto, distancias, metadatos, scores = _recuperar_contexto(personaje_id, pregunta_en)
 
-    # 2) EVALUATOR + ROUTER: ¿son esas fichas relevantes? (rerank / umbral / llm / híbrido)
+    # 2) EVALUATOR + ROUTER: ¿son relevantes las fichas? (rerank / umbral / llm / híbrido)
     es_rag, metodo, distancia, score = _decidir_origen(contexto, distancias, scores, pregunta_en)
+
+    prep: dict = {
+        "personaje_id": personaje_id,
+        "pregunta": pregunta,
+        "nombre": nombre,
+        "metodo": metodo,
+        "distancia": distancia,
+        "rerank_score": score,
+        "pregunta_traducida": pregunta_en,
+        "system": None,
+        "user": None,
+        "etiqueta": None,
+        "respuesta_fija": None,
+    }
 
     if es_rag:
         # --- Camino RAG: respuesta FUNDAMENTADA solo en las fichas ---
-        origen = Origen.RAG
-        # Pasamos la pregunta YA traducida (pregunta_en): Llama 3 entiende y obedece
-        # mejor en inglés. La respuesta, eso sí, se genera en español (lo pide el prompt).
-        system, user = _construir_prompt(nombre, contexto, pregunta_en)
-        respuesta = _llamar_llm(system, user, etiqueta="RAG")
+        prep["origen"] = Origen.RAG
+        prep["system"], prep["user"] = _construir_prompt(nombre, contexto, pregunta_en)
+        prep["etiqueta"] = "RAG"
         # MOSTRAR_FUENTES (flag propio, ya no atado a DEBUG) decide si el niño VE el
-        # desplegable "¿De dónde lo he sacado?" en el chat (Chat.tsx lo pinta si
-        # `fuentes` no viene vacío). Enseñar la procedencia es pedagogía, no depuración.
-        # No afecta a que la respuesta siga fundamentada en el RAG, solo a si se
-        # enseña el porqué (con troceado estructural, la ruta de encabezados va incluida).
-        fuentes = (
+        # desplegable "¿De dónde lo he sacado?" (Chat.tsx lo pinta si `fuentes` no está
+        # vacío). Enseñar la procedencia es pedagogía, no depuración.
+        prep["fuentes"] = (
             [_formatear_fuente(c, m) for c, m in zip(contexto, metadatos, strict=False)]
             if settings_service.get("MOSTRAR_FUENTES")
             else []
         )
     elif settings_service.get("PERMITIR_CONOCIMIENTO_GENERAL"):
-        # --- Camino GENERAL: las fichas no sirven; el personaje responde con su
-        # conocimiento propio (aquí, en el futuro, podría enrutarse a búsqueda web).
-        origen = Origen.GENERAL
-        # Igual que en RAG: la pregunta va en inglés (pregunta_en), la respuesta en español.
-        system, user = _construir_prompt_general(nombre, pregunta_en)
-        respuesta = _llamar_llm(system, user, etiqueta="GENERAL")
-        fuentes = []  # no hay fichas detrás de esta respuesta
+        # --- Camino GENERAL: las fichas no sirven; el personaje tira de su conocimiento.
+        prep["origen"] = Origen.GENERAL
+        prep["system"], prep["user"] = _construir_prompt_general(nombre, pregunta_en)
+        prep["etiqueta"] = "GENERAL"
+        prep["fuentes"] = []
     else:
-        # --- Camino SIN_INFO: las fichas no sirven y el conocimiento propio del LLM
-        # está desactivado (PERMITIR_CONOCIMIENTO_GENERAL=false). Mensaje FIJO, sin
-        # llamar a ningún modelo (ni el LLM del personaje ni el juez): coste cero y
-        # respuesta anclada estrictamente a los documentos subidos.
-        origen = Origen.SIN_INFO
-        respuesta = settings_service.rellenar(
+        # --- Camino SIN_INFO: fichas no válidas y conocimiento general desactivado.
+        # Mensaje FIJO, sin llamar a ningún modelo: coste cero, anclado a los documentos.
+        prep["origen"] = Origen.SIN_INFO
+        prep["respuesta_fija"] = settings_service.rellenar(
             settings_service.get("MENSAJE_SIN_INFORMACION"), nombre=nombre
         )
-        fuentes = []
+        prep["fuentes"] = []
+    return prep
 
-    # Traza de depuración (solo si DEBUG): en la consola del BACKEND, no del cliente.
-    _trazar_origen(origen, metodo, distancia, score, pregunta_en)
 
+def _resultado(prep: dict, respuesta: str) -> RespuestaRAG:
+    """Arma el dict de RespuestaRAG a partir de la preparación y el texto generado."""
     return {
         "success": True,
-        "personaje_id": personaje_id,
-        "pregunta": pregunta,
+        "personaje_id": prep["personaje_id"],
+        "pregunta": prep["pregunta"],
         "respuesta": respuesta,
-        # "RAG" = fundamentada en la enciclopedia · "GENERAL" = conocimiento del modelo.
-        "origen": origen,
-        # Cómo se decidió ("rerank"/"umbral"/"llm") y las señales para depurar/calibrar:
-        # la mejor distancia coseno y, si hubo reranker, la mejor puntuación.
-        "metodo": metodo,
-        "distancia": distancia,
-        "rerank_score": score,
-        # La pregunta traducida a inglés (para verificar que DeepL está actuando).
-        "pregunta_traducida": pregunta_en,
-        # Fichas usadas (vacío si la respuesta no vino del RAG).
-        "fuentes": fuentes,
-        # El audio (TTS) lo añade el orquestador chat_service; aquí NO (capa de texto).
+        "origen": prep["origen"],
+        "metodo": prep["metodo"],
+        "distancia": prep["distancia"],
+        "rerank_score": prep["rerank_score"],
+        "pregunta_traducida": prep["pregunta_traducida"],
+        "fuentes": prep["fuentes"],
     }
+
+
+def responder(personaje_id: str, pregunta: str) -> RespuestaRAG:
+    """Genera la respuesta de TEXTO del personaje (RAG), de una vez. SIN voz (Hito 5).
+
+    La síntesis de voz (TTS) NO vive aquí: este servicio recupera y genera TEXTO. El
+    orquestador `chat_service` añade el audio. `responder_streaming` es la variante que
+    cede el texto por trozos (Hito 8); ambas comparten `_preparar` para no divergir.
+
+    Lanza ValueError (→ 400) si el personaje no existe o falta el token de Replicate.
+    """
+    prep = _preparar(personaje_id, pregunta)
+    if prep["origen"] == Origen.SIN_INFO:
+        respuesta = prep["respuesta_fija"]
+    else:
+        respuesta = _llamar_llm(prep["system"], prep["user"], etiqueta=prep["etiqueta"])
+    _trazar_origen(
+        prep["origen"],
+        prep["metodo"],
+        prep["distancia"],
+        prep["rerank_score"],
+        prep["pregunta_traducida"],
+    )
+    return _resultado(prep, respuesta)
+
+
+def responder_streaming(personaje_id: str, pregunta: str) -> Iterator[dict]:
+    """Variante en STREAMING de `responder`: cede el TEXTO por trozos (Hito 8).
+
+    Emite dicts con `tipo`:
+      - {"tipo": "meta", ...}   una vez al principio: origen, fuentes, metadatos.
+      - {"tipo": "token", "texto": <trozo>}   por cada fragmento del LLM.
+    NO añade voz: el TTS por frases lo orquesta `chat_service` sobre estos eventos
+    (separación de capas). El endpoint JSON `responder` sigue intacto.
+    """
+    prep = _preparar(personaje_id, pregunta)
+    yield {
+        "tipo": "meta",
+        "personaje_id": prep["personaje_id"],
+        "pregunta": prep["pregunta"],
+        "origen": prep["origen"],
+        "metodo": prep["metodo"],
+        "distancia": prep["distancia"],
+        "rerank_score": prep["rerank_score"],
+        "pregunta_traducida": prep["pregunta_traducida"],
+        "fuentes": prep["fuentes"],
+    }
+    if prep["origen"] == Origen.SIN_INFO:
+        # Texto fijo: un único "token" (no hay LLM que streamear).
+        yield {"tipo": "token", "texto": prep["respuesta_fija"]}
+    else:
+        for trozo in llm_service.completar_streaming(
+            prep["system"], prep["user"], etiqueta=prep["etiqueta"]
+        ):
+            yield {"tipo": "token", "texto": trozo}
+    _trazar_origen(
+        prep["origen"],
+        prep["metodo"],
+        prep["distancia"],
+        prep["rerank_score"],
+        prep["pregunta_traducida"],
+    )
