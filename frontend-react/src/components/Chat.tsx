@@ -20,15 +20,15 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import { ask, BackendError, transcribe } from "../api/client";
+import { askStream, BackendError, transcribe } from "../api/client";
 import QuickChips from "./QuickChips/QuickChips";
 import styles from "./Chat.module.css";
 
 interface Mensaje {
   autor: "nino" | "personaje" | "error";
   texto: string;
-  /** Voz de la respuesta (mp3 en base64), solo en burbujas del personaje. */
-  audioBase64?: string | null;
+  /** Voz de la respuesta: una lista de mp3 (base64), UNO POR FRASE (streaming, H8). */
+  audios?: string[];
   /** Fragmentos de la enciclopedia en los que se apoyó la respuesta. */
   fuentes?: string[];
 }
@@ -87,6 +87,10 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const grabacionRef = useRef<Grabacion | null>(null);
+  // Cola de reproducción de audio (H8): las frases llegan por streaming de una en una
+  // y se reproducen EN ORDEN, sin pisarse, aunque lleguen mientras suena la anterior.
+  const colaAudioRef = useRef<string[]>([]);
+  const reproduciendoRef = useRef(false);
 
   // Mientras se responde, se graba o se transcribe, no se puede escribir/enviar
   // (evita solapar una pregunta escrita con una hablada, como en Flet).
@@ -109,7 +113,9 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
   // que sonara y soltar el micrófono si estaba grabando.
   useEffect(() => {
     return () => {
+      if (audioRef.current) audioRef.current.onended = null; // corta el encadenado de la cola
       audioRef.current?.pause();
+      colaAudioRef.current = [];
       const grabacion = grabacionRef.current;
       if (grabacion) {
         grabacion.cancelada = true;
@@ -123,42 +129,98 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
     };
   }, []);
 
-  function reproducir(audioBase64: string) {
-    // Corta la respuesta anterior si aún sonaba y arranca la nueva. Un fallo
-    // NUNCA rompe la UI: el texto ya está visible, solo se pierde el audio.
+  /** Reproduce el siguiente audio de la cola; al acabar, encadena el siguiente. */
+  function bombearCola() {
+    if (reproduciendoRef.current) return;
+    const siguiente = colaAudioRef.current.shift();
+    if (!siguiente) return;
+    reproduciendoRef.current = true;
+    const seguir = () => {
+      reproduciendoRef.current = false;
+      bombearCola();
+    };
     try {
-      audioRef.current?.pause();
-      const audio = new Audio(`data:audio/mpeg;base64,${audioBase64}`);
+      const audio = new Audio(`data:audio/mpeg;base64,${siguiente}`);
       audioRef.current = audio;
-      void audio.play().catch((exc: unknown) => {
-        console.warn("No se pudo reproducir la voz de la respuesta:", exc);
-      });
-    } catch (exc) {
-      console.warn("No se pudo reproducir la voz de la respuesta:", exc);
+      audio.onended = seguir;
+      void audio.play().catch(() => seguir()); // si no puede sonar, sigue con el resto
+    } catch {
+      seguir();
     }
+  }
+
+  /** Encola una frase de audio (llega por streaming) y arranca la cola si hace falta. */
+  function encolarAudio(audioBase64: string) {
+    colaAudioRef.current.push(audioBase64);
+    bombearCola();
+  }
+
+  /** Reproduce una respuesta completa (todas sus frases) desde cero: botón "escuchar". */
+  function reproducirMensaje(audios: string[]) {
+    if (audioRef.current) audioRef.current.onended = null; // corta el encadenado anterior
+    audioRef.current?.pause();
+    reproduciendoRef.current = false;
+    colaAudioRef.current = [...audios];
+    bombearCola();
   }
 
   function burbujaError(texto: string) {
     setMensajes((previos) => [...previos, { autor: "error", texto }]);
   }
 
+  /** Actualiza (fusiona) la ÚLTIMA burbuja del historial (la del personaje en curso). */
+  function actualizarUltima(cambios: Partial<Mensaje>) {
+    setMensajes((previos) => {
+      if (previos.length === 0) return previos;
+      const copia = [...previos];
+      copia[copia.length - 1] = { ...copia[copia.length - 1], ...cambios };
+      return copia;
+    });
+  }
+
   // -- Envío de una pregunta (escrita, transcrita o por chip: MISMO flujo) ----
+  // Streaming (H8): el texto se pinta token a token y cada FRASE se oye en cuanto
+  // llega, en vez de esperar en blanco a toda la respuesta.
 
   async function enviarPregunta(texto: string) {
     setMensajes((previos) => [...previos, { autor: "nino", texto }]);
     setPensando(true);
+    let creada = false; // ¿ya existe la burbuja del personaje que vamos rellenando?
+    let acumulado = "";
+    let fuentes: string[] = [];
+    const audios: string[] = [];
     try {
-      const respuesta = await ask(personajeId, texto);
-      setMensajes((previos) => [
-        ...previos,
-        {
-          autor: "personaje",
-          texto: respuesta.respuesta,
-          audioBase64: respuesta.audio_base64,
-          fuentes: respuesta.fuentes,
+      await askStream(personajeId, texto, {
+        onFuentes: (f) => {
+          fuentes = f; // llega ANTES que los tokens (evento meta); se usa al crear la burbuja
         },
-      ]);
-      if (respuesta.audio_base64) reproducir(respuesta.audio_base64);
+        onToken: (trozo) => {
+          acumulado += trozo;
+          if (!creada) {
+            // Primer token: quita el "pensando" y crea la burbuja del personaje.
+            setPensando(false);
+            setMensajes((previos) => [
+              ...previos,
+              { autor: "personaje", texto: acumulado, audios: [], fuentes },
+            ]);
+            creada = true;
+          } else {
+            actualizarUltima({ texto: acumulado });
+          }
+        },
+        onAudio: (audioBase64) => {
+          audios.push(audioBase64);
+          encolarAudio(audioBase64);
+          actualizarUltima({ audios: [...audios] }); // para el botón "volver a escuchar"
+        },
+        onFin: (respuesta) => {
+          if (respuesta) {
+            acumulado = respuesta;
+            actualizarUltima({ texto: acumulado });
+          }
+        },
+        onError: (mensaje) => burbujaError(mensaje),
+      });
     } catch (exc) {
       const mensaje =
         exc instanceof BackendError
@@ -304,12 +366,12 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
             </span>
             <p className={styles.texto}>{mensaje.texto}</p>
 
-            {mensaje.audioBase64 && (
+            {mensaje.audios && mensaje.audios.length > 0 && (
               <button
                 type="button"
                 className={styles.audio}
                 aria-label="Volver a escuchar la respuesta"
-                onClick={() => reproducir(mensaje.audioBase64 as string)}
+                onClick={() => reproducirMensaje(mensaje.audios as string[])}
               >
                 🔊 Volver a escuchar
               </button>

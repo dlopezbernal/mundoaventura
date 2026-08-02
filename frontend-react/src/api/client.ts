@@ -251,6 +251,110 @@ export async function ask(
 }
 
 /**
+ * Callbacks del streaming de la respuesta (Hito 8). Cada uno se invoca según van
+ * llegando los eventos SSE del backend, para pintar/hablar de forma incremental.
+ */
+export interface StreamCallbacks {
+  /** Fuentes del RAG (una vez, al principio; vacío si no aplica). */
+  onFuentes?: (fuentes: string[]) => void;
+  /** Un trozo de texto de la respuesta (se van concatenando). */
+  onToken?: (texto: string) => void;
+  /** Audio (mp3 base64) de una FRASE ya sintetizada, para encolar y reproducir. */
+  onAudio?: (audioBase64: string) => void;
+  /** Fin: la respuesta completa (texto ya unido). */
+  onFin?: (respuesta: string) => void;
+  /** Error emitido por el backend a mitad de stream (mensaje ya apto para el niño). */
+  onError?: (mensaje: string) => void;
+}
+
+/** Procesa un frame SSE (`event: <tipo>` + `data: <json>`) y llama al callback. */
+function _procesarFrameSSE(frame: string, cb: StreamCallbacks): void {
+  let evento = "message";
+  const datos: string[] = [];
+  for (const linea of frame.split("\n")) {
+    if (linea.startsWith("event:")) evento = linea.slice(6).trim();
+    else if (linea.startsWith("data:")) datos.push(linea.slice(5).trim());
+  }
+  if (datos.length === 0) return;
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(datos.join("\n")) as Record<string, unknown>;
+  } catch {
+    return; // frame incompleto o no-JSON: se ignora
+  }
+  if (evento === "fuentes") cb.onFuentes?.((payload.fuentes as string[]) ?? []);
+  else if (evento === "token") cb.onToken?.((payload.texto as string) ?? "");
+  else if (evento === "audio_chunk") cb.onAudio?.((payload.audio_base64 as string) ?? "");
+  else if (evento === "fin") cb.onFin?.((payload.respuesta as string) ?? "");
+  else if (evento === "error") cb.onError?.((payload.mensaje as string) ?? "Algo ha salido mal.");
+}
+
+/**
+ * Como `ask`, pero en STREAMING (SSE): invoca los callbacks según llegan el texto
+ * (token a token) y el audio (frase a frase). Baja la latencia PERCIBIDA (Hito 8).
+ * No lleva timeout por AbortController (un stream dura lo que dure); se puede cortar
+ * con `signal`. El endpoint JSON `ask` sigue disponible para quien prefiera la
+ * respuesta de una vez.
+ */
+export async function askStream(
+  personajeId: string,
+  pregunta: string,
+  cb: StreamCallbacks,
+  signal?: AbortSignal,
+): Promise<void> {
+  const payload: AskRequest = { personaje_id: personajeId, pregunta };
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    Accept: "text/event-stream",
+  };
+  if (_adminToken) headers["X-Admin-Token"] = _adminToken;
+  if (ACCESS_CODE) headers["X-Access-Code"] = ACCESS_CODE;
+
+  let response: Response;
+  try {
+    response = await fetch(`${BACKEND_URL}/api/ask/stream`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+      signal,
+    });
+  } catch (exc) {
+    if (exc instanceof DOMException && exc.name === "AbortError") return; // cancelado a propósito
+    throw new BackendError(
+      "No pude conectar con la máquina del tiempo. Pide a un adulto que compruebe que está encendida.",
+    );
+  }
+
+  if (!response.ok || !response.body) {
+    let detail = "";
+    try {
+      const body = (await response.json()) as { detail?: string };
+      detail = body.detail ?? "";
+    } catch {
+      detail = "";
+    }
+    if (response.status === 429 && detail) throw new BackendError(detail, 429);
+    throw new BackendError(`Algo ha salido mal: ${detail || `error ${response.status}`}`, response.status);
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    // Los frames SSE se separan por una línea en blanco (\n\n).
+    let corte = buffer.indexOf("\n\n");
+    while (corte !== -1) {
+      _procesarFrameSSE(buffer.slice(0, corte), cb);
+      buffer = buffer.slice(corte + 2);
+      corte = buffer.indexOf("\n\n");
+    }
+  }
+}
+
+/**
  * Sube el audio grabado (multipart) a /api/transcribe y devuelve el texto.
  *
  * Se usa cuando el niño pregunta por voz: graba → transcribe → el texto entra
