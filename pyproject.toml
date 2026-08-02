@@ -36,6 +36,16 @@ dependencies = [
     "openai>=1.0,<2",
 ]
 
+[project.optional-dependencies]
+# STT local (Hito 7): faster-whisper (CTranslate2, SIN torch) transcribe la voz del
+# niño EN EL PROPIO PC. Es OPCIONAL a propósito: un `uv sync` normal queda ligero y
+# usa el STT de nube (elevenlabs), reproduciendo la línea base; quien quiera STT local
+# instala este extra con `uv sync --extra stt-local` y añade las DLLs de cuBLAS/cuDNN
+# (ver README). Si no está o no carga, stt_service cae a la nube — la app no se queda muda.
+stt-local = [
+    "faster-whisper>=1.0,<2",
+]
+
 [dependency-groups]
 # Herramientas de desarrollo (no van al despliegue). Se instalan con `uv sync`
 # (uv incluye los dependency-groups por defecto) y quedan disponibles con

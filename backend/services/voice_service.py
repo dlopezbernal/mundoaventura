@@ -12,7 +12,6 @@ errores se lanzan como VoiceError (subclase de ValueError) para que el router lo
 devuelva como HTTP 400 con un mensaje claro, en vez de un 500 genérico.
 """
 
-import io
 import logging
 
 from elevenlabs.client import ElevenLabs
@@ -57,37 +56,18 @@ def _get_client() -> ElevenLabs:
 
 
 def transcribir(audio_bytes: bytes) -> str:
-    """Transcribe audio (bytes) a texto en español con ElevenLabs Scribe.
+    """Transcribe audio (bytes) a texto en español (puerta pública de STT).
 
-    Scribe deduce el formato de los propios bytes, así que no necesitamos el
-    nombre del fichero. Lanza VoiceError si falta la clave o falla la transcripción.
+    Desde el Hito 7 la transcripción es SELECCIONABLE (nube o local): delega en
+    `stt_service`, que despacha por el ajuste `STT_PROVIDER` y cae a ElevenLabs si el
+    STT local no está disponible. Se mantiene aquí como entrada pública para que el
+    router y los tests no cambien; la implementación de cada dialecto vive en stt_service.
+    Import perezoso para evitar el ciclo (stt_service reutiliza `_get_client` de aquí
+    para el dialecto ElevenLabs).
     """
-    client = _get_client()
-    try:
-        modelo_stt = settings_service.get("ELEVENLABS_STT_MODEL")
-        idioma = settings_service.get("STT_LANG")
-        resultado = resiliencia.reintentar(
-            lambda: client.speech_to_text.convert(
-                file=io.BytesIO(audio_bytes),
-                model_id=modelo_stt,
-                language_code=idioma,
-            ),
-            etiqueta="ElevenLabs · STT",
-        )
-        texto = (resultado.text or "").strip()
-    except Exception as exc:
-        raise VoiceError(f"Error al transcribir con ElevenLabs: {exc}") from exc
+    from backend.services import stt_service
 
-    if settings_service.get("DEBUG"):
-        logger.debug(
-            "[VOZ] 🎙️ STT OK · %s bytes de audio recibidos del frontend → texto "
-            'transcrito: "%s" (ElevenLabs modelo=%s, idioma=%s)',
-            len(audio_bytes),
-            texto,
-            settings_service.get("ELEVENLABS_STT_MODEL"),
-            settings_service.get("STT_LANG"),
-        )
-    return texto
+    return stt_service.transcribir(audio_bytes)
 
 
 def sintetizar(texto: str, voz_id: str) -> bytes:

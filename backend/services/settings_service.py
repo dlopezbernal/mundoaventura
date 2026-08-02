@@ -362,6 +362,45 @@ _SPEC: dict[str, dict[str, Any]] = {
         "default": config.STT_LANG,
         "ayuda": "Idioma de la transcripción (la pregunta del niño).",
     },
+    # --- STT: proveedor de transcripción seleccionable (Hito 7) ---
+    "STT_PROVIDER": {
+        "categoria": CAT_VOZ,
+        "tipo": "str",
+        "default": config.STT_PROVIDER,
+        "opciones": ["elevenlabs", "local", "groq"],
+        "ayuda": "Proveedor de transcripción (voz→texto). elevenlabs = nube (línea base); "
+        "local = faster-whisper en tu PC (la voz del niño no sale del equipo; requiere el "
+        "extra 'stt-local'); groq = Whisper en Groq. Si 'local' no carga, cae a nube.",
+    },
+    "STT_LOCAL_MODEL": {
+        "categoria": CAT_VOZ,
+        "tipo": "str",
+        "default": config.STT_LOCAL_MODEL,
+        "opciones": ["large-v3-turbo", "large-v3", "medium", "small"],
+        "ayuda": "Modelo de faster-whisper (solo si STT_PROVIDER=local). large-v3-turbo "
+        "en int8 ~1–1,5 GB VRAM; medium/small son más ligeros y menos precisos.",
+    },
+    "STT_LOCAL_DEVICE": {
+        "categoria": CAT_VOZ,
+        "tipo": "str",
+        "default": config.STT_LOCAL_DEVICE,
+        "opciones": ["cuda", "cpu"],
+        "ayuda": "Dispositivo de faster-whisper. cuda = GPU (recomendado); cpu = plan B "
+        "si fallan las DLLs de cuBLAS/cuDNN en Windows (más lento pero funciona).",
+    },
+    "STT_LOCAL_COMPUTE": {
+        "categoria": CAT_VOZ,
+        "tipo": "str",
+        "default": config.STT_LOCAL_COMPUTE,
+        "opciones": ["int8", "int8_float16", "float16", "float32"],
+        "ayuda": "Precisión de faster-whisper. int8 es lo más ligero (recomendado en 6 GB).",
+    },
+    "GROQ_STT_MODEL": {
+        "categoria": CAT_VOZ,
+        "tipo": "str",
+        "default": config.GROQ_STT_MODEL,
+        "ayuda": "Modelo de Whisper en Groq (solo si STT_PROVIDER=groq).",
+    },
     # --- Prompts de sistema (editables sin tocar código) ---
     # Van en inglés (Llama 3 obedece mejor); la respuesta se pide en español dentro
     # del propio texto. Variables: {nombre}, {fichas}, {pregunta}. multilinea → la UI
