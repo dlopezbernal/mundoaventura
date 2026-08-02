@@ -172,6 +172,25 @@ MOSTRAR_FUENTES: bool = os.getenv("MOSTRAR_FUENTES", "false").strip().lower() in
     "on",
 )
 
+# --- Reranker: reordenado de candidatos con cross-encoder (Hito 4.3) ---
+# El retrieval trae RERANK_CANDIDATOS candidatos baratos (bi-encoder) y, si RERANKER
+# no es "off", un cross-encoder los reordena por relevancia y nos quedamos con el
+# top-K (RAG_TOP_K). Es en CONSULTA, no toca el índice: NO exige reindexar (se activa
+# en caliente). Ver services/reranker.py. "off" = camino de siempre (solo coseno).
+RERANKER: str = os.getenv("RERANKER", "off").strip()
+
+# Cuántos candidatos recupera ChromaDB ANTES de reordenar (el "ancho" del embudo).
+# Solo se usa si RERANKER != off; si no, se recupera directamente RAG_TOP_K. Calibrado
+# en 5 (ADR-006): con 5 el recall casi iguala a 10 (90,9 vs 92,7 %) a MITAD de latencia.
+RERANK_CANDIDATOS: int = int(os.getenv("RERANK_CANDIDATOS", "5"))
+
+# Umbral de PUNTUACIÓN del reranker (logit: más alto = más relevante; puede ser
+# negativo). Con reranker activo, el Evaluator decide por aquí en vez de por la
+# distancia coseno: score >= UMBRAL ⇒ RAG. Calibrado en -2,75 (ADR-006): equilibra
+# fundamentar (literal/inferencial) y rechazar fuera-de-dominio. Solo aplica si el
+# reranker está activo; el default de RERANKER sigue off (baseline reproducible).
+RERANK_UMBRAL: float = float(os.getenv("RERANK_UMBRAL", "-2.75"))
+
 
 # ---------------------------------------------------------------------------
 # 3b) Voz (ElevenLabs): transcripción (Scribe/STT) + síntesis (Flash/TTS)

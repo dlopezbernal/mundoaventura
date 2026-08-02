@@ -256,6 +256,36 @@ _SPEC: dict[str, dict[str, Any]] = {
         "ayuda": "Mostrar al niño en el chat los fragmentos usados (desplegable "
         "'¿de dónde lo he sacado?'). Flag propio, independiente de DEBUG.",
     },
+    # --- Reranker (Hito 4.3): reordena en CONSULTA, NO exige reindexar ---
+    "RERANKER": {
+        "categoria": CAT_RAG,
+        "tipo": "str",
+        "default": config.RERANKER,
+        "opciones": ["off", "jina-v2"],
+        "ayuda": "Reordena los candidatos con un cross-encoder (lee pregunta+ficha "
+        "juntas, más preciso que la distancia coseno). off = solo coseno; jina-v2 = "
+        "reranker multilingüe. Con reranker activo, el Evaluator decide por su "
+        "puntuación (RERANK_UMBRAL), no por los umbrales coseno. No exige reindexar.",
+    },
+    "RERANK_CANDIDATOS": {
+        "categoria": CAT_RAG,
+        "tipo": "int",
+        "default": config.RERANK_CANDIDATOS,
+        "min": 1,
+        "max": 50,
+        "ayuda": "Cuántos candidatos recupera ChromaDB ANTES de reordenar (solo si el "
+        "reranker está activo). Se reordenan y se queda con RAG_TOP_K.",
+    },
+    "RERANK_UMBRAL": {
+        "categoria": CAT_RAG,
+        "tipo": "float",
+        "default": config.RERANK_UMBRAL,
+        "min": -15.0,
+        "max": 15.0,
+        "paso": 0.1,
+        "ayuda": "Puntuación mínima del reranker para fundamentar (RAG). Logit: más "
+        "alto = más relevante (puede ser negativo). Solo aplica con reranker activo.",
+    },
     "CHROMA_COLLECTION": {
         "categoria": CAT_CHUNKING,
         "tipo": "str",

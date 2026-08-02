@@ -132,12 +132,12 @@ sub-rama, con su ADR (`docs/decisiones/ADR-004…`).
 
 | Métrica | Baseline | H4.1 +embeddings | H4.2 +chunking | H4.3 +reranker | H4.4 −DeepL |
 |---|---|---|---|---|---|
-| Config | minilm-en (0,75) | multi-minilm (0,80) | + estructura | — | — |
-| **recall@3 chunk** | 78,2 % | 81,8 % | **83,6 %** | | |
-| **lat. retrieval (ms)** | 191,7 | 27,3 | ~8 | | |
-| Acierto de ruteo | 66,7 % | 70,0 % | 71,1 % | | |
-| Español | 99 % | 100 % | 100 % | | |
-| Roto de personaje | 0 % | 0 % | 0 % | | |
+| Config | minilm-en (0,75) | multi-minilm (0,80) | + estructura | + jina-v2 (k=5, u=−2,75) | — |
+| **recall@3 chunk** | 78,2 % | 81,8 % | 83,6 % | **90,9 %** | |
+| **lat. retrieval (ms)** | 191,7 | 27,3 | ~8 | **~665** | |
+| Acierto de ruteo | 66,7 % | 70,0 % | 71,1 % | **82,2 %** | |
+| Español | 99 % | 100 % | 100 % | 100 % | |
+| Roto de personaje | 0 % | 0 % | 0 % | 0 % | |
 
 **H4.1 (embeddings multilingües, `multi-minilm`):** recall@3 a nivel de chunk sube
 78,2 → 81,8 %, y la latencia de retrieval cae **7×** (191 → 27 ms: `fastembed` embebe
@@ -155,6 +155,17 @@ además da **procedencia real** al desplegable "¿de dónde lo he sacado?" (flag
 `MOSTRAR_FUENTES`, ya no atado a `DEBUG`). Aplica a `.md`; los `.txt` (libros) caen al
 recursivo. Números de retrieval (deterministas); la corrida completa tuvo errores
 transitorios de Replicate en la generación (429 del free tier), ajenos al chunking.
+
+**H4.3 (reranker, `jina-v2`):** un cross-encoder multilingüe reordena los candidatos
+(embudo: recupera 5 → reordena → top-3) y su **puntuación sustituye al LLM-juez** en el
+ruteo (ADR-006). Salto de calidad grande: recall de chunk 83,6 → **90,9 %** y ruteo
+71,1 → **82,2 %**, este por primera vez **equilibrado** en los cuatro tipos (literal 77 /
+inferencial 92 / fuera_dominio 80 / sin_respuesta 80) — el cross-encoder resuelve el
+trade-off fundamentar/rechazar que ningún umbral coseno equilibraba. Coste asumido: la
+latencia de retrieval sube a ~665 ms en CPU (un cross-encoder es más caro que una
+búsqueda vectorial), aceptable para esta app (no es tiempo real) y revertible en caliente
+(`RERANKER=off`). No exige reindexar (reordena en consulta). El default de código sigue
+`off` (baseline reproducible); la config recomendada de H4 lo activa.
 
 ## 8. Cómo reproducir
 
