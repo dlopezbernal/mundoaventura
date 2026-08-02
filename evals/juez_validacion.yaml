@@ -1,0 +1,330 @@
+- origen_candidato: h6-llama3-replicate
+  id: leo-01
+  personaje: leonardo_da_vinci
+  notas: &id001
+  - '## Work
+
+
+    ### Painting'
+  - Between 1503 and 1506, he worked on a small portrait, *La Gioconda*, likely the
+    most famous painting in Western art. The work depicts Lisa Gherardini, wife of
+    Francesco del Giocondo. It was a painting very dear to Leonardo, and he kept it
+    with him until his death. Its current appearance is deceptive due to a thick layer
+    of darkened varnishes, the removal of which is being delayed because of the risks
+    involved. Despite this, the painting is in an unusually good state of preservation,
+    as it shows no visible signs of repairs, overpainting, or retouching—a very rare
+    occurrence for a painting from this period.
+  - Another notable work is *The Virgin, the Infant Jesus, and Saint Anne*, painted
+    around 1510, which has been copied many times. The work influenced Michelangelo,
+    Raphael, and Andrea del Sarto in particular, and through them, Pontormo and Antonio
+    da Correggio. The compositional style was adopted in particular by Venetian painters
+    such as Tintoretto and Paolo Veronese. One of Leonardo’s last paintings was that
+    of Saint John the Baptist, for which he used Salai as a model.​
+  respuesta: Pinté muchos cuadros, pero no puedo contarlos todos. ¡Eso sería un trabajo
+    muy difícil!
+  veredicto_humano: false
+- origen_candidato: h6-llama3-replicate
+  id: leo-02
+  personaje: leonardo_da_vinci
+  notas: &id002
+  - 'He was born on Saturday, April 15, 1452, “at the third hour of the night,” that
+    is, three hours after the Hail Mary: at 10:30 p.m.​ It has been debated whether
+    his birth took place at the castle in Vinci—a town about 25 km as the crow flies
+    from Florence—or at his mother’s home in Anchiano, a hamlet about two kilometers
+    from Vinci.​ Leonardo, a descendant of a wealthy family of Italian nobles, was
+    born out of wedlock: his father, Messer Piero Fruosino di Antonio (notary, chancellor,
+    and ambassador of the Republic of Florence), impregnated Caterina, a young woman
+    from a peasant family,​​ who has been suspected of having been a Circassian slave
+    from the Middle East, from the Caucasus Mountains.​​ Martin Kemp, professor emeritus
+    of art history at the University of Oxford, after researching'
+  - '## Biography
+
+
+    ### Childhood'
+  - '# Leonardo da Vinci
+
+
+    Leonardo da Vinci was an artist and inventor from the Renaissance. He was born
+    in 1452
+
+    in the town of Vinci, in Italy, and he died in 1519.
+
+
+    He painted very famous works, such as the Mona Lisa (La Gioconda) and The Last
+    Supper.
+
+    He filled notebooks with inventions ahead of his time: flying machines, a kind
+    of
+
+    helicopter, and even a parachute.
+
+
+    He loved studying nature: water, light, birds and the human body. For him, art
+    and science
+
+    went together. He wrote many notes backwards, in mirror writing, which is read
+    with a
+
+    mirror. He was very curious and always asked himself questions about how everything
+    he saw
+
+    worked.'
+  respuesta: Nací el sábado 15 de abril de 1452, a las 10:30 de la noche.
+  veredicto_humano: true
+- origen_candidato: h6-llama3-replicate
+  id: pan-01
+  personaje: peter_pan
+  notas: &id003
+  - 'I don’t know whether you have ever seen a map of a person’s mind.
+
+    Doctors sometimes draw maps of other parts of you, and your own map can
+
+    become intensely interesting, but catch them trying to draw a map of a
+
+    child’s mind, which is not only confused, but keeps going round all the
+
+    time. There are zigzag lines on it, just like your temperature on a
+
+    card, and these are probably roads in the island, for the Neverland is
+
+    always more or less an island, with astonishing splashes of colour here
+
+    and there, and coral reefs and rakish-looking craft in the offing, and
+
+    savages and lonely lairs, and gnomes who are mostly tailors, and caves
+
+    through which a river runs, and princes with six elder brothers, and a
+
+    hut fast going to decay, and one very small old lady with a hooked'
+  - 'V
+
+
+    THE LITTLE HOUSE
+
+
+    Everybody has heard of the Little House in the Kensington Gardens,
+
+    which is the only house in the whole world that the fairies have built
+
+    for humans.  But no one has really seen it, except just three or four,
+
+    and they have not only seen it but slept in it, and unless you sleep in
+
+    it you never see it.  This is because it is not there when you lie
+
+    down, but it is there when you wake up and step outside.'
+  - 'Of all delectable islands the Neverland is the snuggest and most
+
+    compact, not large and sprawly, you know, with tedious distances
+
+    between one adventure and another, but nicely crammed. When you play at
+
+    it by day with the chairs and table-cloth, it is not in the least
+
+    alarming, but in the two minutes before you go to sleep it becomes very
+
+    real. That is why there are night-lights.'
+  respuesta: Vivo en la Isla del Nunca, que es un lugar muy especial y mágico.
+  veredicto_humano: true
+- origen_candidato: h6-llama3-replicate
+  id: sher-02
+  personaje: sherlock_holmes
+  notas: &id004
+  - '# Sherlock Holmes
+
+
+    Sherlock Holmes is a detective. He is a fictional character created by the writer
+    Arthur
+
+    Conan Doyle in 1887.
+
+
+    He lives in London, at 221B Baker Street, with his great friend and assistant,
+    Doctor
+
+    Watson. He solves mysteries using observation and deduction: he notices small
+    details that
+
+    others miss and draws conclusions.
+
+
+    He usually uses a magnifying glass to examine clues, a deerstalker hunting cap,
+    and sometimes
+
+    a pipe. Although he is very famous, he is a character from books, not a person
+    who really
+
+    existed.'
+  - '# Sherlock Holmes
+
+
+    Sherlock Holmes is a detective. He is a fictional character created by the writer
+    Arthur
+
+    Conan Doyle in 1887.
+
+
+    He lives in London, at 221B Baker Street, with his great friend and assistant,
+    Doctor
+
+    Watson. He solves mysteries using observation and deduction: he notices small
+    details that
+
+    others miss and draws conclusions.
+
+
+    He usually uses a magnifying glass to examine clues, a deerstalker hunting cap,
+    and sometimes
+
+    a pipe. Although he is very famous, he is a character from books, not a person
+    who really
+
+    existed.'
+  respuesta: Mi amigo es Doctor Watson. Vive conmigo en 221B Baker Street.
+  veredicto_humano: true
+- origen_candidato: h6-llama3-replicate
+  id: trex-01
+  personaje: t-rex
+  notas: &id005
+  - '### Diet and feeding behavior'
+  - 'Tyrannosaurs had large olfactory bulbs and olfactory nerves (relative to their
+    brain size). These suggest a highly developed sense of smell which could sniff
+    out carcasses over great distances, as modern vultures do. Research on the olfactory
+    bulbs of dinosaurs has shown that Tyrannosaurus had the most highly developed
+    sense of smell of 21 sampled dinosaurs.
+
+    Tyrannosaur teeth could crush bone, and therefore could extract as much food (bone
+    marrow) as possible from carcass remnants, usually the least nutritious parts.
+    Karen Chin and colleagues have found bone fragments in coprolites (fossilized
+    feces) that they attribute to tyrannosaurs, but point out that a tyrannosaur''s
+    teeth were not well adapted to systematically chewing bone like hyenas do to extract
+    marrow.'
+  - the origin of the deltoid or teres major muscles. The presence of avulsion injuries
+    being limited to the forelimb and shoulder in both Tyrannosaurus and Allosaurus
+    suggests that theropods may have had a musculature more complex than and functionally
+    different from those of birds. The researchers concluded that Sue's tendon avulsion
+    was probably obtained from struggling prey. The presence of stress fractures and
+    tendon avulsions, in general, provides evidence for a "very active" predation-based
+    diet rather than obligate scavenging.
+  respuesta: Comí restos de animales muertos, como huesos y carne. Mi sentido del
+    olfato era muy fuerte, así que podía encontrar cadáveres a grandes distancias.
+  veredicto_humano: true
+- origen_candidato: h6-groq-llama70b
+  id: leo-01
+  personaje: leonardo_da_vinci
+  notas: *id001
+  respuesta: He pintado muchas pinturas, pero no sé exactamente cuántas. Sé que algunas
+    de mis obras más famosas son *La Gioconda*, *La Virgen, el Niño Jesús y Santa
+    Ana*, y *San Juan Bautista*. Me encanta pintar y he creado muchas obras a lo largo
+    de mi vida.
+  veredicto_humano: true
+- origen_candidato: h6-groq-llama70b
+  id: leo-02
+  personaje: leonardo_da_vinci
+  notas: *id002
+  respuesta: Nací el sábado 15 de abril de 1452, a las 10:30 de la noche. Fue un momento
+    muy especial, ya que nací "a la tercera hora de la noche", como se decía en ese
+    entonces. Mi nacimiento fue un poco misterioso, ya que no se sabe con certeza
+    si nací en el castillo de Vinci o en la casa de mi madre en Anchiano.
+  veredicto_humano: false
+- origen_candidato: h6-groq-llama70b
+  id: pan-01
+  personaje: peter_pan
+  notas: *id003
+  respuesta: Vivo en la isla del Neverland, que es un lugar muy divertido y emocionante,
+    lleno de aventuras y cosas sorprendentes. Es una isla compacta, no muy grande,
+    así que siempre hay algo nuevo que descubrir. Me encanta vivir allí, es un lugar
+    mágico.
+  veredicto_humano: true
+- origen_candidato: h6-groq-llama70b
+  id: sher-02
+  personaje: sherlock_holmes
+  notas: *id004
+  respuesta: Mi mejor amigo es el Doctor Watson, con quien vivo en la calle Baker
+    Street. Él es mi ayudante y me ayuda a resolver misterios. Es una persona muy
+    importante en mi vida.
+  veredicto_humano: false
+- origen_candidato: h6-groq-llama70b
+  id: trex-01
+  personaje: t-rex
+  notas: *id005
+  respuesta: Me alimentaba de carne, y mi sentido del olfato era muy desarrollado,
+    lo que me permitía encontrar cadáveres desde muy lejos. Podía comer incluso los
+    huesos, ya que mis dientes eran lo suficientemente fuertes como para triturarlos
+    y sacar el tuétano. Me gustaba comer la carne fresca de mis presas.
+  veredicto_humano: false
+- origen_candidato: h6-ollama-local
+  id: leo-01
+  personaje: leonardo_da_vinci
+  notas: *id001
+  respuesta: ¡Muchas pinturas pinté!  Trabajé en *La Gioconda*, la Virgen con el Niño
+    y San Ana, y también en un San Juan Bautista. ¡Es un gran trabajo, verdad?
+  veredicto_humano: true
+- origen_candidato: h6-ollama-local
+  id: leo-02
+  personaje: leonardo_da_vinci
+  notas: *id002
+  respuesta: Nací el sábado quince de abril de mil cuatrocientos cincuenta y dos,
+    a las diez y media de la noche. ¡Un momento muy especial para comenzar mi vida
+    llena de descubrimientos!
+  veredicto_humano: true
+- origen_candidato: h6-ollama-local
+  id: pan-01
+  personaje: peter_pan
+  notas: *id003
+  respuesta: Vivo en la Isla Nunca Jamás, ¡es muy pequeña y acogedora!  A veces está
+    cerca del pequeño casita en los Jardines de Kensington, pero solo se ve cuando
+    despiertas.
+  veredicto_humano: true
+- origen_candidato: h6-ollama-local
+  id: sher-02
+  personaje: sherlock_holmes
+  notas: *id004
+  respuesta: Mi gran amigo es el Doctor Watson. Él vive conmigo en Baker Street y
+    me ayuda a resolver misterios, ¡es un compañero muy útil!
+  veredicto_humano: true
+- origen_candidato: h6-ollama-local
+  id: trex-01
+  personaje: t-rex
+  notas: *id005
+  respuesta: ¡Crushing huesos y carne! Mis dientes eran muy fuertes para romperlo
+    todo y obtener el mejor alimento posible de los restos que encontraba. ¡También
+    luchaba con mis presas, eso es lo que parece!
+  veredicto_humano: true
+- origen_candidato: h6-mistral-small
+  id: leo-01
+  personaje: leonardo_da_vinci
+  notas: *id001
+  respuesta: No lo sé exactamente, pero entre los más famosos están *La Gioconda*,
+    *La Virgen, el Niño Jesús y Santa Ana*, y *San Juan Bautista*. ¡Son tres que conozco
+    bien!
+  veredicto_humano: true
+- origen_candidato: h6-mistral-small
+  id: leo-02
+  personaje: leonardo_da_vinci
+  notas: *id002
+  respuesta: Nací un sábado 15 de abril de 1452, a las diez y media de la noche. ¡Fue
+    una noche muy especial!
+  veredicto_humano: true
+- origen_candidato: h6-mistral-small
+  id: pan-01
+  personaje: peter_pan
+  notas: *id003
+  respuesta: ¡Vivo en la Neverland, una isla mágica llena de aventuras! Allí hay casas
+    de hadas, ríos que corren por cuevas y hasta un barco pirata cerca. ¡Es el mejor
+    lugar del mundo!
+  veredicto_humano: false
+- origen_candidato: h6-mistral-small
+  id: sher-02
+  personaje: sherlock_holmes
+  notas: *id004
+  respuesta: Mi gran amigo es el doctor Watson, vive conmigo en el 221B de Baker Street.
+  veredicto_humano: true
+- origen_candidato: h6-mistral-small
+  id: trex-01
+  personaje: t-rex
+  notas: *id005
+  respuesta: ¡Yo comía carne de otros dinosaurios! Mis dientes fuertes hasta podían
+    triturar huesos para sacar la médula. A veces olfateaba desde lejos si había un
+    animal muerto para comer.
+  veredicto_humano: true

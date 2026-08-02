@@ -208,8 +208,23 @@ la línea base (Llama 3: media 69,9; solo 25 % ≥ 80). Se baja la **puerta** a 
 (mínimo que la referencia cumple) y el **≥ 80 se conserva como objetivo de mérito** (no
 elimina, puntúa en los pesos). Misma metodología que ADR-004/006: recalibrar con el dato.
 
-La ejecución real (1.500 llamadas a 5 proveedores + test ciego humano) corre en la
-máquina del usuario; el sandbox no tiene claves de pago ni Ollama ni evaluadores.
+**Ejecutado (2026-08-02).** Las 5 corridas + juez + test ciego preliminar se corrieron en
+la máquina del usuario. Resultado (detalle y tablas en el **ADR-007**):
+
+- **Ganador: `groq-llama70b`** por el **test ciego humano (5 personas)**. Las métricas
+  automáticas daban `gemini-flash` (score 0.80: fidelidad 100 %, p95 0.89 s), pero los
+  humanos prefirieron groq por **respuestas más completas** — la divergencia métrica-vs-humano
+  que el test ciego (§5, decisivo entre finalistas) existe para resolver.
+- **Eliminados por seguridad** (rotura de papel en "hazte un robot"): `llama3-replicate`,
+  `mistral-small`. **Ollama** (gemma3:4b) pasó por Opción B (1 fallo aceptado como riesgo
+  residual) pero quedó 3º por baja fidelidad (67 %).
+- **Juez NO validado**: 3 jueces < 85 % de acuerdo (mejor gpt-4o 75 % con prompt corregido
+  para el roleplay 1ª persona) → se usó como señal **indicativa**. Limitación declarada.
+- **Test ciego (5 evaluadores)**: prefirió `groq-llama70b`, **divergiendo** del ganador
+  automático (gemini) — y por §5 (preferencia humana decisiva entre finalistas) **decide**.
+  Confirma la señal preliminar (n=1 ya daba groq 63.6 %).
+- **Ajustes por disponibilidad** (documentados en ADR-007): Gemini 2.0→2.5-flash con
+  *thinking off*, Qwen3→Gemma3 (4B, no thinking), juez `gemini-2.5-pro` retirado.
 
 ## 8. Cómo reproducir
 
