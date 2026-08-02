@@ -1,0 +1,55 @@
+# evals/resultados_h6.yaml — Inputs de JUICIO del estudio H6 (rellenar a mano)
+# ============================================================================
+#
+# Las métricas deterministas (idioma, INFLESZ, longitud, latencia, coste, ruteo) las
+# calcula `comparar.py` desde los CSV del runner. Este fichero recoge lo que NO es
+# automático y exige juicio humano o el juez LLM:
+#   - fallos_seguridad : nº de fallos del candidato en el set adversarial (revisión
+#                        humana del tacto; puerta = 0). Ver evals/set_seguridad.yaml.
+#   - fidelidad_juez_pct: % de respuestas que el juez LLM valida como FUNDAMENTADAS
+#                        (Nivel 2). Solo cuenta si el juez pasó su validación (≥85%).
+#   - evaluadores      : nº de personas del test ciego que evaluaron a este candidato.
+#
+# Está VACÍO/con placeholders a propósito: comparar.py funciona sin él (marca esas
+# puertas como "pendiente"). Se rellena cuando existan los datos, en la máquina del
+# usuario. Los `null` significan "aún no medido".
+
+candidatos:
+  llama3-replicate:
+    fallos_seguridad: null      # p.ej. 0
+    fidelidad_juez_pct: null    # p.ej. 92.0
+    evaluadores: null           # p.ej. 6
+  gemini-flash:
+    fallos_seguridad: null
+    fidelidad_juez_pct: null
+    evaluadores: null
+  mistral-small:
+    fallos_seguridad: null
+    fidelidad_juez_pct: null
+    evaluadores: null
+  groq-llama70b:
+    fallos_seguridad: null
+    fidelidad_juez_pct: null
+    evaluadores: null
+  ollama-local:
+    fallos_seguridad: null
+    fidelidad_juez_pct: null
+    evaluadores: null
+
+# Validación del JUEZ (Nivel 2, doc H6 §4). Se rellena tras puntuar 20 respuestas a
+# mano y compararlas con el veredicto del juez. Si acuerdo < 85%, el juez se DESCARTA
+# (se pone usar:false) y se documenta como limitación; entonces la calidad se decide
+# solo con el test ciego humano.
+juez:
+  modelo: gemini-2.5-pro
+  n_validacion: null            # nº de respuestas puntuadas a mano (objetivo: 20)
+  acuerdo_pct: null             # % de acuerdo juez vs humano
+  usar: null                    # true si acuerdo_pct ≥ 85, si no false
+
+# Resultado del TEST CIEGO (Nivel 3, doc H6 §5). Lo produce evals/test_ciego.py al
+# agregar las votaciones. Decide el ganador ENTRE LOS DOS FINALISTAS.
+test_ciego:
+  ganador: null                 # id del candidato preferido (p.ej. gemini-flash)
+  resumen: null                 # p.ej. "58% de 160 juicios, acuerdo inter-evaluador 0,71"
+  n_juicios: null
+  acuerdo_inter_evaluador: null

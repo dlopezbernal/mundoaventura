@@ -185,10 +185,42 @@ mantiene DeepL** (el dato defiende la traducción) y H4 se congela en H4.3, en l
 el "Plan B" de `docs/H4-retrieval.md`. Retomar solo tendría sentido con un corpus en
 español (retrieval monolingüe ES-ES), trabajo futuro.
 
+## 10. H6 — Estudio comparativo de LLMs (metodología)
+
+El instrumento de H3 se reutiliza para elegir el LLM generador con método defendible
+(**puertas primero, pesos después**), no con una impresión. La decisión y sus tablas
+viven en el **ADR-007**; aquí queda la mecánica y sus piezas nuevas en `evals/`:
+
+- **`candidatos.yaml`** — los 5 candidatos (Llama 3/Replicate como línea base, Gemini
+  Flash, Mistral Small, Groq 70B, Ollama local) + el juez, con su config exacta.
+- **`comparar.py`** — agrega los CSV de las 5 corridas (retrieval congelado, 3 reps) y
+  aplica las **puertas §8** (idioma ≥98 %, INFLESZ **media ≥ 68**, longitud 15–90, p95 ≤ 8 s,
+  seguridad 0 fallos) y luego los **pesos §7** (calidad 50 / latencia 30 / coste 20),
+  fijados el **2026-08-02** como constante fechada en el propio código.
+- **`juez.py`** — juez LLM de **fidelidad al contexto** (Nivel 2), un modelo distinto y
+  más potente que los candidatos, **validado** contra 20 respuestas a mano (acuerdo ≥85 %
+  o se descarta y se declara como limitación).
+- **`test_ciego.py`** — genera pares **anonimizados y aleatorizados** entre los 2
+  finalistas y agrega los votos humanos (preferencia + acuerdo inter-evaluador, Nivel 3).
+
+**Calibración de la puerta INFLESZ:** el objetivo del doc (≥ 80 en ≥ 90 %) eliminaría a
+la línea base (Llama 3: media 69,9; solo 25 % ≥ 80). Se baja la **puerta** a media ≥ 68
+(mínimo que la referencia cumple) y el **≥ 80 se conserva como objetivo de mérito** (no
+elimina, puntúa en los pesos). Misma metodología que ADR-004/006: recalibrar con el dato.
+
+La ejecución real (1.500 llamadas a 5 proveedores + test ciego humano) corre en la
+máquina del usuario; el sandbox no tiene claves de pago ni Ollama ni evaluadores.
+
 ## 8. Cómo reproducir
 
 ```powershell
 uv run python -m evals.runner --modo completo --etiqueta baseline   # regenera una corrida
 uv run python -m evals.runner --volcar-fixture                      # regenera el fixture congelado
 uv run python -m evals.runner --modo retrieval-congelado            # compara generadores (H6)
+
+# H6 — por cada candidato: fijar LLM_PROVIDER/LLM_MODEL/LLM_BASE_URL + su clave y correr:
+uv run python -m evals.runner --modo retrieval-congelado --etiqueta h6-<id> --repeticiones 3
+uv run python -m evals.comparar                                     # puertas → pesos → finalistas
+uv run python -m evals.juez validar --muestras evals/juez_validacion.yaml   # valida el juez
+uv run python -m evals.test_ciego generar --a <csvA> --b <csvB> --n 20      # pares del test ciego
 ```
