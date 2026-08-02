@@ -32,8 +32,10 @@ import chromadb
 
 from backend import config, debug_log
 from backend.services import (
+    embeddings,
     personajes_service,
     replicate_client,
+    reranker,
     settings_service,
     translation_service,
     voice_service,
@@ -44,12 +46,15 @@ logger = logging.getLogger(__name__)
 # Cliente y colección de ChromaDB, cargados una sola vez (singleton perezoso).
 _client: chromadb.ClientAPI | None = None
 _collection = None
+_collection_nombre: str | None = None  # nombre con el que se abrió (para detectar cambios)
 
 # Icono por origen, solo para la traza de consola en modo DEBUG.
 _ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡", "SIN_INFO": "🔴"}
 
 
-def _trazar_origen(origen: str, metodo: str, distancia: float | None, pregunta_en: str) -> None:
+def _trazar_origen(
+    origen: str, metodo: str, distancia: float | None, score: float | None, pregunta_en: str
+) -> None:
     """Imprime por la consola del BACKEND si la respuesta vino del RAG o no.
 
     Solo en modo DEBUG (settings_service). Antes esto se calculaba/mostraba en el
@@ -70,13 +75,22 @@ def _trazar_origen(origen: str, metodo: str, distancia: float | None, pregunta_e
     explica_metodo = {
         "umbral": "decidido GRATIS por la distancia coseno (sin llamar al LLM-juez)",
         "llm": "desempatado por el LLM-juez (la distancia caía en la zona dudosa)",
+        "rerank": "decidido por la puntuación del reranker (cross-encoder, sin LLM-juez)",
     }.get(metodo, metodo)
 
     lineas = [
         f"[CHAT] {icono} Evaluator → origen={origen}: {explica_origen}",
         f"[CHAT]        método: {explica_metodo}",
     ]
-    if distancia is not None:
+    # Con reranker, la señal que decide es la PUNTUACIÓN (más alto = más relevante);
+    # sin reranker, la distancia coseno (menor = más relevante).
+    if score is not None:
+        lineas.append(
+            f"[CHAT]        mejor puntuación reranker={score:.2f}  "
+            f"(umbral: >={settings_service.get('RERANK_UMBRAL')}→RAG)  "
+            f"[distancia coseno de esa ficha d={distancia:.2f}]"
+        )
+    elif distancia is not None:
         lineas.append(
             f"[CHAT]        mejor distancia d={distancia:.2f}  "
             f"(umbrales coseno: BAJO={settings_service.get('EVALUATOR_UMBRAL_BAJO')}→RAG, "
@@ -87,14 +101,20 @@ def _trazar_origen(origen: str, metodo: str, distancia: float | None, pregunta_e
 
 
 def _get_collection():
-    """Devuelve la colección de ChromaDB, creándola e indexándola la 1ª vez."""
-    global _client, _collection
-    if _collection is not None:
+    """Devuelve la colección del backend de embeddings vigente (singleton perezoso).
+
+    El nombre depende de `EMBEDDING_BACKEND`; si cambia (p. ej. al comparar backends),
+    se reabre la colección correcta en vez de servir la cacheada del backend anterior.
+    """
+    global _client, _collection, _collection_nombre
+    nombre = embeddings.coleccion_actual()
+    if _collection is not None and _collection_nombre == nombre:
         return _collection
 
     # PersistentClient guarda los datos en disco (config.CHROMA_DIR), así que el
     # índice sobrevive entre reinicios y no hay que recalcularlo cada vez.
-    _client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
+    if _client is None:
+        _client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
 
     # get_or_create_collection: si ya existe la reutiliza; si no, la crea.
     # Por defecto usa su función de embeddings local (CPU).
@@ -107,9 +127,10 @@ def _get_collection():
     # La colección la construye el script de ingesta (python -m backend.ingest)
     # a partir de los documentos. Aquí solo la ABRIMOS para consultarla.
     _collection = _client.get_or_create_collection(
-        name=settings_service.get("CHROMA_COLLECTION"),
+        name=nombre,
         metadata={"hnsw:space": "cosine"},
     )
+    _collection_nombre = nombre
 
     # Si está vacía, avisamos: hay que ejecutar la ingesta primero.
     if _collection.count() == 0:
@@ -131,32 +152,71 @@ def reiniciar_coleccion() -> None:
     fuerza a reabrirla en la siguiente pregunta. Tras un reindexado incremental
     (borrar+reañadir chunks de un personaje) NO hace falta: la colección es la misma.
     """
-    global _client, _collection
+    global _client, _collection, _collection_nombre
     _client = None
     _collection = None
+    _collection_nombre = None
 
 
-def _recuperar_contexto(personaje_id: str, pregunta: str) -> tuple[list[str], list[float]]:
-    """Devuelve (fichas, distancias) más relevantes para la pregunta, de ESE personaje.
+def _recuperar_contexto(
+    personaje_id: str, pregunta: str
+) -> tuple[list[str], list[float], list[dict], list[float] | None]:
+    """Devuelve (fichas, distancias, metadatos, scores) más relevantes, de ESE personaje.
 
-    - fichas: los textos recuperados (ordenados de más a menos parecido).
-    - distancias: la distancia coseno de cada ficha a la pregunta (menor = más
-      parecido). Las usa el Evaluator para decidir por umbral, sin LLM.
+    - fichas: los textos recuperados (ordenados de más a menos relevante).
+    - distancias: la distancia coseno de cada ficha (menor = más parecido). Las usa
+      el Evaluator para decidir por umbral cuando NO hay reranker.
+    - metadatos: source y header_path de cada ficha (para la procedencia del chat).
+    - scores: la puntuación del reranker de cada ficha (más alto = más relevante), o
+      None si el reranker está desactivado. Cuando hay scores, el Evaluator decide
+      por ellos en vez de por la distancia coseno.
+
+    EMBUDO (Hito 4.3): si hay reranker, se recuperan RERANK_CANDIDATOS candidatos
+    baratos (bi-encoder), un cross-encoder los reordena y nos quedamos con el top-K.
+    Sin reranker, se recupera directamente el top-K por distancia coseno.
 
     Usa el filtro `where` para limitar la búsqueda al personaje elegido: así un
     Triceratops nunca responde con datos de Sherlock Holmes.
     """
     collection = _get_collection()
-    resultado = collection.query(
-        query_texts=[pregunta],
-        n_results=settings_service.get("RAG_TOP_K"),
-        where={"personaje_id": personaje_id},  # solo fichas de este personaje
-        include=["documents", "distances"],  # pedimos también las distancias
-    )
+    top_k = settings_service.get("RAG_TOP_K")
+    # Con reranker recuperamos ANCHO (más candidatos) para que el cross-encoder tenga
+    # de dónde elegir; sin reranker, justo los top_k que van al LLM.
+    n_recuperar = settings_service.get("RERANK_CANDIDATOS") if reranker.activo() else top_k
+    comun = {
+        "n_results": n_recuperar,
+        "where": {"personaje_id": personaje_id},  # solo fichas de este personaje
+        "include": ["documents", "distances", "metadatas"],
+    }
+    # Backend multilingüe: embebemos NOSOTROS la consulta (como 'query') y pasamos el
+    # vector. Backend original: la embebe Chroma a partir del texto (query_texts).
+    if embeddings.usa_manuales():
+        resultado = collection.query(query_embeddings=[embeddings.embed_query(pregunta)], **comun)
+    else:
+        resultado = collection.query(query_texts=[pregunta], **comun)
     # query devuelve listas anidadas (una por consulta); tomamos la primera.
     documentos = (resultado.get("documents") or [[]])[0]
     distancias = (resultado.get("distances") or [[]])[0]
-    return documentos, distancias
+    metadatos = (resultado.get("metadatas") or [[]])[0]
+
+    if not reranker.activo() or not documentos:
+        return documentos, distancias, metadatos, None
+
+    # REORDENADO: el cross-encoder puntúa cada candidato (más alto = más relevante) y
+    # reordenamos las tres listas en paralelo por esa puntuación, quedándonos con top_k.
+    scores = reranker.rerank(pregunta, documentos)
+    orden = sorted(range(len(documentos)), key=lambda i: scores[i], reverse=True)[:top_k]
+    documentos = [documentos[i] for i in orden]
+    distancias = [distancias[i] for i in orden]
+    metadatos = [metadatos[i] for i in orden]
+    scores = [scores[i] for i in orden]
+    return documentos, distancias, metadatos, scores
+
+
+def _formatear_fuente(texto: str, meta: dict | None) -> str:
+    """Antepone la ruta de encabezados a la ficha, para la procedencia del chat."""
+    ruta = (meta or {}).get("header_path") or ""
+    return f"[{ruta}] {texto}" if ruta else texto
 
 
 def _construir_prompt(nombre: str, contexto: list[str], pregunta: str) -> tuple[str, str]:
@@ -298,16 +358,22 @@ def _clasificar_umbral(distancia: float) -> str:
 
 
 def _decidir_origen(
-    contexto: list[str], distancias: list[float], pregunta: str
-) -> tuple[bool, str, float | None]:
+    contexto: list[str], distancias: list[float], scores: list[float] | None, pregunta: str
+) -> tuple[bool, str, float | None, float | None]:
     """NODO EVALUATOR + ROUTER. Decide si la respuesta vendrá del RAG.
 
-    Devuelve (es_rag, metodo, distancia):
+    Devuelve (es_rag, metodo, distancia, score):
       - es_rag    : True si se usará el conocimiento de las fichas.
-      - metodo    : "umbral" o "llm" (cómo se tomó la decisión, útil para depurar).
+      - metodo    : "umbral", "llm" o "rerank" (cómo se tomó la decisión).
       - distancia : la mejor (menor) distancia coseno encontrada (o None).
+      - score     : la mejor (mayor) puntuación del reranker (o None si no hay reranker).
 
-    Según el ajuste EVALUATOR_MODE (settings_service):
+    CON RERANKER (Hito 4.3): la decisión la toma la PUNTUACIÓN del cross-encoder, que
+    es una señal de relevancia mucho más fina que la distancia coseno. RAG si la mejor
+    ficha puntúa >= RERANK_UMBRAL. Esto SUSTITUYE al LLM-juez (una llamada menos) — el
+    reranker ya "lee" pregunta+ficha juntas, que es justo lo que hacía el juez.
+
+    SIN RERANKER, según EVALUATOR_MODE (settings_service):
       • "umbral"  → decide solo el número (gratis). RAG si la mejor ficha está
                     por debajo del umbral BAJO.
       • "llm"     → decide solo el LLM-juez (cuesta una llamada).
@@ -316,28 +382,36 @@ def _decidir_origen(
     """
     # Sin fichas no hay nada que fundamentar: no puede ser RAG.
     if not contexto:
-        return False, "umbral", None
+        return False, "umbral", None, None
 
-    mejor = min(distancias) if distancias else None
+    mejor_dist = min(distancias) if distancias else None
+
+    # --- Camino RERANKER: decide la puntuación del cross-encoder, sin LLM-juez ---
+    if scores:
+        mejor_score = max(scores)
+        es_rag = mejor_score >= settings_service.get("RERANK_UMBRAL")
+        return es_rag, "rerank", mejor_dist, mejor_score
+
+    # --- Camino coseno (sin reranker): umbral / llm / híbrido de siempre ---
     modo = settings_service.get("EVALUATOR_MODE")
 
     # Modo LLM puro: el juez decide siempre (ignoramos el umbral).
     if modo == "llm":
-        return _evaluar_relevancia(contexto, pregunta), "llm", mejor
+        return _evaluar_relevancia(contexto, pregunta), "llm", mejor_dist, None
 
-    banda = _clasificar_umbral(mejor) if mejor is not None else "dudoso"
+    banda = _clasificar_umbral(mejor_dist) if mejor_dist is not None else "dudoso"
 
     # Modo umbral puro: solo el número. Conservador: RAG únicamente si es "relevante".
     if modo == "umbral":
-        return (banda == "relevante"), "umbral", mejor
+        return (banda == "relevante"), "umbral", mejor_dist, None
 
     # Modo híbrido: los casos claros los cierra el umbral (gratis); el LLM solo
     # entra a desempatar cuando la distancia cae en la zona "dudosa".
     if banda == "relevante":
-        return True, "umbral", mejor
+        return True, "umbral", mejor_dist, None
     if banda == "irrelevante":
-        return False, "umbral", mejor
-    return _evaluar_relevancia(contexto, pregunta), "llm", mejor
+        return False, "umbral", mejor_dist, None
+    return _evaluar_relevancia(contexto, pregunta), "llm", mejor_dist, None
 
 
 def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
@@ -404,12 +478,12 @@ def responder(personaje_id: str, pregunta: str) -> dict:
     #    (Solo se traduce la pregunta del niño; la RESPUESTA del personaje va en español.)
     pregunta_en = translation_service.traducir_es_en(pregunta)
 
-    # 1) RETRIEVAL: recuperar las fichas candidatas y sus distancias (con la
-    #    pregunta YA en inglés, igual que las fichas).
-    contexto, distancias = _recuperar_contexto(personaje_id, pregunta_en)
+    # 1) RETRIEVAL (+ RERANK si está activo): recuperar las fichas candidatas, sus
+    #    distancias y —si hay reranker— sus puntuaciones (con la pregunta YA en inglés).
+    contexto, distancias, metadatos, scores = _recuperar_contexto(personaje_id, pregunta_en)
 
-    # 2) EVALUATOR + ROUTER: ¿son esas fichas relevantes? (umbral / llm / híbrido)
-    es_rag, metodo, distancia = _decidir_origen(contexto, distancias, pregunta_en)
+    # 2) EVALUATOR + ROUTER: ¿son esas fichas relevantes? (rerank / umbral / llm / híbrido)
+    es_rag, metodo, distancia, score = _decidir_origen(contexto, distancias, scores, pregunta_en)
 
     if es_rag:
         # --- Camino RAG: respuesta FUNDAMENTADA solo en las fichas ---
@@ -418,11 +492,16 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         # mejor en inglés. La respuesta, eso sí, se genera en español (lo pide el prompt).
         system, user = _construir_prompt(nombre, contexto, pregunta_en)
         respuesta = _llamar_llm(system, user, etiqueta="RAG")
-        # DEBUG decide si el niño VE el desplegable "¿De dónde lo he sacado?" en el
-        # chat (Chat.tsx lo pinta si `fuentes` no viene vacío) — igual que decide si
-        # se imprimen trazas en la consola del backend. No afecta a que la respuesta
-        # siga fundamentada en el RAG, solo a si se enseña el porqué.
-        fuentes = contexto if settings_service.get("DEBUG") else []
+        # MOSTRAR_FUENTES (flag propio, ya no atado a DEBUG) decide si el niño VE el
+        # desplegable "¿De dónde lo he sacado?" en el chat (Chat.tsx lo pinta si
+        # `fuentes` no viene vacío). Enseñar la procedencia es pedagogía, no depuración.
+        # No afecta a que la respuesta siga fundamentada en el RAG, solo a si se
+        # enseña el porqué (con troceado estructural, la ruta de encabezados va incluida).
+        fuentes = (
+            [_formatear_fuente(c, m) for c, m in zip(contexto, metadatos, strict=False)]
+            if settings_service.get("MOSTRAR_FUENTES")
+            else []
+        )
     elif settings_service.get("PERMITIR_CONOCIMIENTO_GENERAL"):
         # --- Camino GENERAL: las fichas no sirven; el personaje responde con su
         # conocimiento propio (aquí, en el futuro, podría enrutarse a búsqueda web).
@@ -443,7 +522,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         fuentes = []
 
     # Traza de depuración (solo si DEBUG): en la consola del BACKEND, no del cliente.
-    _trazar_origen(origen, metodo, distancia, pregunta_en)
+    _trazar_origen(origen, metodo, distancia, score, pregunta_en)
 
     # Síntesis de voz de la respuesta (si el personaje tiene voz_id y hay clave).
     # Si falla, audio_base64 queda None y la respuesta sigue viva en texto.
@@ -456,9 +535,11 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         "respuesta": respuesta,
         # "RAG" = fundamentada en la enciclopedia · "GENERAL" = conocimiento del modelo.
         "origen": origen,
-        # Cómo se decidió ("umbral"/"llm") y la mejor distancia (para depurar/calibrar).
+        # Cómo se decidió ("rerank"/"umbral"/"llm") y las señales para depurar/calibrar:
+        # la mejor distancia coseno y, si hubo reranker, la mejor puntuación.
         "metodo": metodo,
         "distancia": distancia,
+        "rerank_score": score,
         # La pregunta traducida a inglés (para verificar que DeepL está actuando).
         "pregunta_traducida": pregunta_en,
         # Fichas usadas (vacío si la respuesta no vino del RAG).

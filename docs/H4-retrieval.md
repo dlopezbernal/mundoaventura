@@ -93,21 +93,27 @@ se quita una llamada de red), coste (baja, una llamada menos al LLM).
 
 ---
 
-## H4.4 — DeepL fuera (`feat/h4-retrieval-sin-deepl`)
+## H4.4 — DeepL fuera (`feat/h4-retrieval-sin-deepl`) — ❌ DESCARTADO CON DATOS
 
-- Quitar la traducción de la consulta (ya no hace falta).
-- Quitar la traducción de documentos al subirlos. Esto **simplifica media
-  `documentos_service.py`**: `_preparar_texto`, `_nombre_con_idioma` y todo el
-  baile de `traducido` / `idioma_original`.
-- Sustituir la detección de idioma por `lingua-py` (local, gratis).
-- **Volver a escribir los prompts en español.** Estaban en inglés porque Llama 3
-  obedecía mejor así; con embeddings multilingües y un LLM moderno ese apaño
-  sobra. Guardar la versión inglesa como alternativa configurable.
-- **No borrar el camino viejo.** Dejarlo como configuración alternativa
-  seleccionable desde `settings_service` (ya está preparado para esto). Es la
-  columna "baseline" de la tabla comparativa de la memoria.
+**No se ejecuta.** La premisa —"ya no hace falta traducir"— se **midió y no se
+sostiene** en este corpus. De-risk retrieval-only (misma colección multi-minilm +
+estructura + reranker jina-v2), comparando por pregunta del set dorado:
 
-**Medir:** todo. Y en particular la latencia, que debería bajar 150–400 ms.
+| | recall@3 chunk | ruteo global |
+|---|---|---|
+| Traducido (DeepL, H4.3) | 90,9 % | 82,2 % |
+| Español directo (sin DeepL) | **85,5 %** (−5,4) | **71,1 %** (−11,1) |
+
+El corpus es **inglés** (Wikipedia): T-rex, Sherlock… son artículos en inglés. Traducir
+la pregunta la mantiene *monolingüe EN-EN*, que casa mejor que cross-lingual ES→EN; y
+DeepL, de paso, **normaliza las faltas** del español infantil ("bibes", "medias"…), un
+segundo beneficio que el español crudo pierde. La latencia tampoco justifica el cambio:
+el reranker (~665 ms) domina y la llamada a DeepL (~150 ms) es ruido a su lado.
+
+**Decisión:** se **mantiene DeepL** (el dato defiende la traducción) y H4 se **congela en
+H4.3** (§Plan B). Quitar DeepL solo tendría sentido con un **corpus en español** (retrieval
+monolingüe ES-ES); queda como trabajo futuro condicionado a esa decisión de producto.
+Los prompts en español y `lingua` como detector de idioma se posponen con él.
 
 ---
 
@@ -117,20 +123,25 @@ Desacoplar `fuentes` de `DEBUG`. Hoy las fuentes sólo se envían al frontend si
 `DEBUG` está activo. Enseñar las fuentes a un niño de 10 años es **pedagogía**,
 no depuración: merecen dos flags distintos (`DEBUG` y `MOSTRAR_FUENTES`).
 
-## Criterios de aceptación (puerta)
+## Criterios de aceptación (puerta) — H4 cerrado en H4.3
 
-- [ ] Cuatro sub-ramas, cada una con su medición y su ADR.
-- [ ] Tabla comparativa acumulada: baseline → +embeddings → +chunking →
-      +reranker → −DeepL.
-- [ ] **Recall@3 mejora respecto a la línea base.** Si no mejora, hay que
-      entender por qué antes de seguir (es la señal de alarma del hito).
-- [ ] Acierto de origen ≥ línea base.
-- [ ] Latencia del bloque de retrieval ≤ línea base.
-- [ ] Umbrales recalibrados con datos del runner, no a ojo.
-- [ ] `DEEPL_API_KEY` deja de ser obligatoria para arrancar.
-- [ ] La configuración antigua sigue siendo seleccionable y produce el resultado
-      de la línea base (prueba de que la comparación es justa).
-- [ ] `pytest` en verde, CI verde.
+- [x] Tres sub-ramas ejecutadas, cada una con su medición y su ADR (004/005/006).
+      La cuarta (H4.4) **descartada con datos**, no ejecutada (ver arriba).
+- [x] Tabla comparativa acumulada: baseline → +embeddings → +chunking → +reranker
+      (+ columna H4.4 con el dato del descarte). En `docs/EVALUACION.md §9`.
+- [x] **Recall@3 (chunk) mejora respecto a la línea base:** 78,2 → **90,9 %**. (El
+      recall de fichero estaba saturado al 100 %; la métrica que gobierna H4 es el
+      recall de chunk, introducido en H4.1.)
+- [x] Acierto de ruteo ≥ línea base: 66,7 → **82,2 %**.
+- [~] Latencia del bloque de retrieval ≤ línea base: **NO** — el reranker la sube a
+      ~665 ms (191 ms baseline). Trade-off **medido y aceptado** (ADR-006): la app no
+      es tiempo real y la calidad pesa más; revertible en caliente (`RERANKER=off`).
+- [x] Umbrales recalibrados con datos del runner, no a ojo (ADR-004/006).
+- [ ] `DEEPL_API_KEY` deja de ser obligatoria: **no se logra** — H4.4 descartado; el
+      dato defiende mantener la traducción. DeepL sigue obligatoria para el chat.
+- [x] La configuración antigua sigue seleccionable y reproduce la línea base
+      (defaults de código: `minilm-en` + `recursivo` + `RERANKER=off`).
+- [x] `pytest` en verde (103 tests); CI verde al abrir el PR a `dev`.
 
 ## Evidencia a entregar para el OK
 

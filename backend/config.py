@@ -149,6 +149,48 @@ CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "120"))
 # Nombre de la colección de ChromaDB donde viven los chunks de los documentos.
 CHROMA_COLLECTION: str = os.getenv("CHROMA_COLLECTION", "documentos_en")
 
+# Backend de embeddings (Hito 4). "minilm-en" = original (all-MiniLM-L6-v2 monolingüe
+# inglés, colección documentos_en, requiere traducir la pregunta); "multi-minilm" y
+# "e5-large" = multilingües locales (fastembed/ONNX) que embeben el español directo.
+# Ver services/embeddings.py. Cambiarlo exige reindexar (colección versionada propia).
+EMBEDDING_BACKEND: str = os.getenv("EMBEDDING_BACKEND", "minilm-en").strip()
+
+# Estrategia de troceado (Hito 4.2). "recursivo" = original (RecursiveCharacterText
+# Splitter, tira los encabezados). "estructura" = trocea los .md por secciones
+# (MarkdownHeaderTextSplitter) y prefija cada chunk con su ruta de encabezados
+# ("Tyrannosaurus > Description > Skull: ..."), que gana contexto para el embedding y
+# da procedencia real en el desplegable "¿de dónde lo saqué?". Cambiarlo exige reindexar.
+CHUNKING: str = os.getenv("CHUNKING", "recursivo").strip()
+
+# Mostrar las FUENTES (fragmentos usados) al niño en el chat (Hito 4.2). Antes iba
+# atado a DEBUG; ahora es un flag propio: enseñar la procedencia es pedagogía, no
+# depuración. False = chat limpio (por defecto). (_leer_bool se define más abajo.)
+MOSTRAR_FUENTES: bool = os.getenv("MOSTRAR_FUENTES", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+
+# --- Reranker: reordenado de candidatos con cross-encoder (Hito 4.3) ---
+# El retrieval trae RERANK_CANDIDATOS candidatos baratos (bi-encoder) y, si RERANKER
+# no es "off", un cross-encoder los reordena por relevancia y nos quedamos con el
+# top-K (RAG_TOP_K). Es en CONSULTA, no toca el índice: NO exige reindexar (se activa
+# en caliente). Ver services/reranker.py. "off" = camino de siempre (solo coseno).
+RERANKER: str = os.getenv("RERANKER", "off").strip()
+
+# Cuántos candidatos recupera ChromaDB ANTES de reordenar (el "ancho" del embudo).
+# Solo se usa si RERANKER != off; si no, se recupera directamente RAG_TOP_K. Calibrado
+# en 5 (ADR-006): con 5 el recall casi iguala a 10 (90,9 vs 92,7 %) a MITAD de latencia.
+RERANK_CANDIDATOS: int = int(os.getenv("RERANK_CANDIDATOS", "5"))
+
+# Umbral de PUNTUACIÓN del reranker (logit: más alto = más relevante; puede ser
+# negativo). Con reranker activo, el Evaluator decide por aquí en vez de por la
+# distancia coseno: score >= UMBRAL ⇒ RAG. Calibrado en -2,75 (ADR-006): equilibra
+# fundamentar (literal/inferencial) y rechazar fuera-de-dominio. Solo aplica si el
+# reranker está activo; el default de RERANKER sigue off (baseline reproducible).
+RERANK_UMBRAL: float = float(os.getenv("RERANK_UMBRAL", "-2.75"))
+
 
 # ---------------------------------------------------------------------------
 # 3b) Voz (ElevenLabs): transcripción (Scribe/STT) + síntesis (Flash/TTS)

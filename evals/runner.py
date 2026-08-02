@@ -32,8 +32,10 @@ from datetime import date
 from pathlib import Path
 
 from backend.services import (
+    embeddings,
     personajes_service,
     rag_service,
+    reranker,
     settings_service,
     translation_service,
 )
@@ -52,20 +54,19 @@ PRECIO_SALIDA_USD_M = 0.25
 # ---------------------------------------------------------------------------
 # Etapas (reutilizan rag_service en solo-lectura)
 # ---------------------------------------------------------------------------
-def _retrieval(personaje_id: str, pregunta_en: str, k: int) -> tuple[list[str], list[float], list]:
-    """Recupera top-k de ChromaDB pidiendo también las fuentes (para recall@3)."""
-    col = rag_service._get_collection()
-    res = col.query(
-        query_texts=[pregunta_en],
-        n_results=k,
-        where={"personaje_id": personaje_id},
-        include=["documents", "distances", "metadatas"],
-    )
-    docs = (res.get("documents") or [[]])[0]
-    dists = (res.get("distances") or [[]])[0]
-    metas = (res.get("metadatas") or [[]])[0]
+def _retrieval(
+    personaje_id: str, pregunta_en: str
+) -> tuple[list[str], list[float], list, list[float] | None]:
+    """Recupera el top-K (ya reordenado por el reranker si está activo) + las fuentes.
+
+    Delega en `rag_service._recuperar_contexto` (única fuente de verdad del retrieval)
+    para NO duplicar la lógica de embeddings/rerank: así el recall@3 y el ruteo se
+    miden sobre exactamente lo que ve el chat real. Deriva `fuentes` (source por chunk,
+    para recall@3) de los metadatos y devuelve los `scores` del reranker (o None).
+    """
+    docs, dists, metas, scores = rag_service._recuperar_contexto(personaje_id, pregunta_en)
     fuentes = [(m or {}).get("source") for m in metas]
-    return docs, dists, fuentes
+    return docs, dists, fuentes, scores
 
 
 def _generar(
@@ -102,6 +103,11 @@ def _origen_de(es_rag: bool) -> str:
 def config_evaluacion() -> dict:
     """Config vigente que condiciona el resultado (para archivar junto a la corrida)."""
     return {
+        "embedding_backend": embeddings.backend_actual(),
+        "coleccion": embeddings.coleccion_actual(),
+        "reranker": reranker.reranker_actual(),
+        "rerank_candidatos": settings_service.get("RERANK_CANDIDATOS"),
+        "rerank_umbral": settings_service.get("RERANK_UMBRAL"),
         "evaluator_mode": settings_service.get("EVALUATOR_MODE"),
         "umbral_bajo": settings_service.get("EVALUATOR_UMBRAL_BAJO"),
         "umbral_alto": settings_service.get("EVALUATOR_UMBRAL_ALTO"),
@@ -132,17 +138,16 @@ def evaluar_pregunta(
     """Devuelve una fila por repetición con todas las métricas."""
     ficha = personajes_service.obtener(preg.personaje_id)
     nombre = ficha["nombre"] if ficha else preg.personaje_id
-    k = settings_service.get("RAG_TOP_K")
 
-    # 1) Traducción + 2) Retrieval — una sola vez (deterministas).
+    # 1) Traducción + 2) Retrieval (+ rerank si activo) — una sola vez (deterministas).
     if modo == "completo":
         t0 = time.perf_counter()
         pregunta_en = translation_service.traducir_es_en(preg.pregunta)
         t_trad = (time.perf_counter() - t0) * 1000
         t0 = time.perf_counter()
-        chunks, dists, fuentes = _retrieval(preg.personaje_id, pregunta_en, k)
+        chunks, dists, fuentes, scores = _retrieval(preg.personaje_id, pregunta_en)
         t_ret = (time.perf_counter() - t0) * 1000
-    else:  # retrieval-congelado: todo viene del fixture (ni DeepL ni Chroma)
+    else:  # retrieval-congelado: todo viene del fixture (ni DeepL ni Chroma ni rerank)
         fila_fix = (fixture or {}).get("retrieval", {}).get(preg.id)
         if fila_fix is None:
             raise ValueError(f"El fixture no tiene la pregunta '{preg.id}'. ¿Está actualizado?")
@@ -150,11 +155,14 @@ def evaluar_pregunta(
         chunks = fila_fix["chunks"]
         dists = fila_fix["distances"]
         fuentes = fila_fix["fuentes"]
+        scores = fila_fix.get("scores")  # el fixture de H3 no los trae → None (camino coseno)
         t_trad = 0.0
         t_ret = 0.0
 
     recall = metricas.recall_at_k(preg.chunk_esperado, fuentes)
+    recall_ch = metricas.recall_chunk(preg.respuesta_contiene, chunks)
     dist_min = round(min(dists), 4) if dists else None
+    score_max = round(max(scores), 4) if scores else None
 
     filas: list[dict] = []
     for rep in range(1, reps + 1):
@@ -165,13 +173,15 @@ def evaluar_pregunta(
             "origen_esperado": preg.origen_esperado.value,
             "rep": rep,
             "recall_at3": recall,
+            "recall_chunk": recall_ch,
             "distancia": dist_min,
+            "rerank_score": score_max,
             "lat_traduccion_ms": round(t_trad, 1),
             "lat_retrieval_ms": round(t_ret, 1),
         }
         try:
             t0 = time.perf_counter()
-            es_rag, metodo, _ = rag_service._decidir_origen(chunks, dists, pregunta_en)
+            es_rag, metodo, _, _ = rag_service._decidir_origen(chunks, dists, scores, pregunta_en)
             t_eval = (time.perf_counter() - t0) * 1000
             origen = _origen_de(es_rag)
 
@@ -238,12 +248,14 @@ def resumir(filas: list[dict]) -> dict:
     ok = [f for f in filas if not f["error"]]
     con_acierto = [f for f in ok if f["acierto_origen"] is not None]
     con_recall = [f for f in ok if f["recall_at3"] is not None]
+    con_recall_ch = [f for f in ok if f.get("recall_chunk") is not None]
     infl_media, infl_desv = _media_desv([f["inflesz"] for f in ok])
     return {
         "n_filas": len(filas),
         "n_error": len(filas) - len(ok),
         "acierto_origen_pct": _pct([f["acierto_origen"] for f in con_acierto]),
         "recall_at3_pct": _pct([f["recall_at3"] for f in con_recall]),
+        "recall_chunk_pct": _pct([f["recall_chunk"] for f in con_recall_ch]),
         "es_espanol_pct": _pct([f["es_espanol"] for f in ok]),
         "roto_pct": _pct([f["n_roto"] > 0 for f in ok]),
         "inflesz_media": infl_media,
@@ -274,7 +286,9 @@ _COLUMNAS = [
     "acierto_origen",
     "metodo",
     "distancia",
+    "rerank_score",
     "recall_at3",
+    "recall_chunk",
     "idioma",
     "es_espanol",
     "palabras",
@@ -365,12 +379,13 @@ def volcar_fixture(ruta: Path | None = None) -> Path:
     retrieval = {}
     for preg in preguntas:
         pregunta_en = translation_service.traducir_es_en(preg.pregunta)
-        chunks, dists, fuentes = _retrieval(preg.personaje_id, pregunta_en, k)
+        chunks, dists, fuentes, scores = _retrieval(preg.personaje_id, pregunta_en)
         retrieval[preg.id] = {
             "pregunta_en": pregunta_en,
             "chunks": chunks,
             "distances": dists,
             "fuentes": fuentes,
+            "scores": scores,  # puntuaciones del reranker (None si estaba desactivado)
         }
     ruta = ruta or (_FIXTURES / f"retrieval_{date.today().isoformat()}.json")
     ruta.parent.mkdir(parents=True, exist_ok=True)

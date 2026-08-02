@@ -32,6 +32,7 @@ dependencies = [
     "slowapi>=0.1.10",
     "lingua-language-detector>=2.2.0",
     "pyphen>=0.17.2",
+    "fastembed>=0.8.0",
 ]
 
 [dependency-groups]
