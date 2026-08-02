@@ -28,6 +28,7 @@ from sqlmodel import select
 
 from backend import config, db
 from backend import personajes as personajes_cfg
+from backend.enums import ModoEvaluator
 from backend.models import Setting
 
 # Categorías (para agrupar los ajustes en la UI del Hito 3).
@@ -42,8 +43,9 @@ CAT_GENERAL = "general"
 # antes constantes fijas en personajes.py, ahora editables sin tocar código.
 CAT_ESTILO_IMAGEN = "estilo_imagen"
 
-# Modos válidos del Evaluator (mismo criterio que config.py).
-_MODOS_EVALUATOR = ("umbral", "llm", "hibrido")
+# Modos válidos del Evaluator (mismo criterio que config.py). Strings planos desde
+# el enum, para que las opciones que ve la UI sean texto normal.
+_MODOS_EVALUATOR = tuple(str(m) for m in ModoEvaluator)
 
 # ---------------------------------------------------------------------------
 # Prompts de sistema por defecto (antes hardcodeados en rag_service.py)
@@ -293,12 +295,29 @@ _SPEC: dict[str, dict[str, Any]] = {
         "requires_reindex": True,
         "ayuda": "Nombre de la colección de ChromaDB. Cambiarlo exige reindexar.",
     },
-    # --- LLM ---
-    "REPLICATE_LLM_MODEL": {
+    # --- LLM (capa de proveedor, Hito 5) ---
+    "LLM_PROVIDER": {
         "categoria": CAT_LLM,
         "tipo": "str",
-        "default": config.REPLICATE_LLM_MODEL,
-        "ayuda": "Modelo de lenguaje (Replicate) que responde como el personaje.",
+        "default": config.LLM_PROVIDER,
+        "opciones": ["replicate", "openai"],
+        "ayuda": "Proveedor del LLM. replicate = línea base; openai = endpoint "
+        "openai-compatible (Groq, Mistral, Gemini-compat, OpenRouter, Ollama local…) "
+        "vía LLM_BASE_URL. Cambiar de proveedor es cambiar config, no código.",
+    },
+    "LLM_MODEL": {
+        "categoria": CAT_LLM,
+        "tipo": "str",
+        "default": config.LLM_MODEL,
+        "ayuda": "Id del modelo en el proveedor activo (p. ej. "
+        "meta/meta-llama-3-8b-instruct en Replicate, o llama3 en Ollama).",
+    },
+    "LLM_BASE_URL": {
+        "categoria": CAT_LLM,
+        "tipo": "str",
+        "default": config.LLM_BASE_URL,
+        "ayuda": "URL del endpoint openai-compatible (solo si el proveedor es openai). "
+        "Ej.: http://localhost:11434/v1 (Ollama) o https://api.groq.com/openai/v1.",
     },
     "LLM_MAX_TOKENS": {
         "categoria": CAT_LLM,

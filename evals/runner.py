@@ -113,7 +113,8 @@ def config_evaluacion() -> dict:
         "umbral_alto": settings_service.get("EVALUATOR_UMBRAL_ALTO"),
         "permitir_conocimiento_general": settings_service.get("PERMITIR_CONOCIMIENTO_GENERAL"),
         "rag_top_k": settings_service.get("RAG_TOP_K"),
-        "llm_model": settings_service.get("REPLICATE_LLM_MODEL"),
+        "llm_provider": settings_service.get("LLM_PROVIDER"),
+        "llm_model": settings_service.get("LLM_MODEL"),
         "llm_max_tokens": settings_service.get("LLM_MAX_TOKENS"),
     }
 

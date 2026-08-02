@@ -26,17 +26,17 @@ import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
-import chromadb
 from sqlmodel import select
 
 from backend import config, db
+from backend.enums import OrigenDocumento
 from backend.models import Documento
 from backend.services import (
     embeddings,
     personajes_service,
-    rag_service,
     settings_service,
     translation_service,
+    vector_store,
 )
 
 logger = logging.getLogger(__name__)
@@ -128,28 +128,16 @@ def _trocear_estructura(texto: str) -> list[tuple[str, str]]:
 
 
 # ---------------------------------------------------------------------------
-# Acceso a ChromaDB (cliente propio; chromadb comparte el System por ruta)
+# Acceso a ChromaDB (vía el cliente ÚNICO de vector_store, Hito 5)
 # ---------------------------------------------------------------------------
-_client: chromadb.ClientAPI | None = None
-
-
-def _get_client() -> chromadb.ClientAPI:
-    global _client
-    if _client is None:
-        _client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
-    return _client
-
-
 def _get_collection():
     """Abre (o crea) la colección del backend de embeddings vigente (métrica coseno).
 
-    El nombre depende de `EMBEDDING_BACKEND` (cada backend tiene su colección propia),
-    para poder comparar backends sin pisar la colección de la línea base.
+    Delega en `vector_store` (cliente único compartido con el chat). El nombre
+    depende de `EMBEDDING_BACKEND` (cada backend tiene su colección propia), para
+    poder comparar backends sin pisar la colección de la línea base.
     """
-    return _get_client().get_or_create_collection(
-        name=embeddings.coleccion_actual(),
-        metadata={"hnsw:space": "cosine"},
-    )
+    return vector_store.coleccion()
 
 
 def _archivos_de(personaje_id: str) -> list[Path]:
@@ -240,7 +228,7 @@ def reindexar_todo() -> dict:
     Actualiza `_progreso_reindex_todo` personaje a personaje mientras dura.
     """
     coleccion = embeddings.coleccion_actual()
-    client = _get_client()
+    client = vector_store.cliente()
     try:
         client.delete_collection(coleccion)
     except Exception:
@@ -252,7 +240,7 @@ def reindexar_todo() -> dict:
             coleccion,
             exc_info=True,
         )
-    collection = client.get_or_create_collection(name=coleccion, metadata={"hnsw:space": "cosine"})
+    collection = vector_store.coleccion(coleccion)
 
     base = config.DOCUMENTOS_DIR
     carpetas = sorted(d for d in base.iterdir() if d.is_dir()) if base.is_dir() else []
@@ -272,9 +260,9 @@ def reindexar_todo() -> dict:
     finally:
         _progreso_reindex_todo.update(en_curso=False, personaje_actual=None)
 
-    # La colección se ha borrado y recreado: el handle cacheado del chat quedó
-    # obsoleto. Forzamos a reabrirla en la siguiente pregunta.
-    rag_service.reiniciar_coleccion()
+    # Ya NO hace falta invalidar ningún handle cacheado del chat: con el cliente
+    # único de vector_store, rag_service pide la colección fresca en cada pregunta
+    # (por eso se pudo eliminar el antiguo rag_service.reiniciar_coleccion()).
     return {"personajes": len(carpetas), "archivos": total_archivos, "chunks": total_chunks}
 
 
@@ -445,7 +433,7 @@ def subir(
     return _registrar(
         personaje_id,
         nombre_guardado,
-        origen="subido",
+        origen=OrigenDocumento.SUBIDO,
         traducido=traducido,
         idioma_original=idioma,
         sobrescribir=sobrescribir,
@@ -511,7 +499,7 @@ def ingesta_url(personaje_id: str, url: str, sobrescribir: bool = False) -> dict
     return _registrar(
         personaje_id,
         nombre,
-        origen="url",
+        origen=OrigenDocumento.URL,
         traducido=traducido,
         idioma_original=idioma,
         url_origen=url,

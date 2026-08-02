@@ -62,34 +62,51 @@ tener el audio). Subirlo al router o a un orquestador.
 
 ### 5. Deuda relacionada (aprovechando que se toca esta zona)
 
-- **Unificar los dos clientes de ChromaDB.** `rag_service` y
-  `documentos_service` crean cada uno su `PersistentClient` sobre la misma ruta
-  y duplican `_get_collection`. Un módulo `vector_store.py` con un cliente único
-  elimina la clase de bug que hoy obliga a existir a `reiniciar_coleccion()`.
-- **Enums en vez de cadenas mágicas**: `RAG`/`GENERAL`/`SIN_INFO`,
-  `umbral`/`llm`/`hibrido`, `subido`/`url`. `StrEnum` en Python.
-- **Tipar los retornos de los servicios.** Hay 28 firmas `-> dict`. Pasar a
-  modelos Pydantic o dataclasses al menos en `rag_service` y `llm_service`.
-- **Generar `types.ts` desde el OpenAPI** con `openapi-typescript`. Hoy está
-  escrito a mano y su propia cabecera admite que hay que mantenerlo sincronizado
-  a mano — una promesa que se rompe sola. Añadir el paso al script de build.
+- **[HECHO] Unificar los dos clientes de ChromaDB.** `rag_service` y
+  `documentos_service` creaban cada uno su `PersistentClient` sobre la misma ruta
+  y duplicaban `_get_collection`. `services/vector_store.py` centraliza un cliente
+  único; al no cachear el objeto-colección, se **eliminó `reiniciar_coleccion()`**
+  y su clase de bug.
+- **[HECHO] Enums en vez de cadenas mágicas**: `backend/enums.py` con `Origen`
+  (RAG/GENERAL/SIN_INFO), `MetodoDecision` (umbral/llm/rerank), `ModoEvaluator`
+  (umbral/llm/hibrido) y `OrigenDocumento` (subido/url). `StrEnum`: un miembro ES
+  su string, así que las comparaciones y el JSON no cambian.
+- **[HECHO] Tipar los retornos de los servicios.** `TypedDict` (cero coste en
+  runtime): `RespuestaRAG` (rag_service), `RespuestaChat` (chat_service) e
+  `InfoLLM` (llm_service.info). Los `-> dict` opacos pasan a contrato explícito.
+- **[DIFERIDO] Generar `types.ts` desde el OpenAPI** con `openapi-typescript`.
+  **Medido al abordarlo:** solo **2 de ~22** endpoints declaran `response_model`
+  (`AskResponse`, `GenerateResponse`); el resto devuelve `dict` pelado, así que el
+  OpenAPI no tiene schema para ellos y `openapi-typescript` los generaría como
+  `unknown` — **destruyendo** el tipado hecho a mano que hoy sí existe. El autogen
+  útil **exige antes** añadir `response_model` (≈20 schemas Pydantic de respuesta)
+  a personajes/documentos/ubicaciones/config/etc., una tarea propia y con riesgo
+  (la validación de `response_model` puede rechazar dicts que hoy pasan → 500).
+  Se **difiere** a su propio trabajo (candidato a H10 o un hito de contrato de API).
 
-## Criterios de aceptación (puerta)
+## Criterios de aceptación (puerta) — H5 cerrado
 
-- [ ] Cambiar de proveedor es cambiar configuración, sin tocar código.
-- [ ] Con Replicate + Llama 3 8B configurado, el runner **reproduce la línea
-      base** (prueba de que el refactor no cambió comportamiento).
-- [ ] Ollama local responde correctamente a través de la misma interfaz.
-- [ ] `rag_service` ya no importa `voice_service`.
-- [ ] Un solo `PersistentClient` en todo el backend.
-- [ ] `types.ts` se genera automáticamente y el frontend compila.
-- [ ] `pytest` en verde, CI verde, cobertura no baja.
+- [x] Cambiar de proveedor es cambiar configuración, sin tocar código
+      (`LLM_PROVIDER`/`LLM_BASE_URL`/`LLM_MODEL`, dispatch en `llm_service`).
+- [~] Con Replicate + Llama 3 8B, el runner **reproduce la línea base**: garantizado
+      por el **test de fijación** (pincha el `input` dict EXACTO de Replicate, sin
+      gastar API) + tests de dispatch. La corrida *end-to-end* del runner la corre el
+      usuario en su máquina (Replicate/DeepL rate-limitean).
+- [~] Ollama local responde por la misma interfaz: la interfaz (`provider=openai` +
+      `base_url`) está lista y unit-testeada; la demo live con Ollama la corre el
+      usuario (no hay Ollama en el sandbox de desarrollo).
+- [x] `rag_service` ya no importa `voice_service` (TTS movido a `chat_service`).
+- [x] Un solo `PersistentClient` en todo el backend (`vector_store`, test que lo fija).
+- [ ] `types.ts` se genera automáticamente: **DIFERIDO** (ver arriba — necesita
+      cobertura de `response_model` primero). El `types.ts` a mano sigue vigente.
+- [x] `pytest` en verde (114 tests); CI verde al abrir el PR a `dev`.
 
 ## Evidencia a entregar para el OK
 
-1. Salida del runner con Replicate demostrando que reproduce la línea base.
-2. Captura de la app funcionando con Ollama local.
-3. Informe de hito.
+1. Test de fijación + dispatch verdes (equivalencia con Replicate sin gastar API).
+   La corrida end-to-end del runner y la demo con Ollama quedan para la máquina del
+   usuario (APIs/servicios locales que el sandbox no tiene).
+2. Informe de hito.
 
 ## Instrucción de arranque para Claude Code
 

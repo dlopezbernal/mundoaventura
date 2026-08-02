@@ -25,28 +25,43 @@ Decisiones para mantenerlo simple y sin GPU local:
     cada personaje solo "vea" sus propios documentos.
 """
 
-import base64
 import logging
+from typing import TypedDict
 
-import chromadb
-
-from backend import config, debug_log
+from backend import config
+from backend.enums import MetodoDecision, ModoEvaluator, Origen
 from backend.services import (
     embeddings,
+    llm_service,
     personajes_service,
-    replicate_client,
     reranker,
     settings_service,
     translation_service,
-    voice_service,
+    vector_store,
 )
 
 logger = logging.getLogger(__name__)
 
-# Cliente y colección de ChromaDB, cargados una sola vez (singleton perezoso).
-_client: chromadb.ClientAPI | None = None
-_collection = None
-_collection_nombre: str | None = None  # nombre con el que se abrió (para detectar cambios)
+
+class RespuestaRAG(TypedDict):
+    """Retorno de `responder`: la respuesta de TEXTO del chat (sin voz).
+
+    Es un TypedDict (un dict normal en runtime, sin coste), solo para dejar por
+    escrito el contrato que antes era un `-> dict` opaco. El audio lo añade
+    `chat_service` sobre esto (ver RespuestaChat allí).
+    """
+
+    success: bool
+    personaje_id: str
+    pregunta: str
+    respuesta: str
+    origen: str  # Origen (StrEnum): RAG / GENERAL / SIN_INFO
+    metodo: str  # MetodoDecision (StrEnum): umbral / llm / rerank
+    distancia: float | None
+    rerank_score: float | None
+    pregunta_traducida: str
+    fuentes: list[str]
+
 
 # Icono por origen, solo para la traza de consola en modo DEBUG.
 _ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡", "SIN_INFO": "🔴"}
@@ -101,61 +116,23 @@ def _trazar_origen(
 
 
 def _get_collection():
-    """Devuelve la colección del backend de embeddings vigente (singleton perezoso).
+    """Abre la colección del backend de embeddings vigente (vía el cliente único).
 
-    El nombre depende de `EMBEDDING_BACKEND`; si cambia (p. ej. al comparar backends),
-    se reabre la colección correcta en vez de servir la cacheada del backend anterior.
+    Delega en `vector_store` (única fuente del cliente ChromaDB). Devuelve la
+    colección fresca: sin objeto-colección cacheado no hay handle que se quede
+    obsoleto tras un reindexado global (por eso ya no existe `reiniciar_coleccion`).
+    Solo LEE la colección; la construye la ingesta (`python -m backend.ingest`).
     """
-    global _client, _collection, _collection_nombre
-    nombre = embeddings.coleccion_actual()
-    if _collection is not None and _collection_nombre == nombre:
-        return _collection
-
-    # PersistentClient guarda los datos en disco (config.CHROMA_DIR), así que el
-    # índice sobrevive entre reinicios y no hay que recalcularlo cada vez.
-    if _client is None:
-        _client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
-
-    # get_or_create_collection: si ya existe la reutiliza; si no, la crea.
-    # Por defecto usa su función de embeddings local (CPU).
-    #
-    # hnsw:space="cosine" → usamos DISTANCIA COSENO, que va de 0 (idéntico) a 2
-    # (opuesto). Es más interpretable que la L2 por defecto y nos permite poner
-    # umbrales fijos para el Evaluator. Usamos un nombre versionado ("..._cos")
-    # para que, si ya tenías una colección antigua con otra métrica, se cree una
-    # nueva limpia con coseno sin que tengas que borrar nada a mano.
-    # La colección la construye el script de ingesta (python -m backend.ingest)
-    # a partir de los documentos. Aquí solo la ABRIMOS para consultarla.
-    _collection = _client.get_or_create_collection(
-        name=nombre,
-        metadata={"hnsw:space": "cosine"},
-    )
-    _collection_nombre = nombre
-
+    collection = vector_store.coleccion()
     # Si está vacía, avisamos: hay que ejecutar la ingesta primero.
-    if _collection.count() == 0:
+    if collection.count() == 0:
         logger.warning(
             "La colección de ChromaDB está VACÍA: no hay ninguna ficha indexada, así "
             "que el chat responderá sin contexto (respuestas pobres o siempre 'no lo "
             "sé'). Añade documentos en backend/documentos/<personaje>/ y reconstruye el "
             "índice con:  python -m backend.ingest"
         )
-
-    return _collection
-
-
-def reiniciar_coleccion() -> None:
-    """Olvida el cliente/colección cacheados de ChromaDB.
-
-    Lo llama documentos_service tras un REINDEXADO GLOBAL (que borra y recrea la
-    colección): el handle cacheado apuntaría a una colección eliminada, así que se
-    fuerza a reabrirla en la siguiente pregunta. Tras un reindexado incremental
-    (borrar+reañadir chunks de un personaje) NO hace falta: la colección es la misma.
-    """
-    global _client, _collection, _collection_nombre
-    _client = None
-    _collection = None
-    _collection_nombre = None
+    return collection
 
 
 def _recuperar_contexto(
@@ -264,44 +241,16 @@ def _llamar_llm(
     temperature: float | None = None,
     etiqueta: str = "LLM",
 ) -> str:
-    """Llama al LLM en Replicate y devuelve el texto de la respuesta.
+    """Genera una respuesta del LLM (delega en la capa de proveedor, Hito 5).
 
-    Los modelos de chat de Replicate devuelven la respuesta "en trocitos"
-    (streaming): una secuencia de cadenas que hay que unir.
-
-    `max_tokens` y `temperature` son configurables porque el Evaluator (juez)
-    necesita una respuesta cortísima y determinista, mientras que la respuesta
-    del personaje admite más longitud y algo de creatividad.
-
-    `etiqueta` identifica el uso ("RAG", "GENERAL", "Evaluator") solo para la
-    traza de prompts en modo DEBUG; no afecta a la llamada.
+    Antes esto hablaba directamente el dialecto de Replicate; ahora TODA llamada al
+    LLM pasa por `llm_service`, que despacha por proveedor (replicate/openai) sin que
+    rag_service sepa cuál. `max_tokens`/`temperature` siguen siendo configurables
+    (el Evaluator los fuerza a 5/0.0); `etiqueta` identifica el uso para la traza.
     """
-    # En modo DEBUG, deja a la vista en consola el prompt completo (system + user)
-    # que recibe el modelo. Es el ÚNICO sitio por el que pasan los 3 usos del LLM.
-    modelo_llm = settings_service.get("REPLICATE_LLM_MODEL")
-    debug_log.trazar_prompt(
-        f"Replicate · {etiqueta} ({modelo_llm})",
-        system=system,
-        user=user,
+    return llm_service.completar(
+        system, user, max_tokens=max_tokens, temperature=temperature, etiqueta=etiqueta
     )
-
-    # temperature=None → usa la temperatura configurable del menú (LLM_TEMPERATURE).
-    # El Evaluator pasa 0.0 explícito (juez determinista) y por eso NO cae aquí.
-    if temperature is None:
-        temperature = settings_service.get("LLM_TEMPERATURE")
-
-    salida = replicate_client.run(
-        modelo_llm,
-        input={
-            "prompt": user,
-            "system_prompt": system,
-            "max_tokens": max_tokens or settings_service.get("LLM_MAX_TOKENS"),
-            "temperature": temperature,
-        },
-        etiqueta=f"Replicate · {etiqueta}",
-    )
-    # salida es un iterable de strings -> los concatenamos en un único texto.
-    return "".join(salida).strip()
 
 
 def _evaluar_relevancia(contexto: list[str], pregunta: str) -> bool:
@@ -382,7 +331,7 @@ def _decidir_origen(
     """
     # Sin fichas no hay nada que fundamentar: no puede ser RAG.
     if not contexto:
-        return False, "umbral", None, None
+        return False, MetodoDecision.UMBRAL, None, None
 
     mejor_dist = min(distancias) if distancias else None
 
@@ -390,70 +339,37 @@ def _decidir_origen(
     if scores:
         mejor_score = max(scores)
         es_rag = mejor_score >= settings_service.get("RERANK_UMBRAL")
-        return es_rag, "rerank", mejor_dist, mejor_score
+        return es_rag, MetodoDecision.RERANK, mejor_dist, mejor_score
 
     # --- Camino coseno (sin reranker): umbral / llm / híbrido de siempre ---
     modo = settings_service.get("EVALUATOR_MODE")
 
     # Modo LLM puro: el juez decide siempre (ignoramos el umbral).
-    if modo == "llm":
-        return _evaluar_relevancia(contexto, pregunta), "llm", mejor_dist, None
+    if modo == ModoEvaluator.LLM:
+        return _evaluar_relevancia(contexto, pregunta), MetodoDecision.LLM, mejor_dist, None
 
     banda = _clasificar_umbral(mejor_dist) if mejor_dist is not None else "dudoso"
 
     # Modo umbral puro: solo el número. Conservador: RAG únicamente si es "relevante".
-    if modo == "umbral":
-        return (banda == "relevante"), "umbral", mejor_dist, None
+    if modo == ModoEvaluator.UMBRAL:
+        return (banda == "relevante"), MetodoDecision.UMBRAL, mejor_dist, None
 
     # Modo híbrido: los casos claros los cierra el umbral (gratis); el LLM solo
     # entra a desempatar cuando la distancia cae en la zona "dudosa".
     if banda == "relevante":
-        return True, "umbral", mejor_dist, None
+        return True, MetodoDecision.UMBRAL, mejor_dist, None
     if banda == "irrelevante":
-        return False, "umbral", mejor_dist, None
-    return _evaluar_relevancia(contexto, pregunta), "llm", mejor_dist, None
+        return False, MetodoDecision.UMBRAL, mejor_dist, None
+    return _evaluar_relevancia(contexto, pregunta), MetodoDecision.LLM, mejor_dist, None
 
 
-def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
-    """Devuelve la respuesta como mp3 en base64, o None.
+def responder(personaje_id: str, pregunta: str) -> RespuestaRAG:
+    """Genera la respuesta de TEXTO del personaje (RAG). SIN voz (Hito 5).
 
-    Degradación elegante: si el personaje no tiene voz_id, si falta la clave de
-    ElevenLabs, o si el TTS falla, devuelve None. El texto de la respuesta NUNCA
-    se rompe por un fallo de voz.
-    """
-    ficha = personajes_service.obtener(personaje_id)
-    voz_id = ficha["voz_id"] if ficha else None
-    if not voz_id or not config.ELEVENLABS_API_KEY:
-        return None
-    try:
-        audio_bytes = voice_service.sintetizar(respuesta, voz_id)
-        audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
-    except Exception:
-        # Degradación elegante: la respuesta se entrega SOLO en texto y el chat
-        # sigue. Pero el fallo se registra SIEMPRE (no solo en DEBUG) para que no
-        # se pierda sin rastro; exc_info=True guarda la traza completa.
-        logger.warning(
-            "TTS (síntesis de voz) FALLÓ para el personaje '%s' (voz_id=%s); la "
-            "respuesta se entrega solo en texto (audio_base64=null).",
-            personaje_id,
-            voz_id,
-            exc_info=True,
-        )
-        return None
-    if settings_service.get("DEBUG"):
-        logger.debug(
-            "[VOZ] 🔊 TTS OK · personaje=%s · voz_id=%s · %s caracteres → mp3 base64 "
-            "(ElevenLabs modelo=%s)",
-            personaje_id,
-            voz_id,
-            len(respuesta),
-            settings_service.get("ELEVENLABS_TTS_MODEL"),
-        )
-    return audio_b64
-
-
-def responder(personaje_id: str, pregunta: str) -> dict:
-    """Función principal: dado un personaje y una pregunta, devuelve la respuesta.
+    La síntesis de voz (TTS) ya NO vive aquí: este servicio recupera y genera
+    TEXTO, y no tiene por qué saber que existe ElevenLabs. El orquestador
+    `chat_service.responder` añade el audio sobre este resultado (subir el TTS un
+    nivel era la fuga de capas principal del backend, y estorba al streaming de H8).
 
     Lanza ValueError (→ 400 en el router) si el personaje no existe o falta el
     token de Replicate.
@@ -487,7 +403,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
 
     if es_rag:
         # --- Camino RAG: respuesta FUNDAMENTADA solo en las fichas ---
-        origen = "RAG"
+        origen = Origen.RAG
         # Pasamos la pregunta YA traducida (pregunta_en): Llama 3 entiende y obedece
         # mejor en inglés. La respuesta, eso sí, se genera en español (lo pide el prompt).
         system, user = _construir_prompt(nombre, contexto, pregunta_en)
@@ -505,7 +421,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
     elif settings_service.get("PERMITIR_CONOCIMIENTO_GENERAL"):
         # --- Camino GENERAL: las fichas no sirven; el personaje responde con su
         # conocimiento propio (aquí, en el futuro, podría enrutarse a búsqueda web).
-        origen = "GENERAL"
+        origen = Origen.GENERAL
         # Igual que en RAG: la pregunta va en inglés (pregunta_en), la respuesta en español.
         system, user = _construir_prompt_general(nombre, pregunta_en)
         respuesta = _llamar_llm(system, user, etiqueta="GENERAL")
@@ -515,7 +431,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         # está desactivado (PERMITIR_CONOCIMIENTO_GENERAL=false). Mensaje FIJO, sin
         # llamar a ningún modelo (ni el LLM del personaje ni el juez): coste cero y
         # respuesta anclada estrictamente a los documentos subidos.
-        origen = "SIN_INFO"
+        origen = Origen.SIN_INFO
         respuesta = settings_service.rellenar(
             settings_service.get("MENSAJE_SIN_INFORMACION"), nombre=nombre
         )
@@ -523,10 +439,6 @@ def responder(personaje_id: str, pregunta: str) -> dict:
 
     # Traza de depuración (solo si DEBUG): en la consola del BACKEND, no del cliente.
     _trazar_origen(origen, metodo, distancia, score, pregunta_en)
-
-    # Síntesis de voz de la respuesta (si el personaje tiene voz_id y hay clave).
-    # Si falla, audio_base64 queda None y la respuesta sigue viva en texto.
-    audio_base64 = _sintetizar_respuesta(personaje_id, respuesta)
 
     return {
         "success": True,
@@ -544,5 +456,5 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         "pregunta_traducida": pregunta_en,
         # Fichas usadas (vacío si la respuesta no vino del RAG).
         "fuentes": fuentes,
-        "audio_base64": audio_base64,
+        # El audio (TTS) lo añade el orquestador chat_service; aquí NO (capa de texto).
     }
