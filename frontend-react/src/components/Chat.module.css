@@ -133,6 +133,54 @@
   color: #9fb4dd;
 }
 
+/* -- Confirmación de voz ("¿has dicho esto?") -- */
+.confirmVoz {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 46, 151, 0.4);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 46, 151, 0.12), rgba(6, 12, 34, 0.6));
+}
+.confirmTexto {
+  font-size: 0.82rem;
+  color: #ffd7ec;
+}
+.confirmBotones {
+  display: flex;
+  gap: 8px;
+}
+.confirmSi,
+.confirmNo {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-family: var(--font-disp);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+}
+.confirmSi {
+  border: none;
+  background: linear-gradient(90deg, var(--holo), var(--lime));
+  color: #04121f;
+}
+.confirmNo {
+  border: 1px solid var(--line);
+  background: rgba(4, 8, 28, 0.6);
+  color: #8fa3e0;
+}
+.confirmNo:hover {
+  border-color: #8fa3e0;
+}
+.confirmSi:disabled,
+.confirmNo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* -- Formulario: input + micro + enviar -- */
 .form {
   display: flex;

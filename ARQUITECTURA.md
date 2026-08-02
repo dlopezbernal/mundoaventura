@@ -19,13 +19,20 @@ App educativa (niños 8–12) cliente-servidor desacoplada:
 |-----------|----------|-------|
 | **Replicate** | Generación de imagen (FLUX) y LLM del chat (Llama 3, por defecto) | `generation_service.py`, `llm_service.py` |
 | **DeepL** | Traducción ES→EN de la pregunta (mejora el retrieval) | `translation_service.py` |
-| **ElevenLabs** | Voz: transcripción (Scribe/STT) y síntesis (Flash/TTS) | `voice_service.py` |
+| **ElevenLabs** | Voz: transcripción (Scribe/STT, opcional) y síntesis (Flash/TTS) | `voice_service.py`, `stt_service.py` |
 
 > **Capa de LLM intercambiable (Hito 5):** el LLM del chat ya no está clavado a
 > Replicate. `llm_service.py` despacha por `LLM_PROVIDER`: `replicate` (por defecto,
 > reproduce la línea base) u `openai` (endpoint openai-compatible vía `LLM_BASE_URL`:
 > Groq, Mistral, Ollama local…). Cambiar de proveedor es cambiar config, no código
 > (habilita el estudio comparativo de H6).
+
+> **Capa de STT intercambiable (Hito 7):** la transcripción tampoco está clavada a
+> ElevenLabs. `stt_service.py` despacha por `STT_PROVIDER`: `elevenlabs` (por defecto,
+> Scribe en nube) | `local` (**faster-whisper**, CTranslate2 sin torch, la voz del niño
+> NO sale del PC — motivación de RGPD; dependencia opcional `stt-local`) | `groq`
+> (Whisper en Groq). Si el STT local no carga (DLLs de cuBLAS/cuDNN), **cae solo a la
+> nube** (nunca se queda muda). `voice_service.transcribir` delega en `stt_service`.
 
 ## Flujo de una pregunta por voz (secuencia)
 

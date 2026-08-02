@@ -172,6 +172,36 @@ fichas equivocadas) y el chat responde con un error claro. Clave gratis (500.000
 voz a la respuesta del personaje (Flash). Sin ella, la voz queda desactivada pero el chat de
 **texto sigue funcionando**. Consigue una clave en [elevenlabs.io](https://elevenlabs.io).
 
+### 3b. (Opcional) Transcripción local con faster-whisper — privacidad (Hito 7)
+
+Por defecto la transcripción (voz→texto) va a **ElevenLabs Scribe** (nube). Puedes moverla a
+**local** con `faster-whisper`: la **voz del niño no sale del PC** (argumento de RGPD), es
+gratis y funciona sin conexión. Es **opcional**: un `uv sync` normal no lo instala, y si el
+STT local no carga, la app **cae automáticamente a la nube** (no se queda muda).
+
+```powershell
+# 1) Instala el extra (faster-whisper; CTranslate2, sin torch)
+uv sync --extra stt-local
+
+# 2) Activa el proveedor local (en el .env o desde el menú ⚙️ → Sistema)
+#    STT_PROVIDER=local · STT_LOCAL_MODEL=large-v3-turbo · STT_LOCAL_DEVICE=cuda · STT_LOCAL_COMPUTE=int8
+```
+
+**Aviso de Windows (donde se pierde media tarde):** para correr en **GPU** (`cuda`),
+faster-whisper necesita las **DLL de cuBLAS y cuDNN en el PATH**. Dos vías:
+
+- Instala los paquetes que traen las DLL y añádelos al PATH (por ejemplo, las ruedas
+  `nvidia-cublas-cu12` y `nvidia-cudnn-cu12` de pip, o el CUDA Toolkit + cuDNN de NVIDIA).
+- Comprueba que Python las encuentra antes de arrancar; si al primer uso ves un error de
+  carga de DLL, es esto.
+
+**Plan B (si tras medio día no arranca en GPU):** pon `STT_LOCAL_DEVICE=cpu` (con
+`STT_LOCAL_COMPUTE=int8`) — más lento pero funciona sin DLLs de CUDA— o deja `STT_PROVIDER=
+elevenlabs` (nube). No insistas con las DLL: el fallback ya cubre el caso.
+
+Con `STT_PROVIDER=local`, `ELEVENLABS_API_KEY` deja de hacer falta para transcribir (sigue
+usándose para la **voz de la respuesta**, el TTS).
+
 ### 4. Arrancar el backend (una terminal)
 
 ```powershell

@@ -24,7 +24,13 @@ import os
 import shutil
 
 from backend import config
-from backend.services import llm_service, replicate_client, translation_service, voice_service
+from backend.services import (
+    llm_service,
+    replicate_client,
+    stt_service,
+    translation_service,
+    voice_service,
+)
 
 # Metadatos de cada proveedor: variable del .env, nombre visible y enlace de alta.
 _PROVEEDORES: dict[str, dict[str, str]] = {
@@ -48,6 +54,13 @@ _PROVEEDORES: dict[str, dict[str, str]] = {
     "llm": {
         "variable": "LLM_API_KEY",
         "nombre": "LLM (endpoint OpenAI-compatible)",
+        "ayuda_url": "https://console.groq.com/keys",
+    },
+    # Clave de Groq para STT (Whisper), solo si STT_PROVIDER=groq (Hito 7). Separada de
+    # la clave "llm" a propósito: son cuentas/servicios distintos aunque coincida Groq.
+    "groq": {
+        "variable": "GROQ_API_KEY",
+        "nombre": "Groq (transcripción Whisper)",
         "ayuda_url": "https://console.groq.com/keys",
     },
 }
@@ -182,6 +195,7 @@ def guardar(cambios: dict[str, str]) -> list[dict]:
     voice_service.reiniciar()
     replicate_client.reiniciar()
     llm_service.reiniciar()
+    stt_service.reiniciar()
 
     return estado()
 
@@ -212,4 +226,6 @@ def probar(proveedor: str) -> dict:
         return translation_service.probar()
     if proveedor == "llm":
         return llm_service.probar()
+    if proveedor == "groq":
+        return stt_service.probar()
     return voice_service.probar()

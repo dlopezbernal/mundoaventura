@@ -242,6 +242,36 @@ TTS_OUTPUT_FORMAT: str = os.getenv("TTS_OUTPUT_FORMAT", "mp3_44100_128").strip()
 # Idioma de la transcripción (la pregunta del niño se dice en español).
 STT_LANG: str = os.getenv("STT_LANG", "es").strip()
 
+# --- STT: proveedor de transcripción seleccionable (Hito 7) ---
+# Mismo patrón que LLM_PROVIDER (H5): la transcripción pasa por stt_service, que elige
+# implementación según STT_PROVIDER, para poder mover la voz del niño a LOCAL sin
+# reescribir el pipeline. La motivación es de PRIVACIDAD, no de coste: con STT local, la
+# voz del niño NUNCA sale del PC (eje del capítulo de RGPD).
+#   "elevenlabs": Scribe en la nube (línea base; usa ELEVENLABS_API_KEY).
+#   "local":      faster-whisper (CTranslate2, GPU/CPU). Dependencia OPCIONAL (extra
+#                 "stt-local"); si no está instalada o no carga (DLLs de cuBLAS/cuDNN),
+#                 stt_service AVISA y cae a la nube — la app nunca se queda muda.
+#   "groq":       Whisper en Groq (nube, endpoint openai-compatible) — usa GROQ_API_KEY.
+# Default = "elevenlabs": un clon limpio arranca SIN CUDA (local es opt-in, se activa
+# desde el menú de config o el .env, y lo documenta el ADR-008). Mismo criterio que
+# RERANKER=off (H4) y LLM_PROVIDER=replicate (H5): el default reproduce la línea base.
+STT_PROVIDER: str = os.getenv("STT_PROVIDER", "elevenlabs").strip().lower()
+
+# Modelo de faster-whisper (STT local). large-v3-turbo en int8 ocupa ~1–1,5 GB de VRAM
+# (con 6 GB sobran); medium/small son más ligeros y algo menos precisos.
+STT_LOCAL_MODEL: str = os.getenv("STT_LOCAL_MODEL", "large-v3-turbo").strip()
+
+# Dispositivo y precisión de faster-whisper. "cuda"+"int8" es lo recomendado (GPU 6 GB).
+# Plan B ante problemas de DLL en Windows: "cpu"+"int8" (más lento pero funciona).
+STT_LOCAL_DEVICE: str = os.getenv("STT_LOCAL_DEVICE", "cuda").strip()
+STT_LOCAL_COMPUTE: str = os.getenv("STT_LOCAL_COMPUTE", "int8").strip()
+
+# Groq como proveedor de STT (Whisper en la nube, endpoint openai-compatible). Clave y
+# modelo propios; el candidato de LATENCIA para la comparativa WER del ADR-008.
+GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_STT_MODEL: str = os.getenv("GROQ_STT_MODEL", "whisper-large-v3").strip()
+GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1").strip()
+
 
 # ---------------------------------------------------------------------------
 # 3c) Personajes: límite del catálogo
@@ -353,6 +383,7 @@ def describe() -> dict:
         "replicate_edit_model": REPLICATE_EDIT_MODEL,
         "llm_provider": LLM_PROVIDER,
         "llm_model": LLM_MODEL,
+        "stt_provider": STT_PROVIDER,
         "aspect_ratio": IMG_ASPECT_RATIO,
         "output_format": IMG_OUTPUT_FORMAT,
         "clip_token_limit": CLIP_TOKEN_LIMIT,
