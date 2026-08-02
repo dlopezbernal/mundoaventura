@@ -29,6 +29,7 @@ from pathlib import Path
 from sqlmodel import select
 
 from backend import config, db
+from backend.enums import OrigenDocumento
 from backend.models import Documento
 from backend.services import (
     embeddings,
@@ -432,7 +433,7 @@ def subir(
     return _registrar(
         personaje_id,
         nombre_guardado,
-        origen="subido",
+        origen=OrigenDocumento.SUBIDO,
         traducido=traducido,
         idioma_original=idioma,
         sobrescribir=sobrescribir,
@@ -498,7 +499,7 @@ def ingesta_url(personaje_id: str, url: str, sobrescribir: bool = False) -> dict
     return _registrar(
         personaje_id,
         nombre,
-        origen="url",
+        origen=OrigenDocumento.URL,
         traducido=traducido,
         idioma_original=idioma,
         url_origen=url,

@@ -26,8 +26,10 @@ Decisiones para mantenerlo simple y sin GPU local:
 """
 
 import logging
+from typing import TypedDict
 
 from backend import config
+from backend.enums import MetodoDecision, ModoEvaluator, Origen
 from backend.services import (
     embeddings,
     llm_service,
@@ -39,6 +41,27 @@ from backend.services import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class RespuestaRAG(TypedDict):
+    """Retorno de `responder`: la respuesta de TEXTO del chat (sin voz).
+
+    Es un TypedDict (un dict normal en runtime, sin coste), solo para dejar por
+    escrito el contrato que antes era un `-> dict` opaco. El audio lo añade
+    `chat_service` sobre esto (ver RespuestaChat allí).
+    """
+
+    success: bool
+    personaje_id: str
+    pregunta: str
+    respuesta: str
+    origen: str  # Origen (StrEnum): RAG / GENERAL / SIN_INFO
+    metodo: str  # MetodoDecision (StrEnum): umbral / llm / rerank
+    distancia: float | None
+    rerank_score: float | None
+    pregunta_traducida: str
+    fuentes: list[str]
+
 
 # Icono por origen, solo para la traza de consola en modo DEBUG.
 _ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡", "SIN_INFO": "🔴"}
@@ -308,7 +331,7 @@ def _decidir_origen(
     """
     # Sin fichas no hay nada que fundamentar: no puede ser RAG.
     if not contexto:
-        return False, "umbral", None, None
+        return False, MetodoDecision.UMBRAL, None, None
 
     mejor_dist = min(distancias) if distancias else None
 
@@ -316,31 +339,31 @@ def _decidir_origen(
     if scores:
         mejor_score = max(scores)
         es_rag = mejor_score >= settings_service.get("RERANK_UMBRAL")
-        return es_rag, "rerank", mejor_dist, mejor_score
+        return es_rag, MetodoDecision.RERANK, mejor_dist, mejor_score
 
     # --- Camino coseno (sin reranker): umbral / llm / híbrido de siempre ---
     modo = settings_service.get("EVALUATOR_MODE")
 
     # Modo LLM puro: el juez decide siempre (ignoramos el umbral).
-    if modo == "llm":
-        return _evaluar_relevancia(contexto, pregunta), "llm", mejor_dist, None
+    if modo == ModoEvaluator.LLM:
+        return _evaluar_relevancia(contexto, pregunta), MetodoDecision.LLM, mejor_dist, None
 
     banda = _clasificar_umbral(mejor_dist) if mejor_dist is not None else "dudoso"
 
     # Modo umbral puro: solo el número. Conservador: RAG únicamente si es "relevante".
-    if modo == "umbral":
-        return (banda == "relevante"), "umbral", mejor_dist, None
+    if modo == ModoEvaluator.UMBRAL:
+        return (banda == "relevante"), MetodoDecision.UMBRAL, mejor_dist, None
 
     # Modo híbrido: los casos claros los cierra el umbral (gratis); el LLM solo
     # entra a desempatar cuando la distancia cae en la zona "dudosa".
     if banda == "relevante":
-        return True, "umbral", mejor_dist, None
+        return True, MetodoDecision.UMBRAL, mejor_dist, None
     if banda == "irrelevante":
-        return False, "umbral", mejor_dist, None
-    return _evaluar_relevancia(contexto, pregunta), "llm", mejor_dist, None
+        return False, MetodoDecision.UMBRAL, mejor_dist, None
+    return _evaluar_relevancia(contexto, pregunta), MetodoDecision.LLM, mejor_dist, None
 
 
-def responder(personaje_id: str, pregunta: str) -> dict:
+def responder(personaje_id: str, pregunta: str) -> RespuestaRAG:
     """Genera la respuesta de TEXTO del personaje (RAG). SIN voz (Hito 5).
 
     La síntesis de voz (TTS) ya NO vive aquí: este servicio recupera y genera
@@ -380,7 +403,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
 
     if es_rag:
         # --- Camino RAG: respuesta FUNDAMENTADA solo en las fichas ---
-        origen = "RAG"
+        origen = Origen.RAG
         # Pasamos la pregunta YA traducida (pregunta_en): Llama 3 entiende y obedece
         # mejor en inglés. La respuesta, eso sí, se genera en español (lo pide el prompt).
         system, user = _construir_prompt(nombre, contexto, pregunta_en)
@@ -398,7 +421,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
     elif settings_service.get("PERMITIR_CONOCIMIENTO_GENERAL"):
         # --- Camino GENERAL: las fichas no sirven; el personaje responde con su
         # conocimiento propio (aquí, en el futuro, podría enrutarse a búsqueda web).
-        origen = "GENERAL"
+        origen = Origen.GENERAL
         # Igual que en RAG: la pregunta va en inglés (pregunta_en), la respuesta en español.
         system, user = _construir_prompt_general(nombre, pregunta_en)
         respuesta = _llamar_llm(system, user, etiqueta="GENERAL")
@@ -408,7 +431,7 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         # está desactivado (PERMITIR_CONOCIMIENTO_GENERAL=false). Mensaje FIJO, sin
         # llamar a ningún modelo (ni el LLM del personaje ni el juez): coste cero y
         # respuesta anclada estrictamente a los documentos subidos.
-        origen = "SIN_INFO"
+        origen = Origen.SIN_INFO
         respuesta = settings_service.rellenar(
             settings_service.get("MENSAJE_SIN_INFORMACION"), nombre=nombre
         )

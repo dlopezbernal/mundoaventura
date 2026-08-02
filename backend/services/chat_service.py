@@ -20,8 +20,19 @@ import logging
 
 from backend import config
 from backend.services import personajes_service, rag_service, settings_service, voice_service
+from backend.services.rag_service import RespuestaRAG
 
 logger = logging.getLogger(__name__)
+
+
+class RespuestaChat(RespuestaRAG):
+    """Retorno de `responder`: la respuesta de texto (RespuestaRAG) MÁS el audio.
+
+    `audio_base64` es el mp3 en base64 (o None si el personaje no tiene voz o el TTS
+    falló). Es lo que consume el endpoint /api/ask (schema AskResponse).
+    """
+
+    audio_base64: str | None
 
 
 def _sintetizar_voz(personaje_id: str, respuesta: str) -> str | None:
@@ -60,12 +71,12 @@ def _sintetizar_voz(personaje_id: str, respuesta: str) -> str | None:
     return audio_b64
 
 
-def responder(personaje_id: str, pregunta: str) -> dict:
+def responder(personaje_id: str, pregunta: str) -> RespuestaChat:
     """Respuesta completa del chat: texto (RAG) + voz (TTS si el personaje tiene).
 
     Propaga los ValueError de `rag_service.responder` (personaje inexistente o falta
     de token) para que el router los mapee a 400.
     """
     resultado = rag_service.responder(personaje_id, pregunta)
-    resultado["audio_base64"] = _sintetizar_voz(personaje_id, resultado["respuesta"])
-    return resultado
+    audio = _sintetizar_voz(personaje_id, resultado["respuesta"])
+    return {**resultado, "audio_base64": audio}

@@ -28,6 +28,7 @@ from sqlmodel import select
 
 from backend import config, db
 from backend import personajes as personajes_cfg
+from backend.enums import ModoEvaluator
 from backend.models import Setting
 
 # Categorías (para agrupar los ajustes en la UI del Hito 3).
@@ -42,8 +43,9 @@ CAT_GENERAL = "general"
 # antes constantes fijas en personajes.py, ahora editables sin tocar código.
 CAT_ESTILO_IMAGEN = "estilo_imagen"
 
-# Modos válidos del Evaluator (mismo criterio que config.py).
-_MODOS_EVALUATOR = ("umbral", "llm", "hibrido")
+# Modos válidos del Evaluator (mismo criterio que config.py). Strings planos desde
+# el enum, para que las opciones que ve la UI sean texto normal.
+_MODOS_EVALUATOR = tuple(str(m) for m in ModoEvaluator)
 
 # ---------------------------------------------------------------------------
 # Prompts de sistema por defecto (antes hardcodeados en rag_service.py)

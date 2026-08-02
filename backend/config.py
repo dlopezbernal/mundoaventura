@@ -19,6 +19,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from backend.enums import ModoEvaluator
+
 # ---------------------------------------------------------------------------
 # 1) Localizar la raíz del proyecto y cargar el .env
 # ---------------------------------------------------------------------------
@@ -114,9 +116,9 @@ RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "3"))
 #   "llm"     → SOLO el LLM-juez decide (más listo, pero cuesta una llamada extra).
 #   "hibrido" → el umbral resuelve los casos claros (gratis) y el LLM solo desempata
 #               los dudosos. Mejor relación calidad/coste. (Recomendado)
-EVALUATOR_MODE: str = os.getenv("EVALUATOR_MODE", "hibrido").strip().lower()
-if EVALUATOR_MODE not in ("umbral", "llm", "hibrido"):
-    EVALUATOR_MODE = "hibrido"  # valor seguro si el .env trae algo raro
+EVALUATOR_MODE: str = os.getenv("EVALUATOR_MODE", ModoEvaluator.HIBRIDO).strip().lower()
+if EVALUATOR_MODE not in set(ModoEvaluator):
+    EVALUATOR_MODE = ModoEvaluator.HIBRIDO  # valor seguro si el .env trae algo raro
 
 # Umbrales de DISTANCIA de ChromaDB (métrica coseno: 0 = idéntico, 2 = opuesto).
 #   distancia <= BAJO  → claramente relevante  (RAG)

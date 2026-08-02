@@ -27,11 +27,20 @@ la clave del endpoint openai-compatible es un secreto (`config.LLM_API_KEY`, .en
 
 import logging
 from collections.abc import Iterator
+from typing import TypedDict
 
 from backend import config, debug_log
 from backend.services import replicate_client, settings_service
 
 logger = logging.getLogger(__name__)
+
+
+class InfoLLM(TypedDict):
+    """Descripción del LLM vigente (sin la clave). La devuelve `info()`."""
+
+    provider: str
+    model: str
+    base_url: str
 
 _PROVEEDORES_VALIDOS = ("replicate", "openai")
 
