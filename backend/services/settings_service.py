@@ -293,12 +293,29 @@ _SPEC: dict[str, dict[str, Any]] = {
         "requires_reindex": True,
         "ayuda": "Nombre de la colección de ChromaDB. Cambiarlo exige reindexar.",
     },
-    # --- LLM ---
-    "REPLICATE_LLM_MODEL": {
+    # --- LLM (capa de proveedor, Hito 5) ---
+    "LLM_PROVIDER": {
         "categoria": CAT_LLM,
         "tipo": "str",
-        "default": config.REPLICATE_LLM_MODEL,
-        "ayuda": "Modelo de lenguaje (Replicate) que responde como el personaje.",
+        "default": config.LLM_PROVIDER,
+        "opciones": ["replicate", "openai"],
+        "ayuda": "Proveedor del LLM. replicate = línea base; openai = endpoint "
+        "openai-compatible (Groq, Mistral, Gemini-compat, OpenRouter, Ollama local…) "
+        "vía LLM_BASE_URL. Cambiar de proveedor es cambiar config, no código.",
+    },
+    "LLM_MODEL": {
+        "categoria": CAT_LLM,
+        "tipo": "str",
+        "default": config.LLM_MODEL,
+        "ayuda": "Id del modelo en el proveedor activo (p. ej. "
+        "meta/meta-llama-3-8b-instruct en Replicate, o llama3 en Ollama).",
+    },
+    "LLM_BASE_URL": {
+        "categoria": CAT_LLM,
+        "tipo": "str",
+        "default": config.LLM_BASE_URL,
+        "ayuda": "URL del endpoint openai-compatible (solo si el proveedor es openai). "
+        "Ej.: http://localhost:11434/v1 (Ollama) o https://api.groq.com/openai/v1.",
     },
     "LLM_MAX_TOKENS": {
         "categoria": CAT_LLM,

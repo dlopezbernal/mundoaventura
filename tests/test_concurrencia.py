@@ -16,7 +16,7 @@ import time
 
 import httpx
 
-from backend.services import rag_service, translation_service, voice_service
+from backend.services import chat_service, translation_service, voice_service
 
 _BLOQUEO_S = 1.0  # cada /api/ask "tarda" esto (simula I/O de red bloqueante)
 
@@ -29,12 +29,15 @@ def _stub_responder(personaje_id: str, pregunta: str) -> dict:
         "pregunta": pregunta,
         "respuesta": "(simulada)",
         "origen": "RAG",
+        "audio_base64": None,
     }
 
 
 def test_health_responde_con_asks_en_vuelo(monkeypatch):
-    # Stub del pipeline (bloqueo determinista) y de las sondas de /health (sin red).
-    monkeypatch.setattr(rag_service, "responder", _stub_responder)
+    # Stub del ORQUESTADOR del chat (bloqueo determinista, sin red) y de las sondas
+    # de /health. Se stubea chat_service.responder porque es lo que llama el endpoint
+    # /api/ask desde H5 (antes era rag_service.responder, ahora envuelto por el TTS).
+    monkeypatch.setattr(chat_service, "responder", _stub_responder)
     monkeypatch.setattr(
         translation_service, "estado", lambda: {"deepl_ok": True, "deepl_mensaje": "(stub)"}
     )

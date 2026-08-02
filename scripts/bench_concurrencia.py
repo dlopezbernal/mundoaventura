@@ -21,7 +21,7 @@ Método (fiel al escenario real)
   se le pega desde el hilo principal con un cliente HTTP independiente. Es la única
   forma honesta de medir "¿cuánto tarda /health MIENTRAS otra petición bloquea?":
   con un cliente ASGI in-process se comparte el mismo event loop y la medición miente.
-- Se stubea `rag_service.responder` con un bloqueo determinista (`time.sleep`), que
+- Se stubea `chat_service.responder` con un bloqueo determinista (`time.sleep`), que
   SIMULA la I/O de red lenta sin gastar crédito de las APIs ni depender del jitter
   de red. Así la medición refleja SOLO el modelo de concurrencia, no la latencia real.
 - Se stubean también las sondas de estado de `/health` (DeepL/ElevenLabs) para que
@@ -47,7 +47,7 @@ import uvicorn
 # Permite ejecutar el script directamente (`python scripts/bench_concurrencia.py`).
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from backend.services import rag_service, translation_service, voice_service  # noqa: E402
+from backend.services import chat_service, translation_service, voice_service  # noqa: E402
 
 _PUERTO = 8137  # puerto local dedicado al benchmark (evita chocar con el 8000 de dev)
 
@@ -64,9 +64,10 @@ def _instalar_stubs(segundos: float) -> None:
             "pregunta": pregunta,
             "respuesta": "(respuesta simulada para el benchmark)",
             "origen": "RAG",
+            "audio_base64": None,
         }
 
-    rag_service.responder = _responder_lento
+    chat_service.responder = _responder_lento
     # /health no debe tocar la red durante la medición: la cronometramos a ella, no a DeepL.
     translation_service.estado = lambda: {"deepl_ok": True, "deepl_mensaje": "(stub)"}
     voice_service.estado = lambda: {"elevenlabs_ok": True, "elevenlabs_mensaje": "(stub)"}

@@ -25,20 +25,18 @@ Decisiones para mantenerlo simple y sin GPU local:
     cada personaje solo "vea" sus propios documentos.
 """
 
-import base64
 import logging
 
 import chromadb
 
-from backend import config, debug_log
+from backend import config
 from backend.services import (
     embeddings,
+    llm_service,
     personajes_service,
-    replicate_client,
     reranker,
     settings_service,
     translation_service,
-    voice_service,
 )
 
 logger = logging.getLogger(__name__)
@@ -264,44 +262,16 @@ def _llamar_llm(
     temperature: float | None = None,
     etiqueta: str = "LLM",
 ) -> str:
-    """Llama al LLM en Replicate y devuelve el texto de la respuesta.
+    """Genera una respuesta del LLM (delega en la capa de proveedor, Hito 5).
 
-    Los modelos de chat de Replicate devuelven la respuesta "en trocitos"
-    (streaming): una secuencia de cadenas que hay que unir.
-
-    `max_tokens` y `temperature` son configurables porque el Evaluator (juez)
-    necesita una respuesta cortísima y determinista, mientras que la respuesta
-    del personaje admite más longitud y algo de creatividad.
-
-    `etiqueta` identifica el uso ("RAG", "GENERAL", "Evaluator") solo para la
-    traza de prompts en modo DEBUG; no afecta a la llamada.
+    Antes esto hablaba directamente el dialecto de Replicate; ahora TODA llamada al
+    LLM pasa por `llm_service`, que despacha por proveedor (replicate/openai) sin que
+    rag_service sepa cuál. `max_tokens`/`temperature` siguen siendo configurables
+    (el Evaluator los fuerza a 5/0.0); `etiqueta` identifica el uso para la traza.
     """
-    # En modo DEBUG, deja a la vista en consola el prompt completo (system + user)
-    # que recibe el modelo. Es el ÚNICO sitio por el que pasan los 3 usos del LLM.
-    modelo_llm = settings_service.get("REPLICATE_LLM_MODEL")
-    debug_log.trazar_prompt(
-        f"Replicate · {etiqueta} ({modelo_llm})",
-        system=system,
-        user=user,
+    return llm_service.completar(
+        system, user, max_tokens=max_tokens, temperature=temperature, etiqueta=etiqueta
     )
-
-    # temperature=None → usa la temperatura configurable del menú (LLM_TEMPERATURE).
-    # El Evaluator pasa 0.0 explícito (juez determinista) y por eso NO cae aquí.
-    if temperature is None:
-        temperature = settings_service.get("LLM_TEMPERATURE")
-
-    salida = replicate_client.run(
-        modelo_llm,
-        input={
-            "prompt": user,
-            "system_prompt": system,
-            "max_tokens": max_tokens or settings_service.get("LLM_MAX_TOKENS"),
-            "temperature": temperature,
-        },
-        etiqueta=f"Replicate · {etiqueta}",
-    )
-    # salida es un iterable de strings -> los concatenamos en un único texto.
-    return "".join(salida).strip()
 
 
 def _evaluar_relevancia(contexto: list[str], pregunta: str) -> bool:
@@ -414,46 +384,13 @@ def _decidir_origen(
     return _evaluar_relevancia(contexto, pregunta), "llm", mejor_dist, None
 
 
-def _sintetizar_respuesta(personaje_id: str, respuesta: str) -> str | None:
-    """Devuelve la respuesta como mp3 en base64, o None.
-
-    Degradación elegante: si el personaje no tiene voz_id, si falta la clave de
-    ElevenLabs, o si el TTS falla, devuelve None. El texto de la respuesta NUNCA
-    se rompe por un fallo de voz.
-    """
-    ficha = personajes_service.obtener(personaje_id)
-    voz_id = ficha["voz_id"] if ficha else None
-    if not voz_id or not config.ELEVENLABS_API_KEY:
-        return None
-    try:
-        audio_bytes = voice_service.sintetizar(respuesta, voz_id)
-        audio_b64 = base64.b64encode(audio_bytes).decode("ascii")
-    except Exception:
-        # Degradación elegante: la respuesta se entrega SOLO en texto y el chat
-        # sigue. Pero el fallo se registra SIEMPRE (no solo en DEBUG) para que no
-        # se pierda sin rastro; exc_info=True guarda la traza completa.
-        logger.warning(
-            "TTS (síntesis de voz) FALLÓ para el personaje '%s' (voz_id=%s); la "
-            "respuesta se entrega solo en texto (audio_base64=null).",
-            personaje_id,
-            voz_id,
-            exc_info=True,
-        )
-        return None
-    if settings_service.get("DEBUG"):
-        logger.debug(
-            "[VOZ] 🔊 TTS OK · personaje=%s · voz_id=%s · %s caracteres → mp3 base64 "
-            "(ElevenLabs modelo=%s)",
-            personaje_id,
-            voz_id,
-            len(respuesta),
-            settings_service.get("ELEVENLABS_TTS_MODEL"),
-        )
-    return audio_b64
-
-
 def responder(personaje_id: str, pregunta: str) -> dict:
-    """Función principal: dado un personaje y una pregunta, devuelve la respuesta.
+    """Genera la respuesta de TEXTO del personaje (RAG). SIN voz (Hito 5).
+
+    La síntesis de voz (TTS) ya NO vive aquí: este servicio recupera y genera
+    TEXTO, y no tiene por qué saber que existe ElevenLabs. El orquestador
+    `chat_service.responder` añade el audio sobre este resultado (subir el TTS un
+    nivel era la fuga de capas principal del backend, y estorba al streaming de H8).
 
     Lanza ValueError (→ 400 en el router) si el personaje no existe o falta el
     token de Replicate.
@@ -524,10 +461,6 @@ def responder(personaje_id: str, pregunta: str) -> dict:
     # Traza de depuración (solo si DEBUG): en la consola del BACKEND, no del cliente.
     _trazar_origen(origen, metodo, distancia, score, pregunta_en)
 
-    # Síntesis de voz de la respuesta (si el personaje tiene voz_id y hay clave).
-    # Si falla, audio_base64 queda None y la respuesta sigue viva en texto.
-    audio_base64 = _sintetizar_respuesta(personaje_id, respuesta)
-
     return {
         "success": True,
         "personaje_id": personaje_id,
@@ -544,5 +477,5 @@ def responder(personaje_id: str, pregunta: str) -> dict:
         "pregunta_traducida": pregunta_en,
         # Fichas usadas (vacío si la respuesta no vino del RAG).
         "fuentes": fuentes,
-        "audio_base64": audio_base64,
+        # El audio (TTS) lo añade el orquestador chat_service; aquí NO (capa de texto).
     }

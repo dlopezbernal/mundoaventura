@@ -79,6 +79,29 @@ CLIP_TOKEN_LIMIT: int = int(os.getenv("CLIP_TOKEN_LIMIT", "77"))
 # rápido, barato y suficientemente bueno para respuestas cortas para niños.
 REPLICATE_LLM_MODEL: str = os.getenv("REPLICATE_LLM_MODEL", "meta/meta-llama-3-8b-instruct").strip()
 
+# --- Capa de proveedor de LLM (Hito 5) ---
+# Todas las llamadas al LLM pasan por services/llm_service.py, que despacha por
+# LLM_PROVIDER. Así se compara de proveedor cambiando config, no código (habilita H6).
+#   "replicate" (por defecto): camino de la línea base (dialecto Replicate).
+#   "openai": SDK openai con LLM_BASE_URL configurable → Groq, Mistral, Gemini-compat,
+#             OpenRouter, Together, Cerebras, Ollama local… un camino, N proveedores.
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "replicate").strip().lower()
+
+# Modelo vigente (id del proveedor activo). Por defecto = REPLICATE_LLM_MODEL para
+# reproducir la línea base sin cambios. Con provider=openai, p. ej. "llama3" (Ollama)
+# o "llama-3.1-8b-instant" (Groq).
+LLM_MODEL: str = os.getenv("LLM_MODEL", REPLICATE_LLM_MODEL).strip()
+
+# Endpoint del proveedor openai-compatible (solo si LLM_PROVIDER="openai"). Ejemplos:
+# Ollama local "http://localhost:11434/v1", Groq "https://api.groq.com/openai/v1".
+LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "").strip()
+
+# Clave del endpoint openai-compatible (SECRETO, .env). Ollama local no la necesita.
+LLM_API_KEY: str = os.getenv("LLM_API_KEY", "").strip()
+
+# Timeout (segundos) de las llamadas al endpoint openai-compatible.
+LLM_TIMEOUT: float = float(os.getenv("LLM_TIMEOUT", "60"))
+
 # Tope de longitud de la respuesta del LLM (en "tokens" ≈ trozos de palabra).
 LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "300"))
 
@@ -326,7 +349,8 @@ def describe() -> dict:
     return {
         "replicate_model": REPLICATE_MODEL,
         "replicate_edit_model": REPLICATE_EDIT_MODEL,
-        "replicate_llm_model": REPLICATE_LLM_MODEL,
+        "llm_provider": LLM_PROVIDER,
+        "llm_model": LLM_MODEL,
         "aspect_ratio": IMG_ASPECT_RATIO,
         "output_format": IMG_OUTPUT_FORMAT,
         "clip_token_limit": CLIP_TOKEN_LIMIT,

@@ -24,7 +24,7 @@ import os
 import shutil
 
 from backend import config
-from backend.services import replicate_client, translation_service, voice_service
+from backend.services import llm_service, replicate_client, translation_service, voice_service
 
 # Metadatos de cada proveedor: variable del .env, nombre visible y enlace de alta.
 _PROVEEDORES: dict[str, dict[str, str]] = {
@@ -42,6 +42,13 @@ _PROVEEDORES: dict[str, dict[str, str]] = {
         "variable": "ELEVENLABS_API_KEY",
         "nombre": "ElevenLabs",
         "ayuda_url": "https://elevenlabs.io/app/settings/api-keys",
+    },
+    # Clave del endpoint openai-compatible (Hito 5). Solo se usa si LLM_PROVIDER=openai
+    # (Groq, Mistral, OpenRouter…); Ollama local no la necesita.
+    "llm": {
+        "variable": "LLM_API_KEY",
+        "nombre": "LLM (endpoint OpenAI-compatible)",
+        "ayuda_url": "https://console.groq.com/keys",
     },
 }
 
@@ -170,10 +177,11 @@ def guardar(cambios: dict[str, str]) -> list[dict]:
         limpio = clave.strip()
         os.environ[variable] = limpio  # respaldo (algunas libs lo leen del entorno)
         setattr(config, variable, limpio)  # lo leen los clientes perezosos de los servicios
-    # Invalidar los 3 clientes perezosos para que la siguiente petición use la clave nueva.
+    # Invalidar los clientes perezosos para que la siguiente petición use la clave nueva.
     translation_service.reiniciar()
     voice_service.reiniciar()
     replicate_client.reiniciar()
+    llm_service.reiniciar()
 
     return estado()
 
@@ -202,4 +210,6 @@ def probar(proveedor: str) -> dict:
         return _probar_replicate()
     if proveedor == "deepl":
         return translation_service.probar()
+    if proveedor == "llm":
+        return llm_service.probar()
     return voice_service.probar()
