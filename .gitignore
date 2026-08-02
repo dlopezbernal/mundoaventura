@@ -30,6 +30,9 @@ backend/models/*.safetensors
 # ─── Base vectorial de ChromaDB (se regenera con: python -m backend.ingest) ─
 backend/chroma_db/
 
+# ─── Caché de audio TTS (Hito 8): mp3 ya sintetizados, se regeneran solos ────
+backend/.cache/
+
 # ─── BBDD de configuración (SQLite) — se recrea y se siembra al arrancar ─────
 # Contiene ajustes/catálogo locales de cada instalación; no se versiona.
 backend/config_db.sqlite3

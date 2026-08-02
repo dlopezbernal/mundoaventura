@@ -42,6 +42,13 @@ def error_500(exc: Exception, contexto: str) -> HTTPException:
     return HTTPException(status_code=500, detail=_MENSAJE_GENERICO.format(id=error_id))
 
 
+def mensaje_generico(exc: Exception, contexto: str) -> str:
+    """Como error_500 pero devuelve solo el TEXTO (para streams SSE, donde ya no se
+    puede lanzar un HTTPException a mitad de respuesta). Loguea el detalle + error_id."""
+    error_id = _registrar(exc, contexto)
+    return _MENSAJE_GENERICO.format(id=error_id)
+
+
 def manejar_excepcion(request: Request, exc: Exception) -> JSONResponse:
     """Handler global de excepciones NO controladas: 500 genérico + error_id."""
     error_id = _registrar(exc, f"{request.method} {request.url.path}")
