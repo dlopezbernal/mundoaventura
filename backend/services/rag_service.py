@@ -27,8 +27,6 @@ Decisiones para mantenerlo simple y sin GPU local:
 
 import logging
 
-import chromadb
-
 from backend import config
 from backend.services import (
     embeddings,
@@ -37,14 +35,10 @@ from backend.services import (
     reranker,
     settings_service,
     translation_service,
+    vector_store,
 )
 
 logger = logging.getLogger(__name__)
-
-# Cliente y colección de ChromaDB, cargados una sola vez (singleton perezoso).
-_client: chromadb.ClientAPI | None = None
-_collection = None
-_collection_nombre: str | None = None  # nombre con el que se abrió (para detectar cambios)
 
 # Icono por origen, solo para la traza de consola en modo DEBUG.
 _ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡", "SIN_INFO": "🔴"}
@@ -99,61 +93,23 @@ def _trazar_origen(
 
 
 def _get_collection():
-    """Devuelve la colección del backend de embeddings vigente (singleton perezoso).
+    """Abre la colección del backend de embeddings vigente (vía el cliente único).
 
-    El nombre depende de `EMBEDDING_BACKEND`; si cambia (p. ej. al comparar backends),
-    se reabre la colección correcta en vez de servir la cacheada del backend anterior.
+    Delega en `vector_store` (única fuente del cliente ChromaDB). Devuelve la
+    colección fresca: sin objeto-colección cacheado no hay handle que se quede
+    obsoleto tras un reindexado global (por eso ya no existe `reiniciar_coleccion`).
+    Solo LEE la colección; la construye la ingesta (`python -m backend.ingest`).
     """
-    global _client, _collection, _collection_nombre
-    nombre = embeddings.coleccion_actual()
-    if _collection is not None and _collection_nombre == nombre:
-        return _collection
-
-    # PersistentClient guarda los datos en disco (config.CHROMA_DIR), así que el
-    # índice sobrevive entre reinicios y no hay que recalcularlo cada vez.
-    if _client is None:
-        _client = chromadb.PersistentClient(path=str(config.CHROMA_DIR))
-
-    # get_or_create_collection: si ya existe la reutiliza; si no, la crea.
-    # Por defecto usa su función de embeddings local (CPU).
-    #
-    # hnsw:space="cosine" → usamos DISTANCIA COSENO, que va de 0 (idéntico) a 2
-    # (opuesto). Es más interpretable que la L2 por defecto y nos permite poner
-    # umbrales fijos para el Evaluator. Usamos un nombre versionado ("..._cos")
-    # para que, si ya tenías una colección antigua con otra métrica, se cree una
-    # nueva limpia con coseno sin que tengas que borrar nada a mano.
-    # La colección la construye el script de ingesta (python -m backend.ingest)
-    # a partir de los documentos. Aquí solo la ABRIMOS para consultarla.
-    _collection = _client.get_or_create_collection(
-        name=nombre,
-        metadata={"hnsw:space": "cosine"},
-    )
-    _collection_nombre = nombre
-
+    collection = vector_store.coleccion()
     # Si está vacía, avisamos: hay que ejecutar la ingesta primero.
-    if _collection.count() == 0:
+    if collection.count() == 0:
         logger.warning(
             "La colección de ChromaDB está VACÍA: no hay ninguna ficha indexada, así "
             "que el chat responderá sin contexto (respuestas pobres o siempre 'no lo "
             "sé'). Añade documentos en backend/documentos/<personaje>/ y reconstruye el "
             "índice con:  python -m backend.ingest"
         )
-
-    return _collection
-
-
-def reiniciar_coleccion() -> None:
-    """Olvida el cliente/colección cacheados de ChromaDB.
-
-    Lo llama documentos_service tras un REINDEXADO GLOBAL (que borra y recrea la
-    colección): el handle cacheado apuntaría a una colección eliminada, así que se
-    fuerza a reabrirla en la siguiente pregunta. Tras un reindexado incremental
-    (borrar+reañadir chunks de un personaje) NO hace falta: la colección es la misma.
-    """
-    global _client, _collection, _collection_nombre
-    _client = None
-    _collection = None
-    _collection_nombre = None
+    return collection
 
 
 def _recuperar_contexto(
