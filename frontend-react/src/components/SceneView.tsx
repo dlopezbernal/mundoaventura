@@ -9,8 +9,19 @@
 
 import styles from "./SceneView.module.css";
 
+/**
+ * Deduce el tipo de imagen de los primeros bytes del base64, para no atarnos a un
+ * formato: el backend puede devolver webp (por defecto, más ligero), png o jpg
+ * (ajuste IMG_OUTPUT_FORMAT). webp empieza por "UklGR" (RIFF), jpg por "/9j/".
+ */
+function mimeDeBase64(b64: string): string {
+  if (b64.startsWith("UklGR")) return "image/webp";
+  if (b64.startsWith("/9j/")) return "image/jpeg";
+  return "image/png";
+}
+
 interface Props {
-  /** La escena generada, tal como llega del backend (PNG en base64). */
+  /** La escena generada, tal como llega del backend (imagen en base64). */
   escenaBase64: string;
   /** Texto alternativo de la imagen (accesibilidad). */
   alt: string;
@@ -33,7 +44,7 @@ export default function SceneView({
         <span className={styles.badge}>◉ IMAGEN GENERADA</span>
         <img
           className={styles.img}
-          src={`data:image/png;base64,${escenaBase64}`}
+          src={`data:${mimeDeBase64(escenaBase64)};base64,${escenaBase64}`}
           alt={alt}
         />
       </div>

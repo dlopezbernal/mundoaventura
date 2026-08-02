@@ -57,8 +57,11 @@ REPLICATE_EDIT_MODEL: str = os.getenv(
 # Proporción de la imagen generada ("1:1", "16:9", "9:16", "4:3"...).
 IMG_ASPECT_RATIO: str = os.getenv("IMG_ASPECT_RATIO", "16:9").strip()
 
-# Formato del archivo de salida ("png", "jpg", "webp").
-IMG_OUTPUT_FORMAT: str = os.getenv("IMG_OUTPUT_FORMAT", "png").strip()
+# Formato del archivo de salida ("png", "jpg", "webp"). Por defecto WEBP (Hito 8):
+# una escena 16:9 en PNG pesa varios MB y, al ir en base64 dentro del JSON, crece otro
+# +33%; en webp pesa una fracción, con calidad de sobra para la demo. El frontend deduce
+# el tipo de imagen de los propios bytes (SceneView), así que el formato es intercambiable.
+IMG_OUTPUT_FORMAT: str = os.getenv("IMG_OUTPUT_FORMAT", "webp").strip()
 
 # Nº de pasos de difusión. FLUX schnell ("schnell" = rápido en alemán) está
 # DESTILADO para dar su mejor resultado en SOLO 4 pasos (su máximo): más pasos no
