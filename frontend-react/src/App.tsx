@@ -181,8 +181,16 @@ export default function App() {
           nombreFamilia={familia.nombre_familia}
           ninoActivo={ninoActivo?.nombre ?? null}
           onCambiarNino={familia.ninos.length > 1 ? () => elegirNino(null) : undefined}
-          onAbrirConfig={() => setMostrarConfig(true)}
-          onAbrirAdmin={() => setMostrarAdmin(true)}
+          // Abrir una pantalla de adulto CIERRA la otra: si no, al alternar entre los
+          // botones del HUD, Admin (que tiene prioridad en el render) se quedaba "clavado".
+          onAbrirConfig={() => {
+            setMostrarAdmin(false);
+            setMostrarConfig(true);
+          }}
+          onAbrirAdmin={() => {
+            setMostrarConfig(false);
+            setMostrarAdmin(true);
+          }}
           onSalir={() => void salirFamilia()}
           onProbarConexion={DEBUG ? probarConexion : undefined}
         />
