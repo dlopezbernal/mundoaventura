@@ -10,6 +10,9 @@
  */
 
 import type {
+  Admin2FAEnrol,
+  Admin2FARecovery,
+  AdminLoginResponse,
   AdminStatus,
   ApiProviderStatus,
   ApiTestResult,
@@ -854,14 +857,56 @@ async function _postPin(path: string, pin: string): Promise<void> {
   setAdminToken(body.token); // guarda el token y lo aplica a las siguientes peticiones
 }
 
-/** Crea el PIN por primera vez (auto-login). POST /api/admin/setup. */
+/** Crea la contraseña de administración por primera vez (auto-login). POST /api/admin/setup. */
 export async function adminSetup(pin: string): Promise<void> {
   await _postPin("/api/admin/setup", pin);
 }
 
-/** Inicia sesión con el PIN. POST /api/admin/login. */
-export async function adminLogin(pin: string): Promise<void> {
-  await _postPin("/api/admin/login", pin);
+/**
+ * Inicia sesión de administración. POST /api/admin/login.
+ * Si el 2FA está activo y no se pasa `codigo`, la respuesta trae `requiere_2fa=true`
+ * y NO hay token: el frontend pide el código y reintenta. Con token, se guarda.
+ * Devuelve `requiere_2fa` para que la UI sepa si debe pedir el segundo factor.
+ */
+export async function adminLogin(pin: string, codigo?: string): Promise<boolean> {
+  const response = await fetchBackend(
+    "/api/admin/login",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin, codigo: codigo ?? null }),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as AdminLoginResponse;
+  if (body.token) setAdminToken(body.token);
+  return body.requiere_2fa;
+}
+
+/** Inicia el enrolamiento 2FA (QR + clave). No activa aún. POST /api/admin/2fa/enrolar. */
+export async function admin2faEnrolar(): Promise<Admin2FAEnrol> {
+  const response = await fetchBackend("/api/admin/2fa/enrolar", { method: "POST" }, TIMEOUT_CONFIG);
+  return (await response.json()) as Admin2FAEnrol;
+}
+
+/** Confirma el enrolamiento con un código y activa el 2FA. POST /api/admin/2fa/confirmar. */
+export async function admin2faConfirmar(codigo: string): Promise<string[]> {
+  const response = await fetchBackend(
+    "/api/admin/2fa/confirmar",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ codigo }) },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as Admin2FARecovery;
+  return body.recovery_codes;
+}
+
+/** Desactiva el 2FA (exige la contraseña actual). POST /api/admin/2fa/desactivar. */
+export async function admin2faDesactivar(pin: string): Promise<void> {
+  await fetchBackend(
+    "/api/admin/2fa/desactivar",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) },
+    TIMEOUT_CONFIG,
+  );
 }
 
 /** Cierra la sesión (invalida el token en el backend y lo olvida aquí). */

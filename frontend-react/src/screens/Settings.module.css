@@ -451,6 +451,36 @@
   font-size: 0.95rem;
 }
 
+/* 2FA (Hito 9.2d): QR de enrolamiento, clave manual y códigos de recuperación. */
+.qr {
+  display: block;
+  width: 180px;
+  height: 180px;
+  margin: 8px 0;
+  background: #fff; /* el QR necesita fondo claro para leerse */
+  border-radius: 8px;
+  padding: 6px;
+}
+.claveManual {
+  font-size: 0.85rem;
+  color: #8fa3e0;
+  margin: 4px 0 10px;
+  word-break: break-all;
+}
+.recoveryLista {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 16px;
+  list-style: none;
+  padding: 12px;
+  margin: 8px 0;
+  border: 1px dashed var(--holo);
+  border-radius: 10px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.95rem;
+  letter-spacing: 0.05em;
+}
+
 /* Enlace en línea con aspecto de botón-texto (cambiar entre login/alta). */
 .linkBtn {
   background: none;

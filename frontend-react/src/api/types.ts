@@ -64,8 +64,11 @@ export type ReindexEstado = Schemas["ReindexEstado"];
 export type UbicacionDTO = Schemas["UbicacionDTO"];
 export type UbicacionCrear = Schemas["UbicacionCrear"];
 
-// --- Admin (PIN, import/export) ---
+// --- Admin (contraseña, 2FA, import/export) ---
 export type AdminStatus = Schemas["AdminStatus"];
+export type AdminLoginResponse = Schemas["AdminLoginResponse"];
+export type Admin2FAEnrol = Schemas["Admin2FAEnrol"];
+export type Admin2FARecovery = Schemas["Admin2FARecovery"];
 export type ConfigExport = Schemas["ConfigExport"];
 export type ImportResult = Schemas["ImportResult"];
 

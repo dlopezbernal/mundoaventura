@@ -301,17 +301,41 @@ class ApiRevealResponse(BaseModel):
 
 # --- Admin ---
 class AdminStatus(BaseModel):
-    """¿Hay PIN configurado? ¿La sesión del token es válida?"""
+    """¿Hay contraseña configurada? ¿La sesión es válida? ¿Está el 2FA activo?"""
 
     configurado: bool
     sesion_activa: bool
+    dos_factor_activo: bool = False
 
 
 class TokenResponse(BaseModel):
-    """Token de sesión de adulto (setup/login)."""
+    """Token de sesión de adulto (setup)."""
 
     ok: bool
     token: str
+
+
+class AdminLoginResponse(BaseModel):
+    """Resultado del login de admin: token, o 'requiere_2fa' si falta el segundo factor."""
+
+    ok: bool
+    requiere_2fa: bool = False
+    token: str = ""  # vacío mientras falte el 2FA
+
+
+class Admin2FAEnrol(BaseModel):
+    """Datos del enrolamiento 2FA: QR (data URI), URI otpauth y la clave en texto."""
+
+    secret: str
+    otpauth_uri: str
+    qr_svg: str
+
+
+class Admin2FARecovery(BaseModel):
+    """Códigos de recuperación (en claro, se muestran una sola vez tras activar el 2FA)."""
+
+    ok: bool
+    recovery_codes: list[str]
 
 
 class ConfigExport(BaseModel):

@@ -113,7 +113,7 @@ export interface paths {
         };
         /**
          * Estado
-         * @description ¿Hay PIN configurado? ¿El token de la cabecera sigue siendo válido?
+         * @description ¿Hay contraseña configurada? ¿El token sigue válido? ¿Está el 2FA activo?
          */
         get: operations["estado_api_admin_status_get"];
         put?: never;
@@ -155,10 +155,11 @@ export interface paths {
         put?: never;
         /**
          * Login
-         * @description Valida el PIN y devuelve un token de sesión.
+         * @description Valida la contraseña (y el 2FA si está activo) y devuelve un token de sesión.
          *
-         *     400 si el PIN es incorrecto; 429 si la IP está temporalmente bloqueada por
-         *     demasiados intentos fallidos (anti-fuerza-bruta, ver admin_service).
+         *     Si el 2FA está activo y no se ha aportado código, responde 200 con
+         *     `requiere_2fa=true` y sin token (el frontend pide el código y reintenta). 400 si la
+         *     contraseña o el código son incorrectos; 429 si la IP está bloqueada.
          */
         post: operations["login_api_admin_login_post"];
         delete?: never;
@@ -198,9 +199,69 @@ export interface paths {
         put?: never;
         /**
          * Cambiar Pin
-         * @description Cambia el PIN (requiere el actual). 400 si el actual no es correcto.
+         * @description Cambia la contraseña (requiere la actual). 400 si la actual no es correcta.
          */
         post: operations["cambiar_pin_api_admin_change_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/2fa/enrolar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enrolar 2Fa
+         * @description Inicia el enrolamiento 2FA: devuelve el QR + la clave (aún NO activa el 2FA).
+         */
+        post: operations["enrolar_2fa_api_admin_2fa_enrolar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/2fa/confirmar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmar 2Fa
+         * @description Confirma el enrolamiento con un código y activa el 2FA. Devuelve los códigos de recuperación.
+         */
+        post: operations["confirmar_2fa_api_admin_2fa_confirmar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/2fa/desactivar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desactivar 2Fa
+         * @description Desactiva el 2FA (exige la contraseña actual). 400 si la contraseña no es correcta.
+         */
+        post: operations["desactivar_2fa_api_admin_2fa_desactivar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -933,41 +994,113 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * AdminCambiar
-         * @description Cambio de PIN: requiere el actual.
+         * Admin2FAConfirmar
+         * @description Confirmación del enrolamiento 2FA con un código del autenticador.
          */
-        AdminCambiar: {
+        Admin2FAConfirmar: {
             /**
-             * Pin Actual
-             * @description PIN actual.
+             * Codigo
+             * @description Código de 6 dígitos del autenticador.
              */
-            pin_actual: string;
-            /**
-             * Pin Nuevo
-             * @description PIN nuevo.
-             */
-            pin_nuevo: string;
+            codigo: string;
         };
         /**
-         * AdminPin
-         * @description PIN de adulto (para crear el PIN o iniciar sesión).
+         * Admin2FADesactivar
+         * @description Desactivación del 2FA: exige la contraseña actual (re-autenticación).
          */
-        AdminPin: {
+        Admin2FADesactivar: {
             /**
              * Pin
-             * @description PIN de adulto.
+             * @description Contraseña de administración actual.
              */
             pin: string;
         };
         /**
+         * Admin2FAEnrol
+         * @description Datos del enrolamiento 2FA: QR (data URI), URI otpauth y la clave en texto.
+         */
+        Admin2FAEnrol: {
+            /** Secret */
+            secret: string;
+            /** Otpauth Uri */
+            otpauth_uri: string;
+            /** Qr Svg */
+            qr_svg: string;
+        };
+        /**
+         * Admin2FARecovery
+         * @description Códigos de recuperación (en claro, se muestran una sola vez tras activar el 2FA).
+         */
+        Admin2FARecovery: {
+            /** Ok */
+            ok: boolean;
+            /** Recovery Codes */
+            recovery_codes: string[];
+        };
+        /**
+         * AdminCambiar
+         * @description Cambio de contraseña de administración: requiere la actual.
+         */
+        AdminCambiar: {
+            /**
+             * Pin Actual
+             * @description Contraseña actual.
+             */
+            pin_actual: string;
+            /**
+             * Pin Nuevo
+             * @description Contraseña nueva.
+             */
+            pin_nuevo: string;
+        };
+        /**
+         * AdminLoginResponse
+         * @description Resultado del login de admin: token, o 'requiere_2fa' si falta el segundo factor.
+         */
+        AdminLoginResponse: {
+            /** Ok */
+            ok: boolean;
+            /**
+             * Requiere 2Fa
+             * @default false
+             */
+            requiere_2fa: boolean;
+            /**
+             * Token
+             * @default
+             */
+            token: string;
+        };
+        /**
+         * AdminPin
+         * @description Contraseña de administración (crear o iniciar sesión), con código 2FA opcional.
+         */
+        AdminPin: {
+            /**
+             * Pin
+             * @description Contraseña de administración.
+             */
+            pin: string;
+            /**
+             * Codigo
+             * @description Código 2FA (TOTP o recuperación).
+             */
+            codigo?: string | null;
+        };
+        /**
          * AdminStatus
-         * @description ¿Hay PIN configurado? ¿La sesión del token es válida?
+         * @description ¿Hay contraseña configurada? ¿La sesión es válida? ¿Está el 2FA activo?
          */
         AdminStatus: {
             /** Configurado */
             configurado: boolean;
             /** Sesion Activa */
             sesion_activa: boolean;
+            /**
+             * Dos Factor Activo
+             * @default false
+             */
+            dos_factor_activo: boolean;
         };
         /**
          * ApiProviderStatus
@@ -1894,7 +2027,7 @@ export interface components {
         };
         /**
          * TokenResponse
-         * @description Token de sesión de adulto (setup/login).
+         * @description Token de sesión de adulto (setup).
          */
         TokenResponse: {
             /** Ok */
@@ -2306,7 +2439,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TokenResponse"];
+                    "application/json": components["schemas"]["AdminLoginResponse"];
                 };
             };
             /** @description Validation Error */
@@ -2363,6 +2496,107 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AdminCambiar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enrolar_2fa_api_admin_2fa_enrolar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Admin2FAEnrol"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirmar_2fa_api_admin_2fa_confirmar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Admin2FAConfirmar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Admin2FARecovery"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    desactivar_2fa_api_admin_2fa_desactivar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Admin2FADesactivar"];
             };
         };
         responses: {
