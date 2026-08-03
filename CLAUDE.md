@@ -16,7 +16,7 @@ La gestión de dependencias del backend usa **`uv`** (Hito 1): `pyproject.toml` 
 # Configuración inicial (Windows PowerShell)
 uv sync                              # crea .venv e instala EXACTAMENTE lo del uv.lock (backend + herramientas dev)
 Copy-Item .env.example .env          # luego rellena REPLICATE_API_TOKEN, DEEPL_API_KEY y ELEVENLABS_API_KEY
-cd frontend-react; npm install; cd ..   # dependencias del frontend (Node 20+), una sola vez
+cd frontend-react; npm install; cd ..   # dependencias del frontend (Node 24+), una sola vez
 
 # Arrancar backend + frontend a la vez (Windows), cada uno en su ventana
 .\scripts\dev.ps1                    # o -Solo back / -Solo front

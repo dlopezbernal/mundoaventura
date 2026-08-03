@@ -145,7 +145,7 @@ python -m venv .venv
 # Backend (Python)
 pip install -r requirements-backend.txt
 
-# Frontend (Node 20+; una sola vez)
+# Frontend (Node 24+; una sola vez)
 cd frontend-react
 npm install
 cd ..
