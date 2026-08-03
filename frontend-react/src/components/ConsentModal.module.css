@@ -17,6 +17,15 @@
   gap: 6px;
 }
 
+.enlacePrivacidad {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.enlacePrivacidad a {
+  color: #8fa3e0;
+}
+
 .cargando {
   color: #8fa3e0;
   font-style: italic;

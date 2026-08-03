@@ -99,9 +99,11 @@ _PROMPT_EVALUATOR_USER = (
 # A diferencia de los PROMPT_* de arriba (instrucciones EN INGLÉS para el LLM), este
 # es el texto FINAL que lee el niño: va directamente en español, sin pasar por
 # ningún modelo. Solo se usa si PERMITIR_CONOCIMIENTO_GENERAL está desactivado.
+# Cálido y EN PERSONAJE: no menciona "documentos" ni nada meta (rompería la inmersión
+# de que el niño habla con el T-Rex/Peter Pan, no con un buscador). Redirige con ganas.
 _MENSAJE_SIN_INFORMACION = (
-    "No tengo esa información entre mis documentos. ¡Pregúntame otra cosa, "
-    "seguro que sé algo interesante!"
+    "¡Uy, de eso no sé mucho! Pero pregúntame por mis cosas y mis aventuras, "
+    "¡que tengo un montón que contarte!"
 )
 
 

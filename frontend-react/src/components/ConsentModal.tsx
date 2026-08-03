@@ -75,6 +75,12 @@ export default function ConsentModal({ onConsentir, onCancelar }: Props) {
           <li>La voz y las preguntas del niño se procesan aparte (ver privacidad).</li>
         </ul>
 
+        <p className={styles.enlacePrivacidad}>
+          <a href="/privacidad.html" target="_blank" rel="noopener noreferrer">
+            📄 Leer la política de privacidad completa
+          </a>
+        </p>
+
         {modo === "cargando" && <p className={styles.cargando}>Un momento…</p>}
 
         {modo === "adulto-ok" && (

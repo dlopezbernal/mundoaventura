@@ -177,6 +177,25 @@ export default function SistemaTab({ onLogout }: Props) {
         </div>
       </div>
 
+      {/* Privacidad */}
+      <div className={styles.pjForm}>
+        <h3 className={styles.pjFormTitulo}>📄 Privacidad y datos</h3>
+        <p className={styles.filaAyuda}>
+          Qué datos usa la app, a dónde van y con qué base legal (RGPD/LOPDGDD). Compártelo
+          con las familias antes de usar la aplicación.
+        </p>
+        <div className={styles.pjBarra}>
+          <a
+            className={styles.testBtn}
+            href="/privacidad.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            📄 Ver política de privacidad
+          </a>
+        </div>
+      </div>
+
       {/* Sesión */}
       <div className={styles.footer}>
         <button type="button" className="btn btn-secundario" onClick={onLogout}>

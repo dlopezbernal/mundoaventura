@@ -5,6 +5,10 @@ retienen y con qué base legal, más el checklist de cumplimiento. Para una app 
 por **niños de 8–12 años**, esto vale tanto como la solución técnica: un tribunal
 español preguntará por aquí. Revisado en el Hito 9 (2026-08-03).
 
+> **Copia navegable para el adulto:** `frontend-react/public/privacidad.html` es una
+> versión de esta misma página que la app enseña al padre/madre (aviso de la foto +
+> pestaña Sistema). Este `.md` es la fuente; **mantener ambos en sync** al editar.
+
 ## Por qué esto es obligatorio
 
 La Máquina del Tiempo es una app para **menores** (8–12), que puede exponerse por un
@@ -78,11 +82,15 @@ también pasa por **DeepL** (traducción, Alemania/UE) en todos los casos.
 
 - [x] **Minimización de datos** (art. 5.1.c RGPD): solo se procesa lo imprescindible
       (pregunta, foto opcional); no se guarda historial ni se piden datos personales.
-- [x] **Consentimiento parental** (<14 años, art. 7 LOPDGDD): confirmación de adulto antes
-      de subir la foto (implementado, H9). *Pendiente de decidir:* ¿se exige también para
-      el chat/voz, o basta el candado de acceso del túnel?
-- [ ] **Información transparente** (arts. 13–14 RGPD): esta página describe los flujos;
-      *pendiente:* enlazarla desde la propia app para que el adulto la vea.
+- [x] **Consentimiento parental** (<14 años, art. 7 LOPDGDD): confirmación explícita de
+      adulto antes de subir la **foto** (implementado, H9), por ser el dato sensible que
+      sale a un tercero. Para el **chat y la voz** —el núcleo de la app— el consentimiento
+      se considera **otorgado por el uso**: un adulto pone en marcha la app y comparte el
+      acceso del túnel; no se piden datos personales y no se persiste nada. La foto es el
+      único paso que exige un gesto explícito adicional.
+- [x] **Información transparente** (arts. 13–14 RGPD): esta página se enlaza desde la app
+      —en el aviso de consentimiento de la foto y en la pestaña Sistema (zona de adulto)—
+      mediante una copia navegable (`frontend-react/public/privacidad.html`).
 - [x] **Derecho de supresión** (art. 17): al no persistirse historial ni fotos, no hay
       datos que suprimir salvo la caché de audio local (borrable a mano: `backend/.cache/`).
 - [ ] **Transferencias internacionales** (cap. V RGPD): el LLM por defecto (Groq, EEUU) y

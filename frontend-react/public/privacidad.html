@@ -1,0 +1,188 @@
+<!doctype html>
+<!--
+  privacidad.html — Copia navegable de docs/PRIVACIDAD.md para el adulto (Hito 9)
+  ==============================================================================
+  La app la enlaza desde el aviso de consentimiento de la foto (ConsentModal) y
+  desde la pestaña Sistema. Es una página ESTÁTICA autocontenida (sin dependencias
+  externas: funciona offline y en el túnel). FUENTE: docs/PRIVACIDAD.md — mantener
+  ambos en sync al editar.
+-->
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacidad · La Máquina del Tiempo</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --fg: #1a1a2e;
+        --muted: #555;
+        --bg: #f7f7fb;
+        --card: #fff;
+        --line: #e2e2ec;
+        --accent: #4a4ae0;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --fg: #e8e8f5;
+          --muted: #a8a8b8;
+          --bg: #14141f;
+          --card: #1e1e2e;
+          --line: #33334a;
+          --accent: #9a9aff;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        padding: 2rem 1rem 4rem;
+        background: var(--bg);
+        color: var(--fg);
+        font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      }
+      main { max-width: 760px; margin: 0 auto; }
+      h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 .3rem; }
+      h2 {
+        font-size: 1.2rem;
+        margin: 2.2rem 0 .6rem;
+        padding-top: 1.2rem;
+        border-top: 1px solid var(--line);
+      }
+      .sub { color: var(--muted); margin: 0 0 1.5rem; }
+      p, li { color: var(--fg); }
+      a { color: var(--accent); }
+      ul { padding-left: 1.2rem; }
+      li { margin: .35rem 0; }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        margin: 1rem 0;
+      }
+      table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+      .tabla-scroll { overflow-x: auto; }
+      th, td { text-align: left; padding: .5rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+      th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+      .check li::marker { content: "✅ "; }
+      .pend li::marker { content: "🔲 "; }
+      code { background: var(--line); padding: .1rem .35rem; border-radius: 5px; font-size: .88em; }
+      .nota { color: var(--muted); font-size: .9rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Privacidad y cumplimiento</h1>
+      <p class="sub">La Máquina del Tiempo · información para el adulto responsable (RGPD / LOPDGDD)</p>
+
+      <div class="card">
+        <p style="margin:0"><strong>En una frase:</strong> esta app para niños (8–12) no
+        pide datos personales, no guarda el historial del chat y <strong>no almacena la
+        foto</strong>. Lo que sí sale del dispositivo es el <em>texto</em> de la pregunta
+        (para traducirlo y generar la respuesta) y, opcionalmente, la voz y la foto.</p>
+      </div>
+
+      <h2>Por qué esto importa</h2>
+      <p>Es una app para <strong>menores</strong> que puede exponerse por un túnel público,
+      <strong>sube fotos</strong> de cuartos infantiles a un servicio externo y les hace
+      <strong>hablar con una IA</strong>. Por eso aplican el <strong>RGPD</strong> (UE
+      2016/679) y la <strong>LOPDGDD</strong> (LO 3/2018), que en España exige
+      <strong>consentimiento parental por debajo de los 14 años</strong>. El consentimiento
+      del adulto y usar los mínimos datos posibles son requisitos, no adornos.</p>
+
+      <h2>Qué datos se usan y a dónde van</h2>
+      <div class="tabla-scroll">
+        <table>
+          <thead>
+            <tr><th>Dato</th><th>¿Sale del dispositivo?</th><th>Destino</th><th>¿Se guarda?</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Voz del niño</strong></td>
+              <td><strong>No</strong> con transcripción local; sí con la de nube (por defecto)</td>
+              <td>ElevenLabs / Groq (solo si es en nube)</td>
+              <td>No localmente</td>
+            </tr>
+            <tr>
+              <td><strong>Texto de la pregunta</strong></td>
+              <td>Sí</td>
+              <td>DeepL (traducción) + el modelo de IA</td>
+              <td>No</td>
+            </tr>
+            <tr>
+              <td><strong>Foto de la habitación</strong></td>
+              <td>Sí (solo si se elige "mi foto")</td>
+              <td>Replicate</td>
+              <td><strong>No</strong>: se usa en memoria y se descarta</td>
+            </tr>
+            <tr>
+              <td><strong>Respuesta del personaje</strong></td>
+              <td>Sí, para ponerle voz</td>
+              <td>ElevenLabs (si el personaje habla)</td>
+              <td>Solo el audio, en una caché local regenerable</td>
+            </tr>
+            <tr>
+              <td><strong>Historial del chat</strong></td>
+              <td>No</td>
+              <td>—</td>
+              <td>Vive en el navegador; se borra al recargar</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>El proveedor de IA (una decisión de privacidad)</h2>
+      <p>El modelo de IA por defecto es <strong>Groq (Llama-3.3-70B)</strong>, que procesa
+      en <strong>EEUU</strong>: la config por defecto implica una <strong>transferencia
+      internacional</strong> del texto de la pregunta (no de la voz si la transcripción es
+      local, ni de la foto, que no se guarda). Es una decisión consciente por calidad y
+      rapidez. Quien priorice la soberanía del dato puede cambiar, sin tocar código, a un
+      proveedor europeo (<strong>Mistral</strong>) o a un modelo <strong>100% local</strong>
+      (<strong>Ollama</strong>, nada sale del PC), a cambio de algo de calidad/velocidad. El
+      texto también pasa por <strong>DeepL</strong> (traducción, UE) en todos los casos.</p>
+
+      <h2>Medidas de seguridad ya tomadas</h2>
+      <ul>
+        <li><strong>Foto no almacenada:</strong> se procesa solo en memoria y se descarta.</li>
+        <li><strong>Consentimiento del adulto</strong> antes de subir cualquier foto.</li>
+        <li><strong>Voz en local opcional:</strong> la voz del niño puede no salir del PC.</li>
+        <li><strong>Protección anti-manipulación:</strong> un documento no puede "reprogramar"
+          al personaje para que diga cosas indebidas.</li>
+        <li><strong>Filtro de las respuestas</strong> no basadas en los documentos, antes de
+          mostrarlas al niño.</li>
+        <li><strong>Sin historial guardado</strong> y <strong>claves protegidas</strong>,
+          fuera del control de versiones.</li>
+        <li><strong>Acceso protegido:</strong> candado del túnel y PIN de adulto para la
+          configuración.</li>
+      </ul>
+
+      <h2>Cumplimiento RGPD / LOPDGDD</h2>
+      <ul class="check">
+        <li><strong>Minimización:</strong> solo lo imprescindible; sin datos personales.</li>
+        <li><strong>Consentimiento parental:</strong> explícito para la foto; para el chat y la
+          voz (el núcleo de la app) se entiende otorgado por el uso, ya que no se piden datos
+          ni se guarda nada.</li>
+        <li><strong>Información transparente:</strong> esta misma página, enlazada desde la app.</li>
+        <li><strong>Derecho de supresión:</strong> al no guardar historial ni fotos, no hay
+          datos que borrar (salvo la caché de audio local, borrable a mano).</li>
+        <li><strong>Medidas técnicas:</strong> las de la sección anterior.</li>
+      </ul>
+      <ul class="pend">
+        <li><strong>Transferencias internacionales:</strong> el modelo por defecto (Groq, EEUU)
+          implica transferencia; elegir un proveedor UE o local la elimina.</li>
+      </ul>
+
+      <h2>Límites que reconocemos</h2>
+      <ul>
+        <li>La voz y la lectura en voz alta van por defecto a la nube; la voz local es opcional.</li>
+        <li>No se verifica la edad real del adulto: la casilla es declarativa; el PIN es la
+          barrera más fuerte disponible.</li>
+        <li>El filtro de contenido es una protección básica, no un servicio profesional de
+          moderación.</li>
+      </ul>
+
+      <p class="nota">Documento técnico completo para desarrolladores: <code>docs/PRIVACIDAD.md</code>
+      en el repositorio del proyecto.</p>
+    </main>
+  </body>
+</html>
