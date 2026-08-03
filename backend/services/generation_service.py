@@ -153,6 +153,11 @@ def generar_en_foto(
     personaje_id : str   personaje a añadir (debe existir en PROMPTS).
     mime : str           tipo MIME de la foto (image/jpeg, image/png...).
 
+    PRIVACIDAD (Hito 9): la foto se procesa SOLO EN MEMORIA. `image_bytes` llega del
+    endpoint (leído con tope de tamaño, sin tocar disco), se convierte a data URI y se
+    envía a Replicate; NUNCA se escribe en disco ni se guarda en la BBDD. Al terminar la
+    función, los bytes quedan fuera de alcance y se recolectan. Ver docs/PRIVACIDAD.md.
+
     Lanza ValueError (→ 400) si el personaje no existe o falta el token.
     """
     ficha_personaje = personajes_service.obtener(personaje_id)

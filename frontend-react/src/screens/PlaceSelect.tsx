@@ -9,8 +9,9 @@
  * gobierna useFlow desde App.
  */
 
-import { useMemo, useRef } from "react";
+import { useMemo, useRef, useState } from "react";
 import Console from "../components/Console/Console";
+import ConsentModal from "../components/ConsentModal";
 import Coverflow from "../components/Coverflow/Coverflow";
 import Roster from "../components/Roster/Roster";
 import type { UbicacionDTO } from "../api/types";
@@ -39,6 +40,9 @@ export default function PlaceSelect({
   onBack,
 }: Props) {
   const fotoInputRef = useRef<HTMLInputElement>(null);
+  // Consentimiento de adulto antes de subir la foto (Hito 9): la foto sale del
+  // dispositivo hacia un tercero, así que un adulto debe autorizarlo primero.
+  const [pidiendoConsentimiento, setPidiendoConsentimiento] = useState(false);
   // Claves del carrusel: "Mi foto" primera, luego las ubicaciones del catálogo.
   const lugarKeys = useMemo(() => [FOTO_ID, ...ubicaciones.map((u) => u.id)], [ubicaciones]);
   const n = lugarKeys.length;
@@ -71,13 +75,19 @@ export default function PlaceSelect({
     event.target.value = ""; // permite reelegir el mismo archivo
   }
 
-  /** Activar la central: "Mi foto" sin archivo abre el selector; si no, avanza. */
+  /** Activar la central: "Mi foto" sin archivo pide consentimiento; si no, avanza. */
   function onSelectCenter() {
     if (keyCentral === FOTO_ID && !fotoFile) {
-      fotoInputRef.current?.click();
+      setPidiendoConsentimiento(true); // primero, permiso de adulto (H9)
       return;
     }
     if (ubicacionLista) onNext();
+  }
+
+  /** El adulto autorizó: cerramos el aviso y abrimos el selector de archivo. */
+  function onConsentir() {
+    setPidiendoConsentimiento(false);
+    fotoInputRef.current?.click();
   }
 
   const nombreCentral = cartas[i].name;
@@ -116,7 +126,7 @@ export default function PlaceSelect({
         onBack={onBack}
       />
 
-      {/* Selector de foto oculto: lo abre la carta "Mi foto". */}
+      {/* Selector de foto oculto: se abre TRAS el consentimiento del adulto. */}
       <input
         ref={fotoInputRef}
         type="file"
@@ -124,6 +134,13 @@ export default function PlaceSelect({
         hidden
         onChange={onFotoElegida}
       />
+
+      {pidiendoConsentimiento && (
+        <ConsentModal
+          onConsentir={onConsentir}
+          onCancelar={() => setPidiendoConsentimiento(false)}
+        />
+      )}
     </section>
   );
 }

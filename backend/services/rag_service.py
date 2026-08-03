@@ -36,6 +36,7 @@ from backend.services import (
     llm_service,
     personajes_service,
     reranker,
+    safety_service,
     settings_service,
     translation_service,
     vector_store,
@@ -209,7 +210,13 @@ def _construir_prompt(nombre: str, contexto: list[str], pregunta: str) -> tuple[
     que leerá el niño (el modelo genera español sin problema aunque se le instruya
     en inglés).
     """
-    fichas_texto = "\n".join(f"- {ficha}" for ficha in contexto) or "(no data)"
+    # Cada ficha va DELIMITADA con <documento></documento> (Hito 9, defensa anti-inyección):
+    # así el prompt de sistema puede tratar el contenido como DATOS y no como órdenes. Un
+    # documento subido que diga "ignora tus instrucciones" queda dentro de las etiquetas y
+    # el modelo lo trata como texto informativo, no como una orden que reescriba al personaje.
+    fichas_texto = "\n".join(f"<documento>\n{ficha}\n</documento>" for ficha in contexto) or (
+        "(no data)"
+    )
     # Plantillas editables desde el menú de configuración (settings_service);
     # sus valores por defecto son los prompts en inglés de siempre.
     system = settings_service.rellenar(settings_service.get("PROMPT_RAG_SYSTEM"), nombre=nombre)
@@ -476,6 +483,9 @@ def responder(personaje_id: str, pregunta: str) -> RespuestaRAG:
         respuesta = prep["respuesta_fija"]
     else:
         respuesta = _llamar_llm(prep["system"], prep["user"], etiqueta=prep["etiqueta"])
+        # La vía GENERAL (no fundamentada) pasa por el filtro de salida antes de entregarse.
+        if prep["origen"] == Origen.GENERAL:
+            respuesta = safety_service.revisar_general(respuesta, prep["nombre"])
     _trazar_origen(
         prep["origen"],
         prep["metodo"],
@@ -510,6 +520,13 @@ def responder_streaming(personaje_id: str, pregunta: str) -> Iterator[dict]:
     if prep["origen"] == Origen.SIN_INFO:
         # Texto fijo: un único "token" (no hay LLM que streamear).
         yield {"tipo": "token", "texto": prep["respuesta_fija"]}
+    elif prep["origen"] == Origen.GENERAL:
+        # Vía GENERAL (no fundamentada): se genera COMPLETA, se FILTRA y se entrega de
+        # una vez (Hito 9). Seguridad sobre latencia: nunca se emite texto libre sin
+        # filtrar al niño; solo la vía RAG (anclada a documentos) se streamea por trozos.
+        texto = _llamar_llm(prep["system"], prep["user"], etiqueta=prep["etiqueta"])
+        texto = safety_service.revisar_general(texto, prep["nombre"])
+        yield {"tipo": "token", "texto": texto}
     else:
         for trozo in llm_service.completar_streaming(
             prep["system"], prep["user"], etiqueta=prep["etiqueta"]
