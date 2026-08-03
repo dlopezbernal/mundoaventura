@@ -952,7 +952,7 @@ export interface components {
             exportado_en: string;
             /** Ajustes */
             ajustes: {
-                [key: string]: number | string | boolean;
+                [key: string]: boolean | number | string;
             };
             /** Personajes */
             personajes: components["schemas"]["PersonajeDTO"][];
@@ -1422,7 +1422,7 @@ export interface components {
             /** Clave */
             clave: string;
             /** Valor */
-            valor: number | string | boolean;
+            valor: boolean | number | string;
             /** Tipo */
             tipo: string;
             /** Categoria */

@@ -72,7 +72,10 @@ class SettingMeta(BaseModel):
     """Metadatos + valor vigente de UN ajuste editable (settings_service.exportar())."""
 
     clave: str
-    valor: int | str | bool
+    # bool antes que int (bool es subclase de int) y float incluido: hay ajustes
+    # decimales (umbrales del Evaluator, temperatura del LLM…). Equivale al
+    # `number | string | boolean` del frontend.
+    valor: bool | int | float | str
     tipo: str
     categoria: str
     requiere_reindex: bool
@@ -316,7 +319,7 @@ class ConfigExport(BaseModel):
 
     version: int
     exportado_en: str
-    ajustes: dict[str, int | str | bool]
+    ajustes: dict[str, bool | int | float | str]
     personajes: list[PersonajeDTO]
     ubicaciones: list[UbicacionDTO]
 
