@@ -13,12 +13,7 @@
  */
 
 import { useState } from "react";
-import {
-  adminChangePin,
-  adminExport,
-  adminImport,
-  BackendError,
-} from "../../api/client";
+import { adminExport, adminImport, BackendError } from "../../api/client";
 import styles from "../Settings.module.css";
 import ConfigForm from "./ConfigForm";
 
@@ -28,32 +23,9 @@ interface Props {
 }
 
 export default function SistemaTab({ onLogout }: Props) {
-  const [pinActual, setPinActual] = useState("");
-  const [pinNuevo, setPinNuevo] = useState("");
-  const [pinNuevo2, setPinNuevo2] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
-
-  async function onCambiarPin() {
-    setError(null);
-    setOkMsg(null);
-    if (pinNuevo !== pinNuevo2) {
-      setError("El PIN nuevo y su confirmación no coinciden.");
-      return;
-    }
-    setOcupado(true);
-    try {
-      await adminChangePin(pinActual, pinNuevo);
-      // Cambiar el PIN invalida la sesión actual en el backend: hay que reentrar.
-      window.alert("PIN cambiado. Vuelve a introducirlo para seguir.");
-      onLogout();
-    } catch (exc) {
-      setError(exc instanceof BackendError ? exc.message : String(exc));
-    } finally {
-      setOcupado(false);
-    }
-  }
 
   async function onExportar() {
     setError(null);
@@ -110,53 +82,6 @@ export default function SistemaTab({ onLogout }: Props) {
 
       {/* Opciones generales */}
       <ConfigForm categorias={["general"]} intro="Opciones generales de la aplicación." />
-
-      {/* Cambiar PIN */}
-      <div className={styles.pjForm}>
-        <h3 className={styles.pjFormTitulo}>🔐 Cambiar PIN de adulto</h3>
-        <label className={styles.pjLabel}>
-          PIN actual
-          <input
-            className={styles.input}
-            type="password"
-            value={pinActual}
-            autoComplete="off"
-            onChange={(e) => setPinActual(e.target.value)}
-          />
-        </label>
-        <div className={styles.pjFila2}>
-          <label className={styles.pjLabel}>
-            PIN nuevo
-            <input
-              className={styles.input}
-              type="password"
-              value={pinNuevo}
-              autoComplete="off"
-              onChange={(e) => setPinNuevo(e.target.value)}
-            />
-          </label>
-          <label className={styles.pjLabel}>
-            Repite el PIN nuevo
-            <input
-              className={styles.input}
-              type="password"
-              value={pinNuevo2}
-              autoComplete="off"
-              onChange={(e) => setPinNuevo2(e.target.value)}
-            />
-          </label>
-        </div>
-        <div className={styles.footer}>
-          <button
-            type="button"
-            className="btn btn-primario"
-            onClick={() => void onCambiarPin()}
-            disabled={ocupado || !pinActual || !pinNuevo}
-          >
-            Cambiar PIN
-          </button>
-        </div>
-      </div>
 
       {/* Copia / restauración */}
       <div className={styles.pjForm}>

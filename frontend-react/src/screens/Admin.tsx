@@ -1,17 +1,20 @@
 /**
- * Settings — Área de configuración de la aplicación (con pestañas)
- * ================================================================
+ * Admin — Área de ADMINISTRACIÓN de la aplicación (con pestañas)
+ * ==============================================================
  *
- * Chasis "Arcade Holo" del menú de configuración. Se abre desde el botón ⚙️ del
- * HUD y ocupa el lugar del flujo principal. Toda la zona va detrás de un PIN de
- * adulto (Hito 7): hasta autenticarse se muestra <AdminGate/>; luego, las pestañas:
+ * Chasis "Arcade Holo" de la administración. Se abre desde el botón 🛡️ del HUD y
+ * ocupa el lugar del flujo principal. Toda la config GLOBAL y COMPARTIDA vive aquí
+ * (H9.2, Fase 1): cambiar algo afecta a TODOS los perfiles, y tocarla sin saber puede
+ * romper la app — por eso se separó de "Configuración" (que solo gestiona el PIN).
+ * Va detrás de un PIN de adulto: hasta autenticarse se muestra <AdminGate/>; luego,
+ * las pestañas:
  *
  *   - APIs         → claves de los proveedores (Hito 2).
  *   - IA           → parámetros del motor: RAG, troceado, LLM y prompts (Hito 3).
  *   - General      → estilo visual común de las imágenes (STYLE_SUFFIX/FRAMING).
  *   - Personajes   → CRUD de personajes + documentos del RAG (Hitos 4 y 5).
  *   - Ubicaciones  → CRUD de ubicaciones (Hito 6).
- *   - Sistema      → PIN, import/export, modo desarrollo/DEBUG y cerrar sesión (Hito 7).
+ *   - Sistema      → import/export y modo desarrollo/DEBUG + cerrar sesión (Hito 7).
  */
 
 import { useCallback, useState } from "react";
@@ -25,7 +28,7 @@ import SistemaTab from "./config/SistemaTab";
 import UbicacionesTab from "./config/UbicacionesTab";
 
 interface Props {
-  /** Vuelve al flujo principal cerrando la configuración. */
+  /** Vuelve al flujo principal cerrando la administración. */
   onCerrar: () => void;
 }
 
@@ -35,12 +38,12 @@ const PESTANAS = [
   { id: "general", label: "General", emoji: "🎨" },
   { id: "personajes", label: "Personajes", emoji: "🎭" },
   { id: "ubicaciones", label: "Ubicaciones", emoji: "🗺️" },
-  { id: "sistema", label: "Sistema", emoji: "🛡️" },
+  { id: "sistema", label: "Sistema", emoji: "🛠️" },
 ] as const;
 
 type PestanaId = (typeof PESTANAS)[number]["id"];
 
-export default function Settings({ onCerrar }: Props) {
+export default function Admin({ onCerrar }: Props) {
   const [pestana, setPestana] = useState<PestanaId>("apis");
   // Sesión de adulto: hasta autenticarse se muestra la puerta (AdminGate).
   const [autenticado, setAutenticado] = useState(false);
@@ -51,11 +54,11 @@ export default function Settings({ onCerrar }: Props) {
   }, []);
 
   return (
-    <section className={styles.page} aria-label="Configuración de la aplicación">
+    <section className={styles.page} aria-label="Administración de la aplicación">
       <header className={styles.head}>
         <div>
-          <p className={styles.kicker}>⚙️ AJUSTES</p>
-          <h1 className={styles.title}>CONFIGURACIÓN</h1>
+          <p className={styles.kicker}>🛡️ ADMINISTRACIÓN</p>
+          <h1 className={styles.title}>ADMIN</h1>
         </div>
         <button type="button" className={styles.close} onClick={onCerrar}>
           ✕ Cerrar
@@ -66,7 +69,7 @@ export default function Settings({ onCerrar }: Props) {
         <AdminGate onListo={() => setAutenticado(true)} />
       ) : (
         <>
-          <nav className={styles.tabs} aria-label="Secciones de configuración">
+          <nav className={styles.tabs} aria-label="Secciones de administración">
             {PESTANAS.map((t) => (
               <button
                 key={t.id}

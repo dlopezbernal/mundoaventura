@@ -20,7 +20,8 @@ import Steps from "./components/Steps/Steps";
 import CharacterSelect from "./screens/CharacterSelect";
 import PlaceSelect from "./screens/PlaceSelect";
 import SceneChat from "./screens/SceneChat";
-import Settings from "./screens/Settings";
+import Admin from "./screens/Admin";
+import Configuracion from "./screens/Configuracion";
 import { BackendError, checkHealth, getPersonajes, getUbicaciones } from "./api/client";
 import type { PersonajeDTO, UbicacionDTO } from "./api/types";
 import { useFlow } from "./state/useFlow";
@@ -43,9 +44,10 @@ export default function App() {
   const [personajes, setPersonajes] = useState<PersonajeDTO[] | null>(null);
   const [ubicaciones, setUbicaciones] = useState<UbicacionDTO[] | null>(null);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
-  // Página de configuración: se abre desde el botón ⚙️ del HUD y sustituye al
-  // flujo principal mientras está activa.
+  // Pantallas de adulto: sustituyen al flujo principal mientras están activas.
+  // Configuración (⚙️) = gestionar el PIN; Admin (🛡️) = config global (H9.2).
   const [mostrarConfig, setMostrarConfig] = useState(false);
+  const [mostrarAdmin, setMostrarAdmin] = useState(false);
 
   const cargarCatalogos = useCallback(async () => {
     setErrorCarga(null);
@@ -62,9 +64,9 @@ export default function App() {
     void cargarCatalogos();
   }, [cargarCatalogos]);
 
-  /** Al cerrar la config, recargamos los catálogos (pudieron cambiar) y volvemos al flujo. */
-  function cerrarConfig() {
-    setMostrarConfig(false);
+  /** Al cerrar Admin, recargamos los catálogos (pudieron cambiar) y volvemos al flujo. */
+  function cerrarAdmin() {
+    setMostrarAdmin(false);
     void cargarCatalogos();
   }
 
@@ -74,11 +76,14 @@ export default function App() {
       <main className="holo-wrap">
         <Hud
           onAbrirConfig={() => setMostrarConfig(true)}
+          onAbrirAdmin={() => setMostrarAdmin(true)}
           onProbarConexion={DEBUG ? probarConexion : undefined}
         />
 
-        {mostrarConfig ? (
-          <Settings onCerrar={cerrarConfig} />
+        {mostrarAdmin ? (
+          <Admin onCerrar={cerrarAdmin} />
+        ) : mostrarConfig ? (
+          <Configuracion onCerrar={() => setMostrarConfig(false)} />
         ) : errorCarga ? (
           <section className="holo-cargando" role="alert">
             <p>😢 No pude cargar el catálogo.</p>
