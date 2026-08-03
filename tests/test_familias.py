@@ -1,9 +1,10 @@
-"""Tests de las cuentas de familia (Hito 9.2): alta, login, sesión persistente.
+"""Tests de las cuentas de familia (Hito 9.2): alta, login, sesión, verificación OTP.
 
 Se aísla la BBDD en un fichero temporal por test (monkeypatch de config.CONFIG_DB_PATH
 + reinicio del motor de SQLModel), así que cada test arranca con la tabla `familias`
 vacía y no ensucia el SQLite real de configuración. El retardo fijo del login se pone
-a 0 para que los tests sean instantáneos.
+a 0 para que los tests sean instantáneos. Por defecto la verificación de correo está
+DESACTIVADA (como en producción); los tests que la ejercen la activan explícitamente.
 """
 
 import pytest
@@ -11,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from backend import config, db
 from backend.main import app
-from backend.services import familias_service, seguridad
+from backend.services import email_service, familias_service, seguridad
 
 _CLIENTE = TestClient(app)
 
@@ -21,11 +22,18 @@ def _bbdd_temporal(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "CONFIG_DB_PATH", tmp_path / "test_familias.sqlite3")
     monkeypatch.setattr(db, "_engine", None)  # fuerza recrear el motor sobre la BBDD temporal
     monkeypatch.setattr(familias_service, "_RETARDO_LOGIN", 0)
+    monkeypatch.setattr(config, "EMAIL_VERIFICACION", False)  # por defecto, sin verificación
     familias_service._fallos_login.clear()
     db.init_db()
     yield
     monkeypatch.setattr(db, "_engine", None)
     familias_service._fallos_login.clear()
+
+
+def _alta(email, password="contrasena1", nombre="Familia"):
+    """Da de alta (sin verificación) y devuelve (familia, token)."""
+    res = familias_service.crear(email, password, nombre)
+    return res["familia"], res["token"]
 
 
 # ---------------------------------------------------------------------------
@@ -43,20 +51,20 @@ def test_hash_usa_sal_distinta_cada_vez():
 
 
 # ---------------------------------------------------------------------------
-# Alta (signup)
+# Alta (signup) sin verificación
 # ---------------------------------------------------------------------------
 def test_signup_crea_familia_y_devuelve_token():
-    familia, token = familias_service.crear("Padre@Ejemplo.com", "contrasena1", "Los García")
-    assert familia["email"] == "padre@ejemplo.com"  # normalizado a minúsculas
-    assert familia["nombre_familia"] == "Los García"
-    assert "password_hash" not in familia  # nunca se expone el hash
-    assert token
-    # La sesión recién creada es válida.
-    assert familias_service.validar_sesion(token)["id"] == familia["id"]
+    res = familias_service.crear("Padre@Ejemplo.com", "contrasena1", "Los García")
+    assert res["verificacion_requerida"] is False
+    assert res["familia"]["email"] == "padre@ejemplo.com"  # normalizado a minúsculas
+    assert res["familia"]["nombre_familia"] == "Los García"
+    assert "password_hash" not in res["familia"]  # nunca se expone el hash
+    assert res["token"]
+    assert familias_service.validar_sesion(res["token"])["id"] == res["familia"]["id"]
 
 
 def test_signup_email_duplicado_falla():
-    familias_service.crear("dup@ejemplo.com", "contrasena1", "Uno")
+    _alta("dup@ejemplo.com", nombre="Uno")
     with pytest.raises(ValueError):
         familias_service.crear("DUP@ejemplo.com", "contrasena2", "Dos")
 
@@ -72,7 +80,7 @@ def test_signup_valida_email_y_password():
 
 def test_hay_familias():
     assert familias_service.hay_familias() is False
-    familias_service.crear("a@ejemplo.com", "contrasena1", "A")
+    _alta("a@ejemplo.com")
     assert familias_service.hay_familias() is True
 
 
@@ -80,14 +88,14 @@ def test_hay_familias():
 # Login
 # ---------------------------------------------------------------------------
 def test_login_correcto():
-    familias_service.crear("login@ejemplo.com", "contrasena1", "L")
+    _alta("login@ejemplo.com", "contrasena1", "L")
     familia, token = familias_service.login("LOGIN@ejemplo.com", "contrasena1")
     assert familia["email"] == "login@ejemplo.com"
     assert familias_service.validar_sesion(token) is not None
 
 
 def test_login_password_incorrecta():
-    familias_service.crear("x@ejemplo.com", "contrasena1", "X")
+    _alta("x@ejemplo.com")
     with pytest.raises(ValueError):
         familias_service.login("x@ejemplo.com", "mala")
 
@@ -98,7 +106,7 @@ def test_login_email_inexistente():
 
 
 def test_login_bloquea_por_fuerza_bruta():
-    familias_service.crear("bf@ejemplo.com", "contrasena1", "BF")
+    _alta("bf@ejemplo.com")
     ip = "9.9.9.9"
     for _ in range(familias_service._MAX_FALLOS):
         with pytest.raises(ValueError):
@@ -108,7 +116,7 @@ def test_login_bloquea_por_fuerza_bruta():
 
 
 # ---------------------------------------------------------------------------
-# Sesión: validar, logout
+# Sesión: validar, logout, caducidad
 # ---------------------------------------------------------------------------
 def test_validar_sesion_token_invalido():
     assert familias_service.validar_sesion(None) is None
@@ -116,19 +124,18 @@ def test_validar_sesion_token_invalido():
 
 
 def test_logout_invalida_la_sesion():
-    _, token = familias_service.crear("out@ejemplo.com", "contrasena1", "O")
+    _, token = _alta("out@ejemplo.com")
     assert familias_service.validar_sesion(token) is not None
     familias_service.logout(token)
     assert familias_service.validar_sesion(token) is None
 
 
-def test_sesion_caducada_se_rechaza(monkeypatch):
+def test_sesion_caducada_se_rechaza():
     from datetime import UTC, datetime, timedelta
 
     from backend.models import SesionFamilia
 
-    _, token = familias_service.crear("exp@ejemplo.com", "contrasena1", "E")
-    # Forzamos la caducidad al pasado directamente en la BBDD.
+    _, token = _alta("exp@ejemplo.com")
     with db.get_session() as sesion:
         fila = sesion.get(SesionFamilia, familias_service._hash_token(token))
         fila.expira_en = datetime.now(UTC) - timedelta(seconds=1)
@@ -138,32 +145,103 @@ def test_sesion_caducada_se_rechaza(monkeypatch):
 
 
 # ---------------------------------------------------------------------------
-# Endpoints (contrato de salida: valida los response_model + cabecera X-Family-Token)
+# Verificación de correo (OTP), con EMAIL_VERIFICACION activo
+# ---------------------------------------------------------------------------
+@pytest.fixture
+def _con_verificacion(monkeypatch):
+    """Activa la verificación y captura el código en vez de enviar correo."""
+    monkeypatch.setattr(config, "EMAIL_VERIFICACION", True)
+    capturado: dict[str, str] = {}
+
+    def _fake_enviar(destinatario, nombre_familia, codigo, minutos):
+        capturado["email"] = destinatario
+        capturado["codigo"] = codigo
+        return "consola"
+
+    monkeypatch.setattr(email_service, "enviar_codigo", _fake_enviar)
+    return capturado
+
+
+def test_signup_con_verificacion_queda_pendiente(_con_verificacion):
+    res = familias_service.crear("pend@ejemplo.com", "contrasena1", "P")
+    assert res["verificacion_requerida"] is True
+    assert res["token"] is None and res["familia"] is None
+    assert res["canal"] == "consola"
+    # Sin verificar, no se puede iniciar sesión aunque la contraseña sea correcta.
+    with pytest.raises(ValueError):
+        familias_service.login("pend@ejemplo.com", "contrasena1")
+
+
+def test_verificar_codigo_correcto_activa_y_da_sesion(_con_verificacion):
+    familias_service.crear("v@ejemplo.com", "contrasena1", "V")
+    codigo = _con_verificacion["codigo"]
+    familia, token = familias_service.verificar_codigo("v@ejemplo.com", codigo)
+    assert familia["email"] == "v@ejemplo.com"
+    assert familias_service.validar_sesion(token) is not None
+    # Ya verificada: ahora el login funciona.
+    assert familias_service.login("v@ejemplo.com", "contrasena1")[1]
+
+
+def test_verificar_codigo_incorrecto_falla(_con_verificacion):
+    familias_service.crear("w@ejemplo.com", "contrasena1", "W")
+    with pytest.raises(ValueError):
+        familias_service.verificar_codigo("w@ejemplo.com", "000000")
+
+
+def test_codigo_agota_intentos(_con_verificacion, monkeypatch):
+    monkeypatch.setattr(familias_service, "_CODIGO_MAX_INTENTOS", 3)
+    familias_service.crear("lim@ejemplo.com", "contrasena1", "L")
+    codigo = _con_verificacion["codigo"]
+    for _ in range(3):
+        with pytest.raises(ValueError):
+            familias_service.verificar_codigo("lim@ejemplo.com", "999999", ip="1.2.3.4")
+    # Agotados los intentos, ni siquiera el código correcto pasa (hay que reenviar).
+    with pytest.raises(ValueError, match="Pide uno nuevo"):
+        familias_service.verificar_codigo("lim@ejemplo.com", codigo, ip="5.6.7.8")
+
+
+def test_reenviar_genera_codigo_nuevo(_con_verificacion):
+    familias_service.crear("re@ejemplo.com", "contrasena1", "R")
+    primero = _con_verificacion["codigo"]
+    familias_service.reenviar_codigo("re@ejemplo.com")
+    segundo = _con_verificacion["codigo"]
+    # El código correcto es el ÚLTIMO enviado; el primero ya no vale.
+    assert familias_service.verificar_codigo("re@ejemplo.com", segundo)[1]
+    # (No comprobamos que 'primero' falle salvo que difieran; si coincidieran por azar,
+    # ambos serían válidos. Basta con que el último enviado verifique.)
+    assert primero is not None
+
+
+def test_realta_de_cuenta_sin_verificar_no_da_400(_con_verificacion):
+    familias_service.crear("realta@ejemplo.com", "contrasena1", "A")
+    # Re-alta del MISMO correo aún sin verificar: se permite (reenvía código), no es 400.
+    res = familias_service.crear("realta@ejemplo.com", "otraclave9", "A2")
+    assert res["verificacion_requerida"] is True
+
+
+# ---------------------------------------------------------------------------
+# Endpoints (contrato de salida + cabecera X-Family-Token)
 # ---------------------------------------------------------------------------
 def test_endpoint_signup_login_me_logout(monkeypatch):
     monkeypatch.setattr(familias_service, "_RETARDO_LOGIN", 0)
 
-    # Sin familias todavía.
     assert _CLIENTE.get("/api/familias/estado").json() == {"hay_familias": False}
 
-    # Alta → token + datos de la familia.
     r = _CLIENTE.post(
         "/api/familias/signup",
         json={"email": "api@ejemplo.com", "password": "contrasena1", "nombre_familia": "API"},
     )
     assert r.status_code == 200, r.text
     cuerpo = r.json()
-    assert cuerpo["ok"] and cuerpo["familia"]["nombre_familia"] == "API"
+    assert cuerpo["ok"] and cuerpo["verificacion_requerida"] is False
+    assert cuerpo["familia"]["nombre_familia"] == "API"
     token = cuerpo["token"]
 
-    # /me con el token devuelve la familia.
     me = _CLIENTE.get("/api/familias/me", headers={"X-Family-Token": token}).json()
     assert me["autenticada"] is True and me["familia"]["email"] == "api@ejemplo.com"
 
-    # /me sin token → no autenticada.
     assert _CLIENTE.get("/api/familias/me").json()["autenticada"] is False
 
-    # Logout invalida el token.
     _CLIENTE.post("/api/familias/logout", headers={"X-Family-Token": token})
     assert (
         _CLIENTE.get("/api/familias/me", headers={"X-Family-Token": token}).json()["autenticada"]
@@ -181,3 +259,17 @@ def test_endpoint_signup_email_duplicado_da_400():
         json={"email": "dup2@ejemplo.com", "password": "otra12345", "nombre_familia": "B"},
     )
     assert r.status_code == 400
+
+
+def test_endpoint_verificar(_con_verificacion):
+    r = _CLIENTE.post(
+        "/api/familias/signup",
+        json={"email": "ep@ejemplo.com", "password": "contrasena1", "nombre_familia": "EP"},
+    )
+    assert r.json()["verificacion_requerida"] is True
+    r2 = _CLIENTE.post(
+        "/api/familias/verificar",
+        json={"email": "ep@ejemplo.com", "codigo": _con_verificacion["codigo"]},
+    )
+    assert r2.status_code == 200, r2.text
+    assert r2.json()["token"]

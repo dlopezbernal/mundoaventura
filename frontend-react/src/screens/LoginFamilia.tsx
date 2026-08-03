@@ -9,23 +9,31 @@
  *
  *   - Si YA hay familias registradas → arranca en "Entrar" (login).
  *   - Si es la primera vez (sin familias) → arranca en "Crear cuenta" (alta).
- *   - El adulto puede alternar entre ambos con un enlace.
+ *   - Si el servidor exige verificar el correo (toggle EMAIL_VERIFICACION), tras el
+ *     alta se pasa a "Verificar": el adulto teclea el código recibido por email.
  *
  * La contraseña solo viaja al backend (que la guarda hasheada); aquí guardamos el
  * TOKEN de sesión que devuelve, en localStorage, para no volver a pedir login.
  */
 
 import { useEffect, useState } from "react";
-import { BackendError, familiaEstado, familiaLogin, familiaSignup } from "../api/client";
+import {
+  BackendError,
+  familiaEstado,
+  familiaLogin,
+  familiaReenviar,
+  familiaSignup,
+  familiaVerificar,
+} from "../api/client";
 import type { FamiliaDTO } from "../api/types";
 import styles from "./Settings.module.css";
 
 interface Props {
-  /** Se llama con la familia una vez autenticada (alta o login correctos). */
+  /** Se llama con la familia una vez autenticada (alta, login o verificación correctos). */
   onListo: (familia: FamiliaDTO) => void;
 }
 
-type Modo = "cargando" | "login" | "signup";
+type Modo = "cargando" | "login" | "signup" | "verificar";
 
 export default function LoginFamilia({ onListo }: Props) {
   const [modo, setModo] = useState<Modo>("cargando");
@@ -33,7 +41,9 @@ export default function LoginFamilia({ onListo }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [password2, setPassword2] = useState("");
+  const [codigo, setCodigo] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
   // Al arrancar: si no hay ninguna familia aún, empezamos por el alta; si ya
@@ -55,13 +65,16 @@ export default function LoginFamilia({ onListo }: Props) {
 
   function cambiarModo(nuevo: Modo) {
     setError(null);
+    setAviso(null);
     setPassword("");
     setPassword2("");
+    setCodigo("");
     setModo(nuevo);
   }
 
   async function enviar() {
     setError(null);
+    setAviso(null);
     const esSignup = modo === "signup";
     if (esSignup && password !== password2) {
       setError("La contraseña y su confirmación no coinciden.");
@@ -69,10 +82,54 @@ export default function LoginFamilia({ onListo }: Props) {
     }
     setOcupado(true);
     try {
-      const res = esSignup
-        ? await familiaSignup(email, password, nombreFamilia)
-        : await familiaLogin(email, password);
+      if (esSignup) {
+        const res = await familiaSignup(email, password, nombreFamilia);
+        if (res.verificacion_requerida) {
+          cambiarModo("verificar");
+          setAviso(
+            res.canal === "consola"
+              ? "Modo desarrollo: el código está en la consola del backend."
+              : "Te hemos enviado un código a tu correo. Escríbelo aquí para terminar.",
+          );
+        } else if (res.familia) {
+          onListo(res.familia);
+        }
+      } else {
+        const res = await familiaLogin(email, password);
+        onListo(res.familia);
+      }
+    } catch (exc) {
+      setError(exc instanceof BackendError ? exc.message : String(exc));
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function verificar() {
+    setError(null);
+    setAviso(null);
+    setOcupado(true);
+    try {
+      const res = await familiaVerificar(email, codigo);
       onListo(res.familia);
+    } catch (exc) {
+      setError(exc instanceof BackendError ? exc.message : String(exc));
+    } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function reenviar() {
+    setError(null);
+    setAviso(null);
+    setOcupado(true);
+    try {
+      const res = await familiaReenviar(email);
+      setAviso(
+        res.canal === "consola"
+          ? "Código reenviado (míralo en la consola del backend)."
+          : "Te hemos reenviado un código nuevo a tu correo.",
+      );
     } catch (exc) {
       setError(exc instanceof BackendError ? exc.message : String(exc));
     } finally {
@@ -85,6 +142,66 @@ export default function LoginFamilia({ onListo }: Props) {
       <div className={styles.gate}>
         <div className={styles.gateCard}>
           <p className={styles.gateTexto}>Cargando…</p>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Paso de verificación del correo (OTP) ---
+  if (modo === "verificar") {
+    return (
+      <div className={styles.gate}>
+        <div className={styles.gateCard}>
+          <span className={styles.gateIcono} aria-hidden="true">
+            📩
+          </span>
+          <h2 className={styles.gateTitulo}>Verifica tu correo</h2>
+          <p className={styles.gateTexto}>
+            Escribe el código que hemos enviado a <strong>{email}</strong>.
+          </p>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void verificar();
+            }}
+          >
+            <input
+              className={styles.input}
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={codigo}
+              placeholder="Código de 6 dígitos"
+              maxLength={6}
+              autoFocus
+              onChange={(e) => setCodigo(e.target.value.replace(/\D/g, ""))}
+            />
+
+            {aviso && <p className={styles.gateTexto}>{aviso}</p>}
+            {error && <p className={styles.testNo}>❌ {error}</p>}
+
+            <button type="submit" className="btn btn-primario" disabled={ocupado || codigo.length < 6}>
+              {ocupado ? "…" : "Verificar y entrar"}
+            </button>
+          </form>
+
+          <p className={styles.gateTexto}>
+            ¿No te ha llegado?{" "}
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={() => void reenviar()}
+              disabled={ocupado}
+            >
+              Reenviar código
+            </button>
+          </p>
+          <p className={styles.gateTexto}>
+            <button type="button" className={styles.linkBtn} onClick={() => cambiarModo("login")}>
+              ← Volver
+            </button>
+          </p>
         </div>
       </div>
     );
@@ -152,6 +269,7 @@ export default function LoginFamilia({ onListo }: Props) {
             />
           )}
 
+          {aviso && <p className={styles.gateTexto}>{aviso}</p>}
           {error && <p className={styles.testNo}>❌ {error}</p>}
 
           <button

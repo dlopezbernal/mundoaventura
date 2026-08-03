@@ -729,9 +729,54 @@ export interface paths {
         put?: never;
         /**
          * Signup
-         * @description Da de alta una familia (auto-login). 400 si el email ya existe o es inválido.
+         * @description Da de alta una familia.
+         *
+         *     Sin verificación de correo (por defecto): responde con sesión iniciada. Con
+         *     verificación activa: la cuenta queda pendiente y se envía un código. 400 si el
+         *     correo ya está registrado o los datos no son válidos; 502 si no se pudo enviar
+         *     el correo de verificación.
          */
         post: operations["signup_api_familias_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/verificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verificar
+         * @description Verifica el código (OTP) y devuelve la sesión. 400 si falla; 429 si IP bloqueada.
+         */
+        post: operations["verificar_api_familias_verificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/reenviar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reenviar
+         * @description Reenvía el código de verificación a un alta pendiente. 400 si no procede.
+         */
+        post: operations["reenviar_api_familias_reenviar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1229,7 +1274,7 @@ export interface components {
         };
         /**
          * FamiliaAuthResponse
-         * @description Respuesta de alta o inicio de sesión: token de sesión + datos de la familia.
+         * @description Respuesta de inicio de sesión o verificación: token de sesión + datos de la familia.
          */
         FamiliaAuthResponse: {
             /** Ok */
@@ -1267,6 +1312,27 @@ export interface components {
             password: string;
         };
         /**
+         * FamiliaReenviar
+         * @description Reenvío del código de verificación a un alta pendiente.
+         */
+        FamiliaReenviar: {
+            /**
+             * Email
+             * @description Correo del adulto.
+             */
+            email: string;
+        };
+        /**
+         * FamiliaReenviarResponse
+         * @description Respuesta de reenviar el código de verificación.
+         */
+        FamiliaReenviarResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Canal */
+            canal: string;
+        };
+        /**
          * FamiliaSesion
          * @description Estado de la sesión de familia (GET /api/familias/me).
          */
@@ -1295,6 +1361,42 @@ export interface components {
              * @description Nombre de la familia, para personalizar la app.
              */
             nombre_familia: string;
+        };
+        /**
+         * FamiliaSignupResponse
+         * @description Respuesta del alta de familia.
+         *
+         *     Si la verificación de correo está desactivada, viene con sesión iniciada
+         *     (`token` + `familia`). Si está activada, `verificacion_requerida=True` y NO hay
+         *     token: hay que verificar el código (`canal` dice si se envió por email o quedó en
+         *     la consola del backend, en modo desarrollo).
+         */
+        FamiliaSignupResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Verificacion Requerida */
+            verificacion_requerida: boolean;
+            /** Canal */
+            canal?: string | null;
+            familia?: components["schemas"]["FamiliaDTO"] | null;
+            /** Token */
+            token?: string | null;
+        };
+        /**
+         * FamiliaVerificar
+         * @description Verificación del correo con el código (OTP) recibido.
+         */
+        FamiliaVerificar: {
+            /**
+             * Email
+             * @description Correo del adulto.
+             */
+            email: string;
+            /**
+             * Codigo
+             * @description Código de verificación recibido por correo.
+             */
+            codigo: string;
         };
         /**
          * FamiliasEstado
@@ -3181,7 +3283,73 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["FamiliaSignupResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verificar_api_familias_verificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaVerificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["FamiliaAuthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reenviar_api_familias_reenviar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaReenviar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaReenviarResponse"];
                 };
             };
             /** @description Validation Error */

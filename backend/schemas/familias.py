@@ -23,3 +23,16 @@ class FamiliaLogin(BaseModel):
 
     email: str = Field(description="Correo del adulto.")
     password: str = Field(description="Contraseña de la familia.")
+
+
+class FamiliaVerificar(BaseModel):
+    """Verificación del correo con el código (OTP) recibido."""
+
+    email: str = Field(description="Correo del adulto.")
+    codigo: str = Field(description="Código de verificación recibido por correo.")
+
+
+class FamiliaReenviar(BaseModel):
+    """Reenvío del código de verificación a un alta pendiente."""
+
+    email: str = Field(description="Correo del adulto.")

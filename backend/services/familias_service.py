@@ -28,15 +28,19 @@ from datetime import UTC, datetime, timedelta
 
 from sqlmodel import select
 
-from backend import db
+from backend import config, db
 from backend.models import Familia, SesionFamilia
-from backend.services import seguridad
+from backend.services import email_service, seguridad
 
 logger = logging.getLogger(__name__)
 
 # Vida de una sesión de familia (días). Larga a propósito: el sentido es no volver a
 # pedir login en el equipo de casa. Se renueva al iniciar sesión.
 _SESION_DIAS = 90
+
+# Verificación del correo (OTP, Hito 9.2): vida y tope de intentos del código.
+_CODIGO_TTL_MIN = 15
+_CODIGO_MAX_INTENTOS = 5
 
 _LONGITUD_MIN_PASSWORD = 8
 # Regex de email deliberadamente laxa (algo@algo.algo): solo evita erratas obvias,
@@ -108,12 +112,41 @@ def _dto(fam: Familia) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Verificación del correo (OTP)
+# ---------------------------------------------------------------------------
+def _nuevo_codigo() -> str:
+    """Código de verificación de 6 dígitos (OTP)."""
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+def _asignar_codigo(fam: Familia) -> str:
+    """Genera un código nuevo, lo guarda HASHEADO en la fila y devuelve el código en claro."""
+    codigo = _nuevo_codigo()
+    fam.codigo_hash = seguridad.hashear(codigo)
+    fam.codigo_expira = datetime.now(UTC) + timedelta(minutes=_CODIGO_TTL_MIN)
+    fam.codigo_intentos = 0
+    return codigo
+
+
+# ---------------------------------------------------------------------------
 # Alta (self-signup)
 # ---------------------------------------------------------------------------
-def crear(email: str, password: str, nombre_familia: str) -> tuple[dict, str]:
-    """Da de alta una familia y devuelve ``(familia, token)`` (auto-login).
+def crear(email: str, password: str, nombre_familia: str) -> dict:
+    """Da de alta una familia (self-signup).
 
-    Lanza ValueError (→ 400) si el email ya existe o los datos no son válidos.
+    Devuelve un dict con el resultado. Si la verificación de correo está DESACTIVADA
+    (por defecto), el alta es inmediata y viene con sesión iniciada::
+
+        {"verificacion_requerida": False, "familia": {...}, "token": "…", "canal": None}
+
+    Si está ACTIVADA (`config.EMAIL_VERIFICACION`), la cuenta queda pendiente y se envía
+    un código; NO hay token todavía (hay que llamar a `verificar_codigo`)::
+
+        {"verificacion_requerida": True, "familia": None, "token": None, "canal": "email"|"consola"}
+
+    Lanza ValueError (→ 400) si el correo ya está registrado y VERIFICADO, o los datos
+    no son válidos. Un correo registrado pero SIN verificar se puede "re-dar de alta"
+    (actualiza credenciales y reenvía el código).
     """
     email = _normalizar_email(email)
     nombre_familia = (nombre_familia or "").strip()
@@ -121,20 +154,103 @@ def crear(email: str, password: str, nombre_familia: str) -> tuple[dict, str]:
 
     db.init_db()
     with db.get_session() as sesion:
-        existe = sesion.exec(select(Familia).where(Familia.email == email)).first()
-        if existe is not None:
+        fam = sesion.exec(select(Familia).where(Familia.email == email)).first()
+        if fam is not None and fam.verificada:
             raise ValueError("Ya hay una familia registrada con ese correo. Inicia sesión.")
-        fam = Familia(
-            id=secrets.token_hex(8),
-            email=email,
-            password_hash=seguridad.hashear(password),
-            nombre_familia=nombre_familia,
-        )
+        if fam is None:
+            fam = Familia(id=secrets.token_hex(8), email=email, password_hash="", nombre_familia="")
+        # Alta nueva o re-alta de una cuenta aún sin verificar: (re)fijamos credenciales.
+        fam.password_hash = seguridad.hashear(password)
+        fam.nombre_familia = nombre_familia
+
+        if not config.EMAIL_VERIFICACION:
+            fam.verificada = True
+            fam.codigo_hash = None
+            fam.codigo_expira = None
+            fam.codigo_intentos = 0
+            sesion.add(fam)
+            sesion.commit()
+            logger.info("Nueva familia registrada: %s (%s).", fam.nombre_familia, fam.email)
+            return {
+                "verificacion_requerida": False,
+                "familia": _dto(fam),
+                "token": _crear_sesion(fam.id),
+                "canal": None,
+            }
+
+        # Verificación activa: cuenta pendiente + código por correo.
+        fam.verificada = False
+        codigo = _asignar_codigo(fam)
+        sesion.add(fam)
+        sesion.commit()  # commit ANTES de enviar: si el envío falla, el reenvío funciona
+        canal = email_service.enviar_codigo(email, nombre_familia, codigo, _CODIGO_TTL_MIN)
+        logger.info("Alta pendiente de verificación: %s (canal=%s).", email, canal)
+        return {"verificacion_requerida": True, "familia": None, "token": None, "canal": canal}
+
+
+def verificar_codigo(email: str, codigo: str, ip: str = "?") -> tuple[dict, str]:
+    """Verifica el código (OTP) de un alta pendiente y devuelve ``(familia, token)``.
+
+    Lanza BloqueoLoginError (→ 429) si la IP está bloqueada, o ValueError (→ 400) si el
+    código es incorrecto, ha caducado o se agotaron los intentos.
+    """
+    _comprobar_bloqueo(ip)
+    time.sleep(_RETARDO_LOGIN)
+    email = _normalizar_email(email)
+
+    db.init_db()
+    with db.get_session() as sesion:
+        fam = sesion.exec(select(Familia).where(Familia.email == email)).first()
+        if fam is None:
+            _registrar_fallo(ip)
+            raise ValueError("Código o correo incorrectos.")
+        if fam.verificada:  # ya verificada: idempotente, iniciamos sesión
+            _limpiar_fallos(ip)
+            return _dto(fam), _crear_sesion(fam.id)
+
+        expira = fam.codigo_expira
+        if expira is not None and expira.tzinfo is None:
+            expira = expira.replace(tzinfo=UTC)
+        if fam.codigo_hash is None or expira is None or expira < datetime.now(UTC):
+            raise ValueError("El código ha caducado. Pide uno nuevo.")
+        if (fam.codigo_intentos or 0) >= _CODIGO_MAX_INTENTOS:
+            raise ValueError("Demasiados intentos con este código. Pide uno nuevo.")
+        if not seguridad.verificar((codigo or "").strip(), fam.codigo_hash):
+            fam.codigo_intentos = (fam.codigo_intentos or 0) + 1
+            sesion.add(fam)
+            sesion.commit()
+            _registrar_fallo(ip)
+            raise ValueError("Código o correo incorrectos.")
+
+        # Correcto: activamos la cuenta y limpiamos el código.
+        fam.verificada = True
+        fam.codigo_hash = None
+        fam.codigo_expira = None
+        fam.codigo_intentos = 0
         sesion.add(fam)
         sesion.commit()
-        sesion.refresh(fam)
-        logger.info("Nueva familia registrada: %s (%s).", fam.nombre_familia, fam.email)
+        _limpiar_fallos(ip)
+        logger.info("Familia verificada: %s (%s).", fam.nombre_familia, fam.email)
         return _dto(fam), _crear_sesion(fam.id)
+
+
+def reenviar_codigo(email: str) -> str:
+    """Reenvía un código nuevo a un alta pendiente. Devuelve el canal (``email``/``consola``).
+
+    Lanza ValueError (→ 400) si no hay cuenta con ese correo o ya está verificada.
+    """
+    email = _normalizar_email(email)
+    db.init_db()
+    with db.get_session() as sesion:
+        fam = sesion.exec(select(Familia).where(Familia.email == email)).first()
+        if fam is None:
+            raise ValueError("No hay ninguna cuenta pendiente con ese correo.")
+        if fam.verificada:
+            raise ValueError("Esta cuenta ya está verificada. Inicia sesión.")
+        codigo = _asignar_codigo(fam)
+        sesion.add(fam)
+        sesion.commit()
+        return email_service.enviar_codigo(email, fam.nombre_familia, codigo, _CODIGO_TTL_MIN)
 
 
 # ---------------------------------------------------------------------------
@@ -164,6 +280,13 @@ def login(email: str, password: str, ip: str = "?") -> tuple[dict, str]:
         ):
             _registrar_fallo(ip)
             raise ValueError("Correo o contraseña incorrectos.")
+        # Contraseña correcta pero cuenta sin verificar: no damos sesión (el mensaje solo
+        # se ve tras acertar la contraseña, así que no filtra el estado de un correo ajeno).
+        if not fam.verificada:
+            _limpiar_fallos(ip)
+            raise ValueError(
+                "Tu cuenta aún no está verificada. Revisa tu correo o pide un código nuevo."
+            )
         _limpiar_fallos(ip)
         return _dto(fam), _crear_sesion(fam.id)
 

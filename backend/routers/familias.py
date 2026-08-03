@@ -18,14 +18,21 @@ cada petición). La contraseña se guarda hasheada; el token solo se guarda hash
 
 from fastapi import APIRouter, Header, HTTPException, Request
 
-from backend.schemas.familias import FamiliaLogin, FamiliaSignup
+from backend.schemas.familias import (
+    FamiliaLogin,
+    FamiliaReenviar,
+    FamiliaSignup,
+    FamiliaVerificar,
+)
 from backend.schemas.respuestas import (
     FamiliaAuthResponse,
+    FamiliaReenviarResponse,
     FamiliaSesion,
     FamiliasEstado,
+    FamiliaSignupResponse,
     OkResponse,
 )
-from backend.services import familias_service
+from backend.services import email_service, familias_service
 
 router = APIRouter(prefix="/api/familias", tags=["Familias"])
 
@@ -43,14 +50,47 @@ def me(x_family_token: str | None = Header(default=None)):
     return {"autenticada": familia is not None, "familia": familia}
 
 
-@router.post("/signup", response_model=FamiliaAuthResponse)
+@router.post("/signup", response_model=FamiliaSignupResponse, response_model_exclude_none=False)
 def signup(req: FamiliaSignup):
-    """Da de alta una familia (auto-login). 400 si el email ya existe o es inválido."""
+    """Da de alta una familia.
+
+    Sin verificación de correo (por defecto): responde con sesión iniciada. Con
+    verificación activa: la cuenta queda pendiente y se envía un código. 400 si el
+    correo ya está registrado o los datos no son válidos; 502 si no se pudo enviar
+    el correo de verificación.
+    """
     try:
-        familia, token = familias_service.crear(req.email, req.password, req.nombre_familia)
+        res = familias_service.crear(req.email, req.password, req.nombre_familia)
+    except email_service.EmailError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, **res}
+
+
+@router.post("/verificar", response_model=FamiliaAuthResponse)
+def verificar(req: FamiliaVerificar, request: Request):
+    """Verifica el código (OTP) y devuelve la sesión. 400 si falla; 429 si IP bloqueada."""
+    ip = request.client.host if request.client else "?"
+    try:
+        familia, token = familias_service.verificar_codigo(req.email, req.codigo, ip)
+    except familias_service.BloqueoLoginError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "token": token, "familia": familia}
+
+
+@router.post("/reenviar", response_model=FamiliaReenviarResponse)
+def reenviar(req: FamiliaReenviar):
+    """Reenvía el código de verificación a un alta pendiente. 400 si no procede."""
+    try:
+        canal = familias_service.reenviar_codigo(req.email)
+    except email_service.EmailError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "canal": canal}
 
 
 @router.post("/login", response_model=FamiliaAuthResponse)

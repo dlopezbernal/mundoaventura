@@ -22,8 +22,10 @@ import type {
   DocumentoContenido,
   DocumentoDTO,
   FamiliaAuthResponse,
+  FamiliaReenviarResponse,
   FamiliaSesion,
   FamiliasEstado,
+  FamiliaSignupResponse,
   GenerateRequest,
   GenerateResponse,
   HealthResponse,
@@ -901,7 +903,8 @@ export async function familiaMe(): Promise<FamiliaSesion> {
   return (await response.json()) as FamiliaSesion;
 }
 
-async function _postFamilia(
+/** POST que devuelve un token de sesión (login/verificar): lo guarda y lo aplica. */
+async function _postFamiliaAuth(
   path: string,
   cuerpo: Record<string, string>,
 ): Promise<FamiliaAuthResponse> {
@@ -915,13 +918,47 @@ async function _postFamilia(
   return body;
 }
 
-/** Alta de una familia (auto-login). POST /api/familias/signup. */
+/**
+ * Alta de una familia. POST /api/familias/signup.
+ * Sin verificación de correo: la respuesta trae `token` (se guarda) y `familia`.
+ * Con verificación: `verificacion_requerida=true` y NO hay token todavía (hay que
+ * llamar a `familiaVerificar` con el código).
+ */
 export async function familiaSignup(
   email: string,
   password: string,
   nombreFamilia: string,
+): Promise<FamiliaSignupResponse> {
+  const response = await fetchBackend(
+    "/api/familias/signup",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, nombre_familia: nombreFamilia }),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as FamiliaSignupResponse;
+  if (body.token) setFamilyToken(body.token); // solo hay token si no hacía falta verificar
+  return body;
+}
+
+/** Verifica el código (OTP) de un alta pendiente y abre sesión. POST /api/familias/verificar. */
+export async function familiaVerificar(
+  email: string,
+  codigo: string,
 ): Promise<FamiliaAuthResponse> {
-  return _postFamilia("/api/familias/signup", { email, password, nombre_familia: nombreFamilia });
+  return _postFamiliaAuth("/api/familias/verificar", { email, codigo });
+}
+
+/** Reenvía el código de verificación. POST /api/familias/reenviar. */
+export async function familiaReenviar(email: string): Promise<FamiliaReenviarResponse> {
+  const response = await fetchBackend(
+    "/api/familias/reenviar",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as FamiliaReenviarResponse;
 }
 
 /** Inicia sesión de familia. POST /api/familias/login. */
@@ -929,7 +966,7 @@ export async function familiaLogin(
   email: string,
   password: string,
 ): Promise<FamiliaAuthResponse> {
-  return _postFamilia("/api/familias/login", { email, password });
+  return _postFamiliaAuth("/api/familias/login", { email, password });
 }
 
 /** Cierra la sesión de familia (invalida el token en el backend y lo olvida aquí). */

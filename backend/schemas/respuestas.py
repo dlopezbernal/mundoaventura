@@ -349,11 +349,34 @@ class FamiliaSesion(BaseModel):
 
 
 class FamiliaAuthResponse(BaseModel):
-    """Respuesta de alta o inicio de sesión: token de sesión + datos de la familia."""
+    """Respuesta de inicio de sesión o verificación: token de sesión + datos de la familia."""
 
     ok: bool
     token: str
     familia: FamiliaDTO
+
+
+class FamiliaSignupResponse(BaseModel):
+    """Respuesta del alta de familia.
+
+    Si la verificación de correo está desactivada, viene con sesión iniciada
+    (`token` + `familia`). Si está activada, `verificacion_requerida=True` y NO hay
+    token: hay que verificar el código (`canal` dice si se envió por email o quedó en
+    la consola del backend, en modo desarrollo).
+    """
+
+    ok: bool
+    verificacion_requerida: bool
+    canal: str | None = None  # "email" | "consola" | None
+    familia: FamiliaDTO | None = None
+    token: str | None = None
+
+
+class FamiliaReenviarResponse(BaseModel):
+    """Respuesta de reenviar el código de verificación."""
+
+    ok: bool
+    canal: str  # "email" | "consola"
 
 
 class FamiliasEstado(BaseModel):

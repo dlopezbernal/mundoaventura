@@ -95,6 +95,14 @@ class Familia(SQLModel, table=True):
     password_hash: str  # 'salt$hash' (PBKDF2); nunca la contraseña en claro
     nombre_familia: str
     activo: bool = True
+    # Verificación del correo (Hito 9.2). Si EMAIL_VERIFICACION está activo, el alta
+    # nace con verificada=False y se activa al teclear el código (OTP) que se envía por
+    # email. Con la verificación desactivada (por defecto), nace ya verificada=True.
+    # Los campos de código son transitorios (se limpian al verificar o al caducar).
+    verificada: bool = True
+    codigo_hash: str | None = None  # 'salt$hash' del OTP; None si no hay código vivo
+    codigo_expira: datetime | None = None
+    codigo_intentos: int = 0  # intentos fallidos del código actual (anti-fuerza-bruta)
     creado_en: datetime = Field(default_factory=_ahora_utc)
 
 

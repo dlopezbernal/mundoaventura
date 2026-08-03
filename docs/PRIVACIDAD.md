@@ -102,7 +102,9 @@ también pasa por **DeepL** (traducción, Alemania/UE) en todos los casos.
       sale a un tercero. Para el **chat y la voz** —el núcleo de la app— el consentimiento
       se considera **otorgado por el uso**: un adulto crea la **cuenta de familia** con su
       correo (H9.2) y pone en marcha la app; ese alta por un adulto refuerza el
-      consentimiento. La foto es el único paso que exige un gesto explícito adicional.
+      consentimiento, y con `EMAIL_VERIFICACION` activo se **verifica ese correo con un
+      código** (confirma que un adulto controla el buzón). La foto es el único paso que
+      exige un gesto explícito adicional.
 - [x] **Información transparente** (arts. 13–14 RGPD): esta página se enlaza desde la app
       —en el aviso de consentimiento de la foto y en la pestaña Sistema (zona de adulto)—
       mediante una copia navegable (`frontend-react/public/privacidad.html`).

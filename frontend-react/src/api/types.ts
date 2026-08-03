@@ -73,6 +73,8 @@ export type ImportResult = Schemas["ImportResult"];
 export type FamiliaDTO = Schemas["FamiliaDTO"];
 export type FamiliaSesion = Schemas["FamiliaSesion"];
 export type FamiliaAuthResponse = Schemas["FamiliaAuthResponse"];
+export type FamiliaSignupResponse = Schemas["FamiliaSignupResponse"];
+export type FamiliaReenviarResponse = Schemas["FamiliaReenviarResponse"];
 export type FamiliasEstado = Schemas["FamiliasEstado"];
 
 // --- Salud ---
