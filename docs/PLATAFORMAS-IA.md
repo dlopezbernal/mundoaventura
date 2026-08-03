@@ -1,7 +1,8 @@
 # Plataformas de IA del proyecto
 
 Mapa de **qué inteligencia artificial usa la app y para qué**. Pensado como material para
-la memoria del proyecto (Hito 10). La app combina **cuatro plataformas en la nube** con un
+la memoria del proyecto (Hito 10). La app combina **cuatro plataformas en la nube** (una de
+ellas, Groq, con dos funciones: LLM y STT opcional → **5 claves API** en total) con un
 **pipeline de RAG que corre entero en local** (CPU, sin coste ni envío de datos).
 
 ## Diagrama del flujo
@@ -41,12 +42,22 @@ flowchart TD
 
 ### En la nube (4 plataformas)
 
-| Plataforma | Función | Modelo / detalle | Secreto (`.env`) |
+La pantalla **Admin → APIs** gestiona **5 claves** (`secrets_service`): el LLM es un slot
+**genérico "openai-compatible"** (no atado a un proveedor) y Groq aparece **dos veces** porque
+la misma cuenta sirve el LLM y, opcionalmente, la transcripción — con **claves separadas**.
+
+| Proveedor (pantalla APIs) | Función | Modelo / detalle | Secreto (`.env`) |
 |---|---|---|---|
-| **Groq** | **Chat / RAG** — genera la respuesta del personaje | Llama 3.3 70B (Meta), vía protocolo OpenAI | `LLM_API_KEY` |
+| **LLM openai-compatible** | **Chat / RAG** — genera la respuesta del personaje | Slot **configurable** (Groq / Mistral / Ollama…); hoy → **Groq · Llama 3.3 70B**, vía protocolo OpenAI | `LLM_API_KEY` |
 | **Replicate** | **Generación de imagen** — la escena (personaje + lugar) | FLUX schnell; **FLUX Kontext** para "editar sobre tu foto" | `REPLICATE_API_TOKEN` |
 | **DeepL** | **Traducción** ES→EN de la pregunta y de los documentos del RAG | Obligatoria: sin ella el RAG recupera mal | `DEEPL_API_KEY` |
-| **ElevenLabs** | **Voz**: transcribe la pregunta hablada (STT, Scribe) y pone voz a la respuesta (TTS, Flash) | STT por defecto | `ELEVENLABS_API_KEY` |
+| **ElevenLabs** | **Voz**: transcribe la pregunta hablada (STT, Scribe) y pone voz a la respuesta (TTS, Flash) | STT **por defecto** (una de tres opciones, ver abajo) | `ELEVENLABS_API_KEY` |
+| **Groq transcription** | **STT alternativo** — transcribe la voz del niño | Whisper en Groq, si `STT_PROVIDER=groq` (opcional) | `GROQ_API_KEY` |
+
+> **STT (voz→texto) seleccionable** (`STT_PROVIDER`, Hito 7): **ElevenLabs** (nube, por defecto)
+> · **faster-whisper** (local, la voz no sale del PC) · **Groq** (Whisper en nube). El **LLM** es
+> igual de configurable (`LLM_PROVIDER`/`LLM_BASE_URL`): hoy Groq, pero cambiar de proveedor es
+> configuración, no código (ver la aclaración más abajo).
 
 ### En local (el RAG entero, sin coste ni envío de datos)
 
@@ -81,8 +92,8 @@ configuración, no código** (capa `llm_service`, Hito 5).
 1. **Crear la escena.** El niño elige personaje + lugar (o sube una foto) → **Replicate**
    (FLUX) dibuja la imagen y la devuelve en base64.
 2. **El niño pregunta** (por texto o por voz):
-   - Si es voz → **ElevenLabs** (Scribe) la transcribe a texto (o **faster-whisper** si el
-     STT local está activo).
+   - Si es voz → **ElevenLabs** (Scribe) la transcribe a texto (o **faster-whisper** en local,
+     o **Groq** (Whisper) en nube, según `STT_PROVIDER`).
    - El texto → **DeepL** lo traduce ES→EN (los embeddings y el conocimiento están en inglés).
    - **ChromaDB + fastembed** (embeddings + reranker `jina-v2`), en **local**, recuperan los
      fragmentos relevantes del personaje.
