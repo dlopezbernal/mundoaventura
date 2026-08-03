@@ -38,11 +38,18 @@ class FamiliaReenviar(BaseModel):
     email: str = Field(description="Correo del adulto.")
 
 
+class NinoInput(BaseModel):
+    """Un niño en la edición del perfil: nombre + sexo (chico/chica/'')."""
+
+    nombre: str = Field(description="Nombre del niño.")
+    sexo: str = Field(default="", description="Sexo: 'chico', 'chica' o '' (sin especificar).")
+
+
 class FamiliaPerfilUpdate(BaseModel):
-    """Edición del perfil de la familia (nombre + nombres de los niños)."""
+    """Edición del perfil de la familia (nombre + niños con nombre y sexo)."""
 
     nombre_familia: str | None = Field(default=None, description="Nuevo nombre de la familia.")
-    ninos: list[str] | None = Field(default=None, description="Lista de nombres de los niños.")
+    ninos: list[NinoInput] | None = Field(default=None, description="Lista de niños (nombre+sexo).")
 
 
 class FamiliaPinSet(BaseModel):

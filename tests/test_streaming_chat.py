@@ -58,7 +58,7 @@ def _stream_rag_falso():
 
 
 def test_responder_streaming_intercala_audio_por_frase(monkeypatch):
-    monkeypatch.setattr(rag_service, "responder_streaming", lambda pid, p: _stream_rag_falso())
+    monkeypatch.setattr(rag_service, "responder_streaming", lambda pid, p, *a: _stream_rag_falso())
     monkeypatch.setattr(chat_service, "_voz_id", lambda pid: "voz1")
     # El TTS falso devuelve la propia frase como "audio", para poder comprobarla.
     # (Recorta como el real, que hace texto.strip() por dentro.)
@@ -80,7 +80,7 @@ def test_responder_streaming_intercala_audio_por_frase(monkeypatch):
 
 
 def test_responder_streaming_sin_voz_no_emite_audio(monkeypatch):
-    monkeypatch.setattr(rag_service, "responder_streaming", lambda pid, p: _stream_rag_falso())
+    monkeypatch.setattr(rag_service, "responder_streaming", lambda pid, p, *a: _stream_rag_falso())
     monkeypatch.setattr(chat_service, "_voz_id", lambda pid: None)  # personaje sin voz
 
     eventos = list(chat_service.responder_streaming("t-rex", "hola"))
@@ -100,7 +100,7 @@ def _client():
 
 
 def test_sse_endpoint_emite_frames(monkeypatch):
-    def _fake_stream(personaje_id, pregunta):
+    def _fake_stream(personaje_id, pregunta, *args):
         yield {"tipo": "fuentes", "fuentes": [], "origen": "RAG"}
         yield {"tipo": "token", "texto": "Hola"}
         yield {"tipo": "fin", "respuesta": "Hola"}
@@ -114,7 +114,7 @@ def test_sse_endpoint_emite_frames(monkeypatch):
 
 
 def test_sse_endpoint_error_emite_evento_error(monkeypatch):
-    def _revienta(personaje_id, pregunta):
+    def _revienta(personaje_id, pregunta, *args):
         raise ValueError("Personaje desconocido: 'nadie'.")
         yield  # pragma: no cover — hace de esto un generador
 

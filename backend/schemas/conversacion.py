@@ -27,6 +27,16 @@ class AskRequest(BaseModel):
     pregunta: str = Field(
         ..., min_length=1, max_length=500, description="La pregunta del niño, en texto."
     )
+    # Nombre del niño que juega (multi-perfil, H9.2c): personaliza el prompt del chat.
+    # Opcional (sin perfil → None). Se SANEA en el backend (solo se usa como nombre de
+    # pila); max_length pone un tope duro antes de llegar a la lógica.
+    nombre_nino: str | None = Field(
+        default=None, max_length=50, description="Nombre del niño que juega (para personalizar)."
+    )
+    # Sexo del niño (H9.2c): personaliza el género gramatical en español. Opcional.
+    sexo_nino: str | None = Field(
+        default=None, max_length=10, description="Sexo del niño: 'chico', 'chica' o vacío."
+    )
 
 
 class AskResponse(BaseModel):

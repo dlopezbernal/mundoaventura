@@ -71,6 +71,7 @@ export type ImportResult = Schemas["ImportResult"];
 
 // --- Familias (cuentas + sesión, Hito 9.2) ---
 export type FamiliaDTO = Schemas["FamiliaDTO"];
+export type NinoDTO = Schemas["NinoDTO"];
 export type FamiliaSesion = Schemas["FamiliaSesion"];
 export type FamiliaAuthResponse = Schemas["FamiliaAuthResponse"];
 export type FamiliaSignupResponse = Schemas["FamiliaSignupResponse"];

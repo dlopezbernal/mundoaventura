@@ -23,6 +23,7 @@ import type {
   DocumentoDTO,
   FamiliaAuthResponse,
   FamiliaDTO,
+  NinoDTO,
   FamiliaReenviarResponse,
   FamiliaSesion,
   FamiliasEstado,
@@ -271,8 +272,15 @@ export async function generateOnPhoto(
 export async function ask(
   personajeId: string,
   pregunta: string,
+  nombreNino?: string | null,
+  sexoNino?: string | null,
 ): Promise<AskResponse> {
-  const payload: AskRequest = { personaje_id: personajeId, pregunta };
+  const payload: AskRequest = {
+    personaje_id: personajeId,
+    pregunta,
+    nombre_nino: nombreNino ?? null,
+    sexo_nino: sexoNino ?? null,
+  };
   const response = await fetchBackend(
     "/api/ask",
     {
@@ -336,8 +344,15 @@ export async function askStream(
   pregunta: string,
   cb: StreamCallbacks,
   signal?: AbortSignal,
+  nombreNino?: string | null,
+  sexoNino?: string | null,
 ): Promise<void> {
-  const payload: AskRequest = { personaje_id: personajeId, pregunta };
+  const payload: AskRequest = {
+    personaje_id: personajeId,
+    pregunta,
+    nombre_nino: nombreNino ?? null,
+    sexo_nino: sexoNino ?? null,
+  };
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "text/event-stream",
@@ -985,7 +1000,7 @@ export async function familiaLogout(): Promise<void> {
  */
 export async function familiaActualizarPerfil(cambios: {
   nombre_familia?: string;
-  ninos?: string[];
+  ninos?: NinoDTO[];
 }): Promise<FamiliaDTO> {
   const response = await fetchBackend(
     "/api/familias/perfil",

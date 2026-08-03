@@ -32,7 +32,7 @@ import {
   getPersonajes,
   getUbicaciones,
 } from "./api/client";
-import type { FamiliaDTO, PersonajeDTO, UbicacionDTO } from "./api/types";
+import type { FamiliaDTO, NinoDTO, PersonajeDTO, UbicacionDTO } from "./api/types";
 import { useFlow } from "./state/useFlow";
 
 // Modo desarrollo: muestra el botón "Probar conexión" en el HUD (como el DEBUG
@@ -64,7 +64,7 @@ export default function App() {
   // undefined = comprobando todavía; null = sin sesión (mostrar login).
   const [familia, setFamilia] = useState<FamiliaDTO | null | undefined>(undefined);
   // Niño con perfil activo (multi-perfil, H9.2c). null = aún sin elegir.
-  const [ninoActivo, setNinoActivo] = useState<string | null>(null);
+  const [ninoActivo, setNinoActivo] = useState<NinoDTO | null>(null);
   // Catálogos cargados por API: null = cargando todavía.
   const [personajes, setPersonajes] = useState<PersonajeDTO[] | null>(null);
   const [ubicaciones, setUbicaciones] = useState<UbicacionDTO[] | null>(null);
@@ -106,22 +106,23 @@ export default function App() {
     if (familia) void cargarCatalogos();
   }, [familia, cargarCatalogos]);
 
-  // Reconcilia el niño activo con la familia: recupera el recordado si sigue existiendo,
-  // autoselecciona cuando hay uno solo, y lo limpia si ya no está en la lista.
+  // Reconcilia el niño activo con la familia: recupera el recordado (por nombre) si
+  // sigue existiendo, autoselecciona cuando hay uno solo, y lo limpia si ya no está.
   useEffect(() => {
     if (!familia) return;
     setNinoActivo((actual) => {
-      const guardado = actual ?? localStorage.getItem(NINO_KEY);
-      if (guardado && familia.ninos.includes(guardado)) return guardado;
+      const nombre = actual?.nombre ?? localStorage.getItem(NINO_KEY);
+      const encontrado = nombre ? familia.ninos.find((n) => n.nombre === nombre) : undefined;
+      if (encontrado) return encontrado;
       if (familia.ninos.length === 1) return familia.ninos[0];
       return null; // 0 niños, o varios sin selección válida (→ "¿quién juega?")
     });
   }, [familia]);
 
   /** Elige (o deselecciona) el niño que juega y lo recuerda en el dispositivo. */
-  function elegirNino(nino: string | null) {
+  function elegirNino(nino: NinoDTO | null) {
     setNinoActivo(nino);
-    guardarNinoActivo(nino);
+    guardarNinoActivo(nino?.nombre ?? null);
   }
 
   /** Al cerrar Admin, recargamos los catálogos (pudieron cambiar) y volvemos al flujo. */
@@ -178,7 +179,7 @@ export default function App() {
       <main className="holo-wrap">
         <Hud
           nombreFamilia={familia.nombre_familia}
-          ninoActivo={ninoActivo}
+          ninoActivo={ninoActivo?.nombre ?? null}
           onCambiarNino={familia.ninos.length > 1 ? () => elegirNino(null) : undefined}
           onAbrirConfig={() => setMostrarConfig(true)}
           onAbrirAdmin={() => setMostrarAdmin(true)}
@@ -230,6 +231,7 @@ export default function App() {
             key={[...personajes.map((p) => p.id), "|", ...ubicaciones.map((u) => u.id)].join(",")}
             personajes={personajes}
             ubicaciones={ubicaciones}
+            ninoActivo={ninoActivo}
           />
         )}
 
@@ -248,9 +250,11 @@ export default function App() {
 function Asistente({
   personajes,
   ubicaciones,
+  ninoActivo,
 }: {
   personajes: PersonajeDTO[];
   ubicaciones: UbicacionDTO[];
+  ninoActivo: NinoDTO | null;
 }) {
   const flow = useFlow(personajes, ubicaciones);
   const { estado, ubicacionLista, nombreLugar } = flow;
@@ -295,6 +299,8 @@ function Asistente({
           personajeNombre={personaje.nombre}
           personajeEmoji={personaje.emoji ?? "🎭"}
           nombreLugar={nombreLugar()}
+          nombreNino={ninoActivo?.nombre ?? null}
+          sexoNino={ninoActivo?.sexo ?? null}
           onReintentar={() =>
             estado.ubicacionId &&
             flow.generarEscena(estado.personajeId, estado.ubicacionId, estado.fotoFile)

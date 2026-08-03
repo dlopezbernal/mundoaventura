@@ -121,19 +121,29 @@ def dividir_frases(buffer: str) -> tuple[list[str], str]:
     return frases, buffer[pos:]
 
 
-def responder(personaje_id: str, pregunta: str) -> RespuestaChat:
+def responder(
+    personaje_id: str,
+    pregunta: str,
+    nombre_nino: str | None = None,
+    sexo_nino: str | None = None,
+) -> RespuestaChat:
     """Respuesta completa del chat (de una vez): texto (RAG) + voz (TTS si tiene).
 
     Propaga los ValueError de `rag_service.responder` (personaje inexistente o falta
     de token) para que el router los mapee a 400. El streaming equivalente es
-    `responder_streaming`.
+    `responder_streaming`. `nombre_nino`/`sexo_nino` (opcionales, H9.2c) personalizan.
     """
-    resultado = rag_service.responder(personaje_id, pregunta)
+    resultado = rag_service.responder(personaje_id, pregunta, nombre_nino, sexo_nino)
     audio = _sintetizar_voz(personaje_id, resultado["respuesta"])
     return {**resultado, "audio_base64": audio}
 
 
-def responder_streaming(personaje_id: str, pregunta: str) -> Iterator[dict]:
+def responder_streaming(
+    personaje_id: str,
+    pregunta: str,
+    nombre_nino: str | None = None,
+    sexo_nino: str | None = None,
+) -> Iterator[dict]:
     """Orquesta el chat en STREAMING (Hito 8): texto por trozos + voz POR FRASES.
 
     Emite dicts con `tipo` (los que consume el endpoint SSE):
@@ -149,7 +159,7 @@ def responder_streaming(personaje_id: str, pregunta: str) -> Iterator[dict]:
     voz_id = _voz_id(personaje_id)
     buffer = ""
     partes: list[str] = []
-    for evento in rag_service.responder_streaming(personaje_id, pregunta):
+    for evento in rag_service.responder_streaming(personaje_id, pregunta, nombre_nino, sexo_nino):
         if evento["tipo"] == "meta":
             yield {"tipo": "fuentes", "fuentes": evento["fuentes"], "origen": evento["origen"]}
             continue

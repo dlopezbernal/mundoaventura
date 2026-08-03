@@ -1053,6 +1053,16 @@ export interface components {
              * @description La pregunta del niño, en texto.
              */
             pregunta: string;
+            /**
+             * Nombre Nino
+             * @description Nombre del niño que juega (para personalizar).
+             */
+            nombre_nino?: string | null;
+            /**
+             * Sexo Nino
+             * @description Sexo del niño: 'chico', 'chica' o vacío.
+             */
+            sexo_nino?: string | null;
         };
         /**
          * AskResponse
@@ -1360,7 +1370,7 @@ export interface components {
              * Ninos
              * @default []
              */
-            ninos: string[];
+            ninos: components["schemas"]["NinoDTO"][];
             /**
              * Tiene Pin
              * @default false
@@ -1385,7 +1395,7 @@ export interface components {
         };
         /**
          * FamiliaPerfilUpdate
-         * @description Edición del perfil de la familia (nombre + nombres de los niños).
+         * @description Edición del perfil de la familia (nombre + niños con nombre y sexo).
          */
         FamiliaPerfilUpdate: {
             /**
@@ -1395,9 +1405,9 @@ export interface components {
             nombre_familia?: string | null;
             /**
              * Ninos
-             * @description Lista de nombres de los niños.
+             * @description Lista de niños (nombre+sexo).
              */
-            ninos?: string[] | null;
+            ninos?: components["schemas"]["NinoInput"][] | null;
         };
         /**
          * FamiliaPinSet
@@ -1610,6 +1620,36 @@ export interface components {
             resumen: components["schemas"]["ResumenImport"];
             /** Backup */
             backup?: string | null;
+        };
+        /**
+         * NinoDTO
+         * @description Un niño del perfil de familia: nombre + sexo (para avatar y género gramatical).
+         */
+        NinoDTO: {
+            /** Nombre */
+            nombre: string;
+            /**
+             * Sexo
+             * @default
+             */
+            sexo: string;
+        };
+        /**
+         * NinoInput
+         * @description Un niño en la edición del perfil: nombre + sexo (chico/chica/'').
+         */
+        NinoInput: {
+            /**
+             * Nombre
+             * @description Nombre del niño.
+             */
+            nombre: string;
+            /**
+             * Sexo
+             * @description Sexo: 'chico', 'chica' o '' (sin especificar).
+             * @default
+             */
+            sexo: string;
         };
         /**
          * OkResponse

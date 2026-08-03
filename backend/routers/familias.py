@@ -126,8 +126,9 @@ def logout(x_family_token: str | None = Header(default=None)):
 @router.put("/perfil", response_model=FamiliaDTO)
 def actualizar_perfil(req: FamiliaPerfilUpdate, familia: dict = _familia):
     """Edita el nombre de la familia y/o la lista de niños. 400 si algo no es válido."""
+    ninos = [n.model_dump() for n in req.ninos] if req.ninos is not None else None
     try:
-        return familias_service.actualizar_perfil(familia["id"], req.nombre_familia, req.ninos)
+        return familias_service.actualizar_perfil(familia["id"], req.nombre_familia, ninos)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 

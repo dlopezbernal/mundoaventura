@@ -39,6 +39,7 @@ logger = logging.getLogger(__name__)
 # Multi-perfil (Hito 9.2c): límites de la lista de niños y forma del PIN de familia.
 _MAX_NINOS = 8
 _MAX_LARGO_NOMBRE = 30
+_SEXOS_VALIDOS = {"chico", "chica"}  # además de '' (sin especificar)
 _RE_PIN_FAMILIA = re.compile(r"^\d{4}$")  # exactamente 4 dígitos
 
 # Vida de una sesión de familia (días). Larga a propósito: el sentido es no volver a
@@ -113,15 +114,6 @@ def _validar_signup(email: str, password: str, nombre_familia: str) -> None:
         raise ValueError("Escribe un nombre de familia.")
 
 
-def _ninos_lista(fam: Familia) -> list[str]:
-    """Decodifica la lista de nombres de niños (JSON) de la fila; [] si está mal formada."""
-    try:
-        datos = json.loads(fam.ninos or "[]")
-        return [str(n) for n in datos] if isinstance(datos, list) else []
-    except (ValueError, TypeError):
-        return []
-
-
 def _sanear_nombre_nino(nombre: str) -> str:
     """Normaliza un nombre de niño: recorta, colapsa espacios y limita la longitud.
 
@@ -130,6 +122,38 @@ def _sanear_nombre_nino(nombre: str) -> str:
     el prompt vive en el servicio del chat)."""
     limpio = " ".join((nombre or "").split())
     return limpio[:_MAX_LARGO_NOMBRE]
+
+
+def _sanear_nino(entry: object) -> dict | None:
+    """Normaliza un niño a ``{"nombre", "sexo"}`` seguro, o None si el nombre queda vacío.
+
+    Acepta tanto el formato NUEVO (dict con nombre+sexo) como el ANTIGUO (una cadena
+    con solo el nombre, de las familias creadas antes de añadir el sexo): así no hace
+    falta migrar la BBDD, la lectura normaliza al vuelo. `sexo` se limita a los valores
+    conocidos ('chico'/'chica'); cualquier otra cosa queda como '' (sin especificar).
+    """
+    if isinstance(entry, str):
+        nombre, sexo = entry, ""
+    elif isinstance(entry, dict):
+        nombre = str(entry.get("nombre", ""))
+        sexo = str(entry.get("sexo", ""))
+    else:
+        return None
+    nombre = _sanear_nombre_nino(nombre)
+    if not nombre:
+        return None
+    return {"nombre": nombre, "sexo": sexo if sexo in _SEXOS_VALIDOS else ""}
+
+
+def _ninos_lista(fam: Familia) -> list[dict]:
+    """Decodifica la lista de niños (JSON) de la fila como dicts nombre+sexo; [] si falla."""
+    try:
+        datos = json.loads(fam.ninos or "[]")
+    except (ValueError, TypeError):
+        return []
+    if not isinstance(datos, list):
+        return []
+    return [nino for e in datos if (nino := _sanear_nino(e)) is not None]
 
 
 def _dto(fam: Familia) -> dict:
@@ -396,11 +420,12 @@ def hay_familias() -> bool:
 # Perfil de familia: nombre + niños (multi-perfil, Hito 9.2c)
 # ---------------------------------------------------------------------------
 def actualizar_perfil(
-    familia_id: str, nombre_familia: str | None = None, ninos: list[str] | None = None
+    familia_id: str, nombre_familia: str | None = None, ninos: list[dict] | None = None
 ) -> dict:
-    """Edita el nombre de la familia y/o la lista de niños. Devuelve el perfil actualizado.
+    """Edita el nombre de la familia y/o la lista de niños (cada uno nombre+sexo).
 
-    Lanza ValueError (→ 400) si el nombre queda vacío o la lista de niños no es válida.
+    Devuelve el perfil actualizado. Lanza ValueError (→ 400) si el nombre queda vacío o
+    la lista de niños supera el tope.
     """
     db.init_db()
     with db.get_session() as sesion:
@@ -413,8 +438,7 @@ def actualizar_perfil(
                 raise ValueError("El nombre de familia no puede estar vacío.")
             fam.nombre_familia = limpio
         if ninos is not None:
-            limpios = [_sanear_nombre_nino(n) for n in ninos]
-            limpios = [n for n in limpios if n]  # descarta vacíos
+            limpios = [nino for e in ninos if (nino := _sanear_nino(e)) is not None]
             if len(limpios) > _MAX_NINOS:
                 raise ValueError(f"Como mucho {_MAX_NINOS} niños por familia.")
             fam.ninos = json.dumps(limpios, ensure_ascii=False)

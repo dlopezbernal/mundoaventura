@@ -11,7 +11,8 @@
 
 import { useState } from "react";
 import { BackendError, familiaActualizarPerfil, familiaSetPin } from "../../api/client";
-import type { FamiliaDTO } from "../../api/types";
+import type { FamiliaDTO, NinoDTO } from "../../api/types";
+import { avatarNino } from "../avatar";
 import styles from "../Settings.module.css";
 
 interface Props {
@@ -22,8 +23,9 @@ interface Props {
 
 export default function PerfilFamilia({ familia, onActualizado }: Props) {
   const [nombre, setNombre] = useState(familia.nombre_familia);
-  const [ninos, setNinos] = useState<string[]>(familia.ninos);
+  const [ninos, setNinos] = useState<NinoDTO[]>(familia.ninos);
   const [nuevoNino, setNuevoNino] = useState("");
+  const [nuevoSexo, setNuevoSexo] = useState<string>("");
   const [tienePin, setTienePin] = useState(familia.tiene_pin);
   const [pinActual, setPinActual] = useState("");
   const [pinNuevo, setPinNuevo] = useState("");
@@ -33,8 +35,11 @@ export default function PerfilFamilia({ familia, onActualizado }: Props) {
 
   function anadirNino() {
     const limpio = nuevoNino.trim();
-    if (limpio && !ninos.includes(limpio)) setNinos([...ninos, limpio]);
+    if (limpio && !ninos.some((n) => n.nombre === limpio)) {
+      setNinos([...ninos, { nombre: limpio, sexo: nuevoSexo }]);
+    }
     setNuevoNino("");
+    setNuevoSexo("");
   }
 
   async function guardarPerfil() {
@@ -95,13 +100,15 @@ export default function PerfilFamilia({ familia, onActualizado }: Props) {
         {ninos.length > 0 ? (
           <ul className={styles.ninosLista}>
             {ninos.map((nino) => (
-              <li key={nino} className={styles.ninoItem}>
-                <span>🧒 {nino}</span>
+              <li key={nino.nombre} className={styles.ninoItem}>
+                <span>
+                  {avatarNino(nino.sexo)} {nino.nombre}
+                </span>
                 <button
                   type="button"
                   className={styles.ninoQuitar}
-                  onClick={() => setNinos(ninos.filter((n) => n !== nino))}
-                  aria-label={`Quitar a ${nino}`}
+                  onClick={() => setNinos(ninos.filter((n) => n.nombre !== nino.nombre))}
+                  aria-label={`Quitar a ${nino.nombre}`}
                 >
                   ✕
                 </button>
@@ -127,6 +134,16 @@ export default function PerfilFamilia({ familia, onActualizado }: Props) {
               }
             }}
           />
+          <select
+            className={styles.input}
+            value={nuevoSexo}
+            aria-label="Sexo del niño"
+            onChange={(e) => setNuevoSexo(e.target.value)}
+          >
+            <option value="">🧒 Sin especificar</option>
+            <option value="chico">👦 Chico</option>
+            <option value="chica">👧 Chica</option>
+          </select>
           <button type="button" className={styles.testBtn} onClick={anadirNino} disabled={!nuevoNino.trim()}>
             ＋ Añadir
           </button>

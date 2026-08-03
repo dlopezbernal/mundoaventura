@@ -8,13 +8,15 @@
  * entra como familia. La elección se recuerda en el dispositivo (App).
  */
 
+import type { NinoDTO } from "../api/types";
+import { avatarNino } from "./avatar";
 import styles from "./Settings.module.css";
 
 interface Props {
   nombreFamilia: string;
-  ninos: string[];
-  /** Se llama con el nombre del niño elegido. */
-  onElegir: (nino: string) => void;
+  ninos: NinoDTO[];
+  /** Se llama con el niño elegido. */
+  onElegir: (nino: NinoDTO) => void;
   /** Abre la Configuración de la familia (para añadir/editar los niños). */
   onGestionar: () => void;
 }
@@ -32,15 +34,15 @@ export default function QuienJuega({ nombreFamilia, ninos, onElegir, onGestionar
         <div className={styles.perfilLista}>
           {ninos.map((nino) => (
             <button
-              key={nino}
+              key={nino.nombre}
               type="button"
               className={styles.perfilBtn}
               onClick={() => onElegir(nino)}
             >
               <span className={styles.perfilEmoji} aria-hidden="true">
-                🧒
+                {avatarNino(nino.sexo)}
               </span>
-              <span className={styles.perfilNombre}>{nino}</span>
+              <span className={styles.perfilNombre}>{nino.nombre}</span>
             </button>
           ))}
         </div>

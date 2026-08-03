@@ -26,6 +26,7 @@ Decisiones para mantenerlo simple y sin GPU local:
 """
 
 import logging
+import re
 from collections.abc import Iterator
 from typing import TypedDict
 
@@ -67,6 +68,50 @@ class RespuestaRAG(TypedDict):
 
 # Icono por origen, solo para la traza de consola en modo DEBUG.
 _ICONO_ORIGEN = {"RAG": "🟢", "GENERAL": "🟡", "SIN_INFO": "🔴"}
+
+# Personalización con el nombre del niño (Hito 9.2c). El nombre viene del cliente, así
+# que se SANEA con lista blanca antes de meterlo en el prompt: solo letras (incluidas
+# acentuadas), espacios, guion y apóstrofo, y un tope de longitud. Así un "nombre" con
+# instrucciones ("ignora tus reglas…") se queda en un puñado de letras inofensivas.
+_MAX_NOMBRE_NINO = 30
+_RE_NOMBRE_NINO_PROHIBIDO = re.compile(r"[^A-Za-zÀ-ÿ' \-]")
+
+
+def _sanear_nombre_nino(nombre: str | None) -> str | None:
+    """Reduce el nombre del niño a un nombre de pila seguro para el prompt, o None."""
+    if not nombre:
+        return None
+    limpio = _RE_NOMBRE_NINO_PROHIBIDO.sub(" ", nombre)
+    limpio = " ".join(limpio.split())[:_MAX_NOMBRE_NINO].strip()
+    return limpio or None
+
+
+# Sexo del niño → término inglés + género gramatical español para el prompt.
+_SEXO_NINO = {
+    "chico": ("boy", "masculine"),
+    "chica": ("girl", "feminine"),
+}
+
+
+def _instruccion_nombre_nino(nombre: str, sexo: str | None = None) -> str:
+    """Frase (en inglés, como el resto de instrucciones) para dirigirse al niño.
+
+    Incluye el nombre siempre y, si se conoce el sexo, pide usar el GÉNERO GRAMATICAL
+    correcto en español (el niño lee la respuesta en español). `sexo` ya viene saneado.
+    """
+    frase = (
+        f'\n\nThe child you are talking to is called "{nombre}". '
+        "Use their name from time to time to make it personal, warmly and naturally — "
+        "but do not overuse it, and never invent a different name."
+    )
+    genero = _SEXO_NINO.get(sexo or "")
+    if genero:
+        termino, gramatical = genero
+        frase += (
+            f" The child is a {termino}; when you address or describe them in Spanish, "
+            f"use the correct {gramatical} grammatical gender."
+        )
+    return frase
 
 
 def _trazar_origen(
@@ -371,13 +416,21 @@ def _decidir_origen(
     return _evaluar_relevancia(contexto, pregunta), MetodoDecision.LLM, mejor_dist, None
 
 
-def _preparar(personaje_id: str, pregunta: str) -> dict:
+def _preparar(
+    personaje_id: str,
+    pregunta: str,
+    nombre_nino: str | None = None,
+    sexo_nino: str | None = None,
+) -> dict:
     """Fase COMÚN de responder/responder_streaming (todo menos generar el texto final).
 
     Valida, traduce (ES→EN), recupera, decide el origen (Evaluator+Router) y construye
     el prompt (o el texto fijo de SIN_INFO). NO llama al LLM de generación: eso lo hace
     quien llame, de golpe (`responder`) o en streaming (`responder_streaming`). Así la
     lógica de decisión vive en un solo sitio y las dos salidas no divergen.
+
+    `nombre_nino`/`sexo_nino` (opcionales, multi-perfil H9.2c) personalizan el prompt para
+    que el personaje se dirija al niño por su nombre y con el género correcto; se SANEAN.
 
     Devuelve un dict con: origen/metodo/distancia/rerank_score/pregunta_traducida/
     fuentes/nombre y, según el camino, (system, user, etiqueta) para generar o
@@ -409,6 +462,9 @@ def _preparar(personaje_id: str, pregunta: str) -> dict:
     # 2) EVALUATOR + ROUTER: ¿son relevantes las fichas? (rerank / umbral / llm / híbrido)
     es_rag, metodo, distancia, score = _decidir_origen(contexto, distancias, scores, pregunta_en)
 
+    nino = _sanear_nombre_nino(nombre_nino)  # nombre de pila seguro para el prompt (o None)
+    sexo = sexo_nino if sexo_nino in _SEXO_NINO else None  # solo 'chico'/'chica' cuentan
+
     prep: dict = {
         "personaje_id": personaje_id,
         "pregunta": pregunta,
@@ -427,6 +483,8 @@ def _preparar(personaje_id: str, pregunta: str) -> dict:
         # --- Camino RAG: respuesta FUNDAMENTADA solo en las fichas ---
         prep["origen"] = Origen.RAG
         prep["system"], prep["user"] = _construir_prompt(nombre, contexto, pregunta_en)
+        if nino:
+            prep["system"] += _instruccion_nombre_nino(nino, sexo)
         prep["etiqueta"] = "RAG"
         # MOSTRAR_FUENTES (flag propio, ya no atado a DEBUG) decide si el niño VE el
         # desplegable "¿De dónde lo he sacado?" (Chat.tsx lo pinta si `fuentes` no está
@@ -440,6 +498,8 @@ def _preparar(personaje_id: str, pregunta: str) -> dict:
         # --- Camino GENERAL: las fichas no sirven; el personaje tira de su conocimiento.
         prep["origen"] = Origen.GENERAL
         prep["system"], prep["user"] = _construir_prompt_general(nombre, pregunta_en)
+        if nino:
+            prep["system"] += _instruccion_nombre_nino(nino, sexo)
         prep["etiqueta"] = "GENERAL"
         prep["fuentes"] = []
     else:
@@ -469,16 +529,22 @@ def _resultado(prep: dict, respuesta: str) -> RespuestaRAG:
     }
 
 
-def responder(personaje_id: str, pregunta: str) -> RespuestaRAG:
+def responder(
+    personaje_id: str,
+    pregunta: str,
+    nombre_nino: str | None = None,
+    sexo_nino: str | None = None,
+) -> RespuestaRAG:
     """Genera la respuesta de TEXTO del personaje (RAG), de una vez. SIN voz (Hito 5).
 
     La síntesis de voz (TTS) NO vive aquí: este servicio recupera y genera TEXTO. El
     orquestador `chat_service` añade el audio. `responder_streaming` es la variante que
     cede el texto por trozos (Hito 8); ambas comparten `_preparar` para no divergir.
 
-    Lanza ValueError (→ 400) si el personaje no existe o falta el token de Replicate.
+    `nombre_nino`/`sexo_nino` (opcionales, H9.2c) personalizan el prompt con el nombre y
+    el género del niño. Lanza ValueError (→ 400) si el personaje no existe o falta token.
     """
-    prep = _preparar(personaje_id, pregunta)
+    prep = _preparar(personaje_id, pregunta, nombre_nino, sexo_nino)
     if prep["origen"] == Origen.SIN_INFO:
         respuesta = prep["respuesta_fija"]
     else:
@@ -496,7 +562,12 @@ def responder(personaje_id: str, pregunta: str) -> RespuestaRAG:
     return _resultado(prep, respuesta)
 
 
-def responder_streaming(personaje_id: str, pregunta: str) -> Iterator[dict]:
+def responder_streaming(
+    personaje_id: str,
+    pregunta: str,
+    nombre_nino: str | None = None,
+    sexo_nino: str | None = None,
+) -> Iterator[dict]:
     """Variante en STREAMING de `responder`: cede el TEXTO por trozos (Hito 8).
 
     Emite dicts con `tipo`:
@@ -505,7 +576,7 @@ def responder_streaming(personaje_id: str, pregunta: str) -> Iterator[dict]:
     NO añade voz: el TTS por frases lo orquesta `chat_service` sobre estos eventos
     (separación de capas). El endpoint JSON `responder` sigue intacto.
     """
-    prep = _preparar(personaje_id, pregunta)
+    prep = _preparar(personaje_id, pregunta, nombre_nino, sexo_nino)
     yield {
         "tipo": "meta",
         "personaje_id": prep["personaje_id"],
