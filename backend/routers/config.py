@@ -18,6 +18,7 @@ from fastapi import APIRouter, HTTPException
 
 from backend import config as cfg
 from backend.schemas.config import ConfigUpdateRequest
+from backend.schemas.respuestas import ConfigResponse, ConfigSaveResult
 from backend.services import settings_service
 
 router = APIRouter(prefix="/api", tags=["Configuración"])
@@ -50,7 +51,7 @@ def _estado_secretos() -> list[dict]:
     ]
 
 
-@router.get("/config")
+@router.get("/config", response_model=ConfigResponse)
 def obtener_config():
     """Devuelve los ajustes vigentes (con metadatos) y el estado de los secretos."""
     return {
@@ -59,7 +60,7 @@ def obtener_config():
     }
 
 
-@router.put("/config")
+@router.put("/config", response_model=ConfigSaveResult)
 def guardar_config(req: ConfigUpdateRequest):
     """Guarda ajustes y los aplica en caliente. Lanza 400 si algún valor es inválido."""
     try:

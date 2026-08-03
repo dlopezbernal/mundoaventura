@@ -15,6 +15,11 @@ configuración. El control de acceso admin a la edición llega en el Hito 7.
 
 from fastapi import APIRouter, Depends, HTTPException
 
+from backend.schemas.respuestas import (
+    OkResponse,
+    UbicacionesResponse,
+    UbicacionMutacion,
+)
 from backend.schemas.ubicaciones import UbicacionCrear, UbicacionEditar
 from backend.services import admin_service, ubicaciones_service
 
@@ -24,13 +29,13 @@ router = APIRouter(prefix="/api", tags=["Configuración · Ubicaciones"])
 _admin = [Depends(admin_service.requiere_admin)]
 
 
-@router.get("/ubicaciones")
+@router.get("/ubicaciones", response_model=UbicacionesResponse)
 def listar_ubicaciones(todos: bool = False):
     """Catálogo de ubicaciones. Por defecto solo las activas; `?todos=1` incluye inactivas."""
     return {"ubicaciones": ubicaciones_service.listar(incluir_inactivos=todos)}
 
 
-@router.post("/ubicaciones", dependencies=_admin)
+@router.post("/ubicaciones", dependencies=_admin, response_model=UbicacionMutacion)
 def crear_ubicacion(req: UbicacionCrear):
     """Crea una ubicación nueva. 400 si algo es inválido."""
     try:
@@ -40,7 +45,7 @@ def crear_ubicacion(req: UbicacionCrear):
     return {"ok": True, "ubicacion": ubicacion}
 
 
-@router.put("/ubicaciones/{ubicacion_id}", dependencies=_admin)
+@router.put("/ubicaciones/{ubicacion_id}", dependencies=_admin, response_model=UbicacionMutacion)
 def editar_ubicacion(ubicacion_id: str, req: UbicacionEditar):
     """Actualiza los campos indicados de una ubicación (el id no cambia). 400 si inválido."""
     try:
@@ -50,7 +55,7 @@ def editar_ubicacion(ubicacion_id: str, req: UbicacionEditar):
     return {"ok": True, "ubicacion": ubicacion}
 
 
-@router.delete("/ubicaciones/{ubicacion_id}", dependencies=_admin)
+@router.delete("/ubicaciones/{ubicacion_id}", dependencies=_admin, response_model=OkResponse)
 def borrar_ubicacion(ubicacion_id: str):
     """Borra una ubicación del catálogo. 400 si no existe."""
     try:

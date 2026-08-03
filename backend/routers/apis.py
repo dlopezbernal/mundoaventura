@@ -17,18 +17,24 @@ bloque desde main.py).
 from fastapi import APIRouter, HTTPException
 
 from backend.schemas.apis import ApisUpdateRequest
+from backend.schemas.respuestas import (
+    ApiRevealResponse,
+    ApisGuardarResponse,
+    ApisResponse,
+    ApiTestResult,
+)
 from backend.services import secrets_service
 
 router = APIRouter(prefix="/api/apis", tags=["Configuración · APIs"])
 
 
-@router.get("")
+@router.get("", response_model=ApisResponse)
 def listar_apis():
     """Estado de los 3 proveedores (configurado + clave enmascarada)."""
     return {"proveedores": secrets_service.estado()}
 
 
-@router.put("")
+@router.put("", response_model=ApisGuardarResponse)
 def guardar_apis(req: ApisUpdateRequest):
     """Guarda claves en el .env y las aplica en caliente. 400 si alguna es inválida."""
     try:
@@ -38,7 +44,7 @@ def guardar_apis(req: ApisUpdateRequest):
     return {"ok": True, "proveedores": proveedores}
 
 
-@router.post("/{proveedor}/test")
+@router.post("/{proveedor}/test", response_model=ApiTestResult)
 def probar_api(proveedor: str):
     """Prueba de conexión de un proveedor: {ok, mensaje}."""
     try:
@@ -47,7 +53,7 @@ def probar_api(proveedor: str):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.post("/{proveedor}/reveal")
+@router.post("/{proveedor}/reveal", response_model=ApiRevealResponse)
 def revelar_api(proveedor: str):
     """Devuelve la clave COMPLETA de un proveedor (para el icono del ojo)."""
     try:

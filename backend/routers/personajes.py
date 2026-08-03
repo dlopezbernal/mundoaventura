@@ -23,6 +23,13 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from backend import config
 from backend.schemas.personajes import PersonajeCrear, PersonajeEditar, VozProbar
+from backend.schemas.respuestas import (
+    AudioResponse,
+    OkResponse,
+    PersonajeMutacion,
+    PersonajesInfo,
+    VocesResponse,
+)
 from backend.services import admin_service, personajes_service, voice_service
 
 router = APIRouter(prefix="/api", tags=["Configuración · Personajes"])
@@ -32,7 +39,7 @@ router = APIRouter(prefix="/api", tags=["Configuración · Personajes"])
 _admin = [Depends(admin_service.requiere_admin)]
 
 
-@router.get("/personajes")
+@router.get("/personajes", response_model=PersonajesInfo)
 def listar_personajes(todos: bool = False):
     """Catálogo de personajes. Por defecto solo los activos; `?todos=1` incluye inactivos.
 
@@ -45,7 +52,7 @@ def listar_personajes(todos: bool = False):
     }
 
 
-@router.post("/personajes", dependencies=_admin)
+@router.post("/personajes", dependencies=_admin, response_model=PersonajeMutacion)
 def crear_personaje(req: PersonajeCrear):
     """Crea un personaje nuevo y todas sus piezas del invariante. 400 si algo es inválido."""
     try:
@@ -55,7 +62,7 @@ def crear_personaje(req: PersonajeCrear):
     return {"ok": True, "personaje": personaje}
 
 
-@router.put("/personajes/{personaje_id}", dependencies=_admin)
+@router.put("/personajes/{personaje_id}", dependencies=_admin, response_model=PersonajeMutacion)
 def editar_personaje(personaje_id: str, req: PersonajeEditar):
     """Actualiza los campos indicados de un personaje (el id no cambia). 400 si inválido."""
     try:
@@ -67,7 +74,7 @@ def editar_personaje(personaje_id: str, req: PersonajeEditar):
     return {"ok": True, "personaje": personaje}
 
 
-@router.delete("/personajes/{personaje_id}", dependencies=_admin)
+@router.delete("/personajes/{personaje_id}", dependencies=_admin, response_model=OkResponse)
 def borrar_personaje(personaje_id: str):
     """Borra un personaje del catálogo. 400 si no existe."""
     try:
@@ -77,13 +84,13 @@ def borrar_personaje(personaje_id: str):
     return {"ok": True}
 
 
-@router.get("/voices", dependencies=_admin)
+@router.get("/voices", dependencies=_admin, response_model=VocesResponse)
 def listar_voces():
     """Voces de ElevenLabs para el desplegable: {disponible, voces, mensaje}."""
     return voice_service.listar_voces()
 
 
-@router.post("/voices/probar", dependencies=_admin)
+@router.post("/voices/probar", dependencies=_admin, response_model=AudioResponse)
 def probar_voz(req: VozProbar):
     """Sintetiza la frase de prueba con `voz_id` y la devuelve en base64 (mp3)."""
     try:

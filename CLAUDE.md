@@ -16,7 +16,7 @@ La gestión de dependencias del backend usa **`uv`** (Hito 1): `pyproject.toml` 
 # Configuración inicial (Windows PowerShell)
 uv sync                              # crea .venv e instala EXACTAMENTE lo del uv.lock (backend + herramientas dev)
 Copy-Item .env.example .env          # luego rellena REPLICATE_API_TOKEN, DEEPL_API_KEY y ELEVENLABS_API_KEY
-cd frontend-react; npm install; cd ..   # dependencias del frontend (Node 20+), una sola vez
+cd frontend-react; npm install; cd ..   # dependencias del frontend (Node 24+), una sola vez
 
 # Arrancar backend + frontend a la vez (Windows), cada uno en su ventana
 .\scripts\dev.ps1                    # o -Solo back / -Solo front
@@ -53,6 +53,8 @@ Hay una **suite de tests con `pytest`** en `tests/`: las funciones puras de los 
 ## Arquitectura
 
 **Dos procesos independientes.** `backend/` (FastAPI) y `frontend-react/` (SPA React) corren por separado y solo se comunican por HTTP. La única puerta de entrada del frontend al backend es `frontend-react/src/api/client.ts`; la URL del backend viene de `VITE_BACKEND_URL` en `frontend-react/.env` (en desarrollo, el proxy de Vite redirige `/api` y `/health` al backend local, así que no hace falta configurar nada).
+
+**Contrato de tipos AUTOGENERADO (backend = fuente de verdad).** Todos los endpoints declaran un `response_model` Pydantic (los "planos" —`PersonajeDTO`, `UbicacionDTO`, `DocumentoDTO`…— viven en `backend/schemas/respuestas.py`, y las respuestas envoltorio los componen). `frontend-react/src/api/schema.d.ts` se **genera** del esquema OpenAPI con `uv run python -m scripts.gen_types` (usa `npx openapi-typescript`; el `.d.ts` se versiona, la herramienta no es dependencia de `package.json`). `frontend-react/src/api/types.ts` ya **no se escribe a mano**: solo re-exporta esos tipos con nombres estables (`PersonajeDTO = Schemas["PersonajeDTO"]`, etc.), así los componentes no cambian sus imports. Al añadir/cambiar un endpoint con `response_model`, **regenera** y añade el alias.
 
 **Capas del backend** — routers → services → config. Los endpoints de `backend/routers/` se mantienen finos: validan, llaman a un service, y mapean `ValueError` → HTTP 400 / otras excepciones → 500. Toda la lógica real vive en `backend/services/`. Los parámetros ajustables **ya no se leen como constantes congeladas de `config.py`**: pasan por `backend/services/settings_service.py`, que devuelve el valor *vigente* desde **SQLite** (con caché en memoria, invalidada al guardar) y **cae al valor por defecto de `config.py`** cuando la BBDD no tiene ningún override. Así, un cambio hecho desde el menú de configuración surte efecto en la **siguiente petición sin reiniciar**, y con la BBDD vacía la app se comporta exactamente como antes. `config.py` sigue guardando los valores por defecto (y leyendo los secretos del `.env`); el menú de configuración sin código está documentado en el README ("Decisiones de diseño") y en ARQUITECTURA.md.
 

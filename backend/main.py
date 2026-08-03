@@ -30,6 +30,7 @@ from backend.routers import conversacion, errores, generation, transcription
 from backend.routers import documentos as documentos_router
 from backend.routers import personajes as personajes_router
 from backend.routers import ubicaciones as ubicaciones_router
+from backend.schemas.respuestas import HealthResponse, RootResponse
 from backend.services import (
     acceso_service,
     admin_service,
@@ -183,7 +184,7 @@ app.include_router(ubicaciones_router.router)
 # ---------------------------------------------------------------------------
 # 4) Endpoints básicos de salud / información
 # ---------------------------------------------------------------------------
-@app.get("/", tags=["Info"])
+@app.get("/", tags=["Info"], response_model=RootResponse)
 def root():
     """Mensaje de bienvenida. Útil para comprobar que el server responde."""
     return {
@@ -196,7 +197,7 @@ def root():
     }
 
 
-@app.get("/health", tags=["Info"])
+@app.get("/health", tags=["Info"], response_model=HealthResponse)
 def health():
     """Comprobación de estado: token de Replicate, modelo, y conexión con DeepL.
 

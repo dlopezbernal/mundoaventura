@@ -250,8 +250,8 @@ function Control({ meta, valor, onChange }: Omit<CampoProps, "modificado">) {
         type="number"
         className={styles.input}
         value={String(valor)}
-        min={meta.min}
-        max={meta.max}
+        min={meta.min ?? undefined}
+        max={meta.max ?? undefined}
         step={paso}
         onChange={(e) => {
           const n = meta.tipo === "int" ? parseInt(e.target.value, 10) : parseFloat(e.target.value);
