@@ -10,7 +10,12 @@
  */
 
 import { useState } from "react";
-import { BackendError, familiaActualizarPerfil, familiaSetPin } from "../../api/client";
+import {
+  BackendError,
+  familiaActualizarPerfil,
+  familiaEliminarCuenta,
+  familiaSetPin,
+} from "../../api/client";
 import type { FamiliaDTO, NinoDTO } from "../../api/types";
 import { avatarNino } from "../avatar";
 import styles from "../Settings.module.css";
@@ -19,9 +24,11 @@ interface Props {
   familia: FamiliaDTO;
   /** Se llama con la familia actualizada, para que App refresque su estado. */
   onActualizado: (fam: FamiliaDTO) => void;
+  /** Se llama tras eliminar la cuenta (la sesión ya no existe → volver al login). */
+  onEliminada: () => void;
 }
 
-export default function PerfilFamilia({ familia, onActualizado }: Props) {
+export default function PerfilFamilia({ familia, onActualizado, onEliminada }: Props) {
   const [nombre, setNombre] = useState(familia.nombre_familia);
   const [ninos, setNinos] = useState<NinoDTO[]>(familia.ninos);
   const [nuevoNino, setNuevoNino] = useState("");
@@ -54,6 +61,25 @@ export default function PerfilFamilia({ familia, onActualizado }: Props) {
     } catch (exc) {
       setError(exc instanceof BackendError ? exc.message : String(exc));
     } finally {
+      setOcupado(false);
+    }
+  }
+
+  async function eliminarCuenta() {
+    if (
+      !window.confirm(
+        `¿Eliminar la cuenta de la familia "${familia.nombre_familia}"? Se borrarán la cuenta, ` +
+          "los perfiles de los niños y las sesiones. Esta acción no se puede deshacer.",
+      )
+    )
+      return;
+    setError(null);
+    setOcupado(true);
+    try {
+      await familiaEliminarCuenta();
+      onEliminada();
+    } catch (exc) {
+      setError(exc instanceof BackendError ? exc.message : String(exc));
       setOcupado(false);
     }
   }
@@ -202,6 +228,25 @@ export default function PerfilFamilia({ familia, onActualizado }: Props) {
             disabled={ocupado || pinNuevo.length !== 4 || (tienePin && pinActual.length !== 4)}
           >
             {tienePin ? "Cambiar PIN" : "Crear PIN"}
+          </button>
+        </div>
+      </div>
+
+      {/* Zona peligrosa: borrado de cuenta (derecho de supresión RGPD) */}
+      <div className={styles.pjForm}>
+        <h3 className={styles.pjFormTitulo}>🗑️ Eliminar la cuenta</h3>
+        <p className={styles.filaAyuda}>
+          Borra la cuenta de la familia y todos sus datos (perfiles de los niños y sesiones).
+          Es tu derecho de supresión (RGPD). No se puede deshacer.
+        </p>
+        <div className={styles.footer}>
+          <button
+            type="button"
+            className="btn btn-secundario"
+            onClick={() => void eliminarCuenta()}
+            disabled={ocupado}
+          >
+            Eliminar cuenta de familia
           </button>
         </div>
       </div>

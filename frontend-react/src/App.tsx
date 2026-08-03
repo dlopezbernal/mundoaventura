@@ -131,15 +131,20 @@ export default function App() {
     void cargarCatalogos();
   }
 
-  /** Cierra la sesión de familia y vuelve a la pantalla de login. */
-  async function salirFamilia() {
-    await familiaLogout();
+  /** Limpia el estado y vuelve a la pantalla de login (sin tocar el backend). */
+  function volverAlLogin() {
     setMostrarAdmin(false);
     setMostrarConfig(false);
     setPersonajes(null);
     setUbicaciones(null);
     elegirNino(null);
     setFamilia(null);
+  }
+
+  /** Cierra la sesión de familia (invalida el token en el backend) y vuelve al login. */
+  async function salirFamilia() {
+    await familiaLogout();
+    volverAlLogin();
   }
 
   // Mientras comprobamos la sesión, un estado de carga sobrio (sin HUD).
@@ -201,6 +206,7 @@ export default function App() {
           <Configuracion
             familia={familia}
             onActualizado={setFamilia}
+            onCuentaEliminada={volverAlLogin}
             onCerrar={() => setMostrarConfig(false)}
           />
         ) : familia.ninos.length > 1 && ninoActivo === null ? (

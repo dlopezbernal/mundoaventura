@@ -1,17 +1,20 @@
 """
-routers/admin.py — Acceso de administrador + import/export (Hito 7)
-===================================================================
+routers/admin.py — Acceso de administrador + import/export (Hito 7, 2FA en H9.2d)
+=================================================================================
 
-Puerta de entrada al área de configuración (toda ella detrás de un PIN de adulto)
-y utilidades de mantenimiento. La lógica de sesión vive en admin_service.
+Puerta de entrada al área de Administración (detrás de una contraseña de administración,
+con 2FA TOTP opcional) y utilidades de mantenimiento. La lógica vive en admin_service.
 
-  GET  /api/admin/status   → ¿hay PIN configurado? ¿la sesión actual es válida?  (público)
-  POST /api/admin/setup    → crea el PIN la primera vez y devuelve token.        (público)
-  POST /api/admin/login    → valida el PIN y devuelve token.                     (público)
-  POST /api/admin/logout   → invalida el token de la cabecera.                   (público)
-  POST /api/admin/change   → cambia el PIN (requiere el actual).                 (protegido)
-  GET  /api/admin/export   → descarga la configuración (sin secretos).           (protegido)
-  POST /api/admin/import   → restaura configuración (con copia de seguridad).    (protegido)
+  GET  /api/admin/status         → ¿hay contraseña? ¿sesión válida? ¿2FA activo?   (público)
+  POST /api/admin/setup          → crea la contraseña la 1ª vez y devuelve token.  (público)
+  POST /api/admin/login          → valida contraseña (+2FA si aplica) → token.     (público)
+  POST /api/admin/logout         → invalida el token de la cabecera.               (público)
+  POST /api/admin/change         → cambia la contraseña (requiere la actual).      (protegido)
+  POST /api/admin/2fa/enrolar    → inicia el enrolamiento 2FA (QR + clave).        (protegido)
+  POST /api/admin/2fa/confirmar  → confirma y activa el 2FA (recovery codes).      (protegido)
+  POST /api/admin/2fa/desactivar → desactiva el 2FA (exige la contraseña).         (protegido)
+  GET  /api/admin/export         → descarga la configuración (sin secretos).       (protegido)
+  POST /api/admin/import         → restaura configuración (con copia de seguridad).(protegido)
 
 Los endpoints públicos son los mínimos para arrancar/entrar; el resto exige el
 token (dependencia requiere_admin). Los SECRETOS (claves API) nunca se exportan.
@@ -60,7 +63,7 @@ def estado(x_admin_token: str | None = Header(default=None)):
 
 @router.post("/setup", response_model=TokenResponse)
 def setup(req: AdminPin):
-    """Crea el PIN de adulto por primera vez (auto-login). 400 si ya existe o es corto."""
+    """Crea la contraseña de administración por primera vez (auto-login). 400 si ya existe o es corta."""
     try:
         token = admin_service.configurar(req.pin)
     except ValueError as exc:

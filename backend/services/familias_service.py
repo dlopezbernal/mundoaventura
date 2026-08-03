@@ -488,6 +488,28 @@ def verificar_pin_familia(familia_id: str, pin: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Borrado de cuenta (derecho de supresión RGPD, art. 17)
+# ---------------------------------------------------------------------------
+def eliminar(familia_id: str) -> None:
+    """Elimina una familia y TODOS sus datos: la cuenta y sus sesiones persistentes.
+
+    Es el derecho de supresión (RGPD art. 17) en autoservicio. Como la lista de niños
+    vive en la propia fila de la familia, borrar la fila borra también esos datos. Tras
+    esto, cualquier token de sesión de esa familia deja de ser válido (ya no hay fila)."""
+    db.init_db()
+    with db.get_session() as sesion:
+        for s in sesion.exec(
+            select(SesionFamilia).where(SesionFamilia.familia_id == familia_id)
+        ).all():
+            sesion.delete(s)
+        fam = sesion.get(Familia, familia_id)
+        if fam is not None:
+            sesion.delete(fam)
+            logger.info("Familia ELIMINADA (RGPD): %s (%s).", fam.nombre_familia, fam.email)
+        sesion.commit()
+
+
+# ---------------------------------------------------------------------------
 # Dependencia de FastAPI: exige una sesión de familia válida
 # ---------------------------------------------------------------------------
 def requiere_familia(x_family_token: str | None = Header(default=None)) -> dict:

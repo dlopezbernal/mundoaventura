@@ -1078,3 +1078,15 @@ export async function familiaVerificarPin(pin: string): Promise<boolean> {
   const body = (await response.json()) as { ok: boolean };
   return body.ok;
 }
+
+/**
+ * Elimina la cuenta de la familia y todos sus datos (derecho de supresión RGPD).
+ * DELETE /api/familias/cuenta. Al terminar, olvida el token (la sesión ya no existe).
+ */
+export async function familiaEliminarCuenta(): Promise<void> {
+  try {
+    await fetchBackend("/api/familias/cuenta", { method: "DELETE" }, TIMEOUT_CONFIG);
+  } finally {
+    setFamilyToken(null);
+  }
+}

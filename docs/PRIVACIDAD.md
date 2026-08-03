@@ -108,11 +108,12 @@ también pasa por **DeepL** (traducción, Alemania/UE) en todos los casos.
 - [x] **Información transparente** (arts. 13–14 RGPD): esta página se enlaza desde la app
       —en el aviso de consentimiento de la foto y en la pestaña Sistema (zona de adulto)—
       mediante una copia navegable (`frontend-react/public/privacidad.html`).
-- [~] **Derecho de supresión** (art. 17): no se persisten historial ni fotos. El único dato
-      suprimible es la **cuenta de familia**: hoy se borra a mano (fila de la tabla `familias`
-      / fichero SQLite) y el **logout** elimina la sesión del dispositivo; el **borrado de
-      cuenta autoservicio** desde la UI queda como trabajo pendiente. La caché de audio local
-      es borrable a mano (`backend/.cache/`).
+- [x] **Derecho de supresión** (art. 17): no se persisten historial ni fotos. El único dato
+      suprimible es la **cuenta de familia**, y hay **borrado autoservicio** desde la UI
+      (Configuración → "Eliminar la cuenta"): borra la cuenta, los perfiles de los niños y
+      las sesiones (`familias_service.eliminar`, `DELETE /api/familias/cuenta`). El **logout**
+      elimina solo la sesión del dispositivo. La caché de audio local es borrable a mano
+      (`backend/.cache/`).
 - [ ] **Transferencias internacionales** (cap. V RGPD): el LLM por defecto (Groq, EEUU) y
       opcionalmente el STT/TTS en nube implican transferencia; *a gestionar:* preferir
       proveedores UE (Mistral) o local (Ollama) la elimina, a cambio de calidad/latencia.
@@ -127,7 +128,7 @@ también pasa por **DeepL** (traducción, Alemania/UE) en todos los casos.
 - No hay verificación de edad real del adulto (la casilla es declarativa); el PIN es la
   barrera más fuerte disponible.
 - La lista de términos del filtro de salida es **mínima**, no un servicio de moderación.
-- **Borrado de cuenta de familia** (H9.2): aún no hay autoservicio desde la UI; se borra a
-  mano en la BBDD. El correo del adulto se guarda **en claro** (es un identificador de
-  contacto, no un secreto; la contraseña sí va hasheada). Todo ello vive **en el dispositivo**,
-  no en un tercero.
+- **Cuenta de familia** (H9.2): el correo del adulto se guarda **en claro** (es un
+  identificador de contacto, no un secreto; la contraseña sí va hasheada). Todo ello vive
+  **en el dispositivo**, no en un tercero, y la familia puede **eliminar su cuenta** desde la
+  propia app (derecho de supresión, autoservicio).

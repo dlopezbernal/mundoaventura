@@ -371,6 +371,32 @@ def test_endpoint_perfil_y_pin_requieren_sesion():
     assert ok is True
 
 
+# ---------------------------------------------------------------------------
+# Borrado de cuenta (derecho de supresión RGPD)
+# ---------------------------------------------------------------------------
+def test_eliminar_borra_familia_y_sesiones():
+    familia, token = _alta("borrar@ejemplo.com")
+    assert familias_service.validar_sesion(token) is not None
+    familias_service.eliminar(familia["id"])
+    # La cuenta ya no existe y su sesión persistente deja de ser válida.
+    assert familias_service.validar_sesion(token) is None
+    assert familias_service.hay_familias() is False
+
+
+def test_endpoint_eliminar_cuenta_requiere_sesion():
+    # Sin token: 401.
+    assert _CLIENTE.delete("/api/familias/cuenta").status_code == 401
+    # Con token: borra y luego /me deja de reconocer la sesión.
+    r = _CLIENTE.post(
+        "/api/familias/signup",
+        json={"email": "del@ejemplo.com", "password": "contrasena1", "nombre_familia": "DEL"},
+    )
+    token = r.json()["token"]
+    h = {"X-Family-Token": token}
+    assert _CLIENTE.delete("/api/familias/cuenta", headers=h).status_code == 200
+    assert _CLIENTE.get("/api/familias/me", headers=h).json()["autenticada"] is False
+
+
 def test_endpoint_verificar(_con_verificacion):
     r = _CLIENTE.post(
         "/api/familias/signup",
