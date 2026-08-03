@@ -377,6 +377,27 @@
   font-size: 1.1rem;
   padding: 10px 12px;
 }
+/* Campos de texto normal (email, nombre, contraseña) dentro de una gateCard:
+   deshacen el look "PIN" (centrado + tracking ancho), pensado para dígitos. */
+.gateCard .campoTexto {
+  text-align: left;
+  letter-spacing: normal;
+  font-size: 1rem;
+}
+/* Enlace en línea con aspecto de botón-texto (cambiar entre login/alta). */
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--holo);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.linkBtn:hover {
+  color: #fff;
+}
 
 /* ===========================================================================
  * Pestaña "Personajes" — lista + tarjetas + formulario de alta/edición

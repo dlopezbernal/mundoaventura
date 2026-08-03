@@ -332,6 +332,36 @@ class ImportResult(BaseModel):
     backup: str | None = None
 
 
+# --- Familias (cuentas + sesión, Hito 9.2) ---
+class FamiliaDTO(BaseModel):
+    """Datos públicos de una familia (NUNCA el hash de la contraseña)."""
+
+    id: str
+    email: str
+    nombre_familia: str
+
+
+class FamiliaSesion(BaseModel):
+    """Estado de la sesión de familia (GET /api/familias/me)."""
+
+    autenticada: bool
+    familia: FamiliaDTO | None = None
+
+
+class FamiliaAuthResponse(BaseModel):
+    """Respuesta de alta o inicio de sesión: token de sesión + datos de la familia."""
+
+    ok: bool
+    token: str
+    familia: FamiliaDTO
+
+
+class FamiliasEstado(BaseModel):
+    """¿Hay ya alguna familia registrada? (para adaptar el primer arranque)."""
+
+    hay_familias: bool
+
+
 # --- Transcripción ---
 class TranscribeResponse(BaseModel):
     """Texto transcrito del audio del niño."""

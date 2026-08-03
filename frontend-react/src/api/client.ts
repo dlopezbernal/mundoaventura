@@ -21,6 +21,9 @@ import type {
   CopiaResult,
   DocumentoContenido,
   DocumentoDTO,
+  FamiliaAuthResponse,
+  FamiliaSesion,
+  FamiliasEstado,
   GenerateRequest,
   GenerateResponse,
   HealthResponse,
@@ -95,6 +98,32 @@ export function getAdminToken(): string | null {
   return _adminToken;
 }
 
+// ---------------------------------------------------------------------------
+// Token de FAMILIA (Hito 9.2). La app va detrás de una sesión de familia. A
+// diferencia del token de admin (sessionStorage: se borra al cerrar la pestaña),
+// el de familia se guarda en localStorage para que la sesión PERSISTA en el
+// dispositivo (no volver a pedir login). Se envía como X-Family-Token.
+// ---------------------------------------------------------------------------
+const _FAMILY_KEY = "mdt_family_token";
+let _familyToken: string | null =
+  typeof localStorage !== "undefined" ? localStorage.getItem(_FAMILY_KEY) : null;
+
+/** Guarda (o borra, con null) el token de sesión de familia. */
+export function setFamilyToken(token: string | null): void {
+  _familyToken = token;
+  try {
+    if (token) localStorage.setItem(_FAMILY_KEY, token);
+    else localStorage.removeItem(_FAMILY_KEY);
+  } catch {
+    /* localStorage puede no estar disponible; el token vive en memoria igualmente */
+  }
+}
+
+/** Token de familia actual (o null si no hay sesión). */
+export function getFamilyToken(): string | null {
+  return _familyToken;
+}
+
 /**
  * fetch con timeout vía AbortController.
  * Lanza BackendError con mensaje amigable si la petición falla, expira o el
@@ -113,6 +142,9 @@ async function fetchBackend(
   // del flujo del niño lo ignoran, y los protegidos lo exigen.
   const headers: Record<string, string> = { ...((options.headers as Record<string, string>) ?? {}) };
   if (_adminToken) headers["X-Admin-Token"] = _adminToken;
+  // Token de familia (sesión de la app): los endpoints de familia lo exigen; los
+  // demás lo ignoran. Enviarlo en todas es inofensivo.
+  if (_familyToken) headers["X-Family-Token"] = _familyToken;
   // Candado del túnel: los endpoints del niño lo exigen si el backend tiene
   // ACCESS_CODE; los demás lo ignoran. Enviarlo en todas es inofensivo.
   if (ACCESS_CODE) headers["X-Access-Code"] = ACCESS_CODE;
@@ -308,6 +340,7 @@ export async function askStream(
     Accept: "text/event-stream",
   };
   if (_adminToken) headers["X-Admin-Token"] = _adminToken;
+  if (_familyToken) headers["X-Family-Token"] = _familyToken;
   if (ACCESS_CODE) headers["X-Access-Code"] = ACCESS_CODE;
 
   let response: Response;
@@ -849,4 +882,61 @@ export async function adminImport(datos: unknown): Promise<ImportResult> {
     TIMEOUT_DOCS,
   );
   return (await response.json()) as ImportResult;
+}
+
+// ---------------------------------------------------------------------------
+// Familias (Hito 9.2): cuentas (email + contraseña) + sesión persistente.
+// La sesión gatea el uso de la app; el token se guarda en localStorage.
+// ---------------------------------------------------------------------------
+
+/** ¿Hay ya alguna familia registrada? (alta vs login en el primer arranque). */
+export async function familiaEstado(): Promise<FamiliasEstado> {
+  const response = await fetchBackend("/api/familias/estado", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as FamiliasEstado;
+}
+
+/** ¿Hay sesión de familia válida? Devuelve los datos de la familia o autenticada=false. */
+export async function familiaMe(): Promise<FamiliaSesion> {
+  const response = await fetchBackend("/api/familias/me", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as FamiliaSesion;
+}
+
+async function _postFamilia(
+  path: string,
+  cuerpo: Record<string, string>,
+): Promise<FamiliaAuthResponse> {
+  const response = await fetchBackend(
+    path,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as FamiliaAuthResponse;
+  setFamilyToken(body.token); // guarda el token y lo aplica a las siguientes peticiones
+  return body;
+}
+
+/** Alta de una familia (auto-login). POST /api/familias/signup. */
+export async function familiaSignup(
+  email: string,
+  password: string,
+  nombreFamilia: string,
+): Promise<FamiliaAuthResponse> {
+  return _postFamilia("/api/familias/signup", { email, password, nombre_familia: nombreFamilia });
+}
+
+/** Inicia sesión de familia. POST /api/familias/login. */
+export async function familiaLogin(
+  email: string,
+  password: string,
+): Promise<FamiliaAuthResponse> {
+  return _postFamilia("/api/familias/login", { email, password });
+}
+
+/** Cierra la sesión de familia (invalida el token en el backend y lo olvida aquí). */
+export async function familiaLogout(): Promise<void> {
+  try {
+    await fetchBackend("/api/familias/logout", { method: "POST" }, TIMEOUT_CONFIG);
+  } finally {
+    setFamilyToken(null);
+  }
 }

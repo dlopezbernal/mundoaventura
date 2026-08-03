@@ -69,5 +69,11 @@ export type AdminStatus = Schemas["AdminStatus"];
 export type ConfigExport = Schemas["ConfigExport"];
 export type ImportResult = Schemas["ImportResult"];
 
+// --- Familias (cuentas + sesión, Hito 9.2) ---
+export type FamiliaDTO = Schemas["FamiliaDTO"];
+export type FamiliaSesion = Schemas["FamiliaSesion"];
+export type FamiliaAuthResponse = Schemas["FamiliaAuthResponse"];
+export type FamiliasEstado = Schemas["FamiliasEstado"];
+
 // --- Salud ---
 export type HealthResponse = Schemas["HealthResponse"];

@@ -76,10 +76,12 @@
       <p class="sub">La Máquina del Tiempo · información para el adulto responsable (RGPD / LOPDGDD)</p>
 
       <div class="card">
-        <p style="margin:0"><strong>En una frase:</strong> esta app para niños (8–12) no
-        pide datos personales, no guarda el historial del chat y <strong>no almacena la
-        foto</strong>. Lo que sí sale del dispositivo es el <em>texto</em> de la pregunta
-        (para traducirlo y generar la respuesta) y, opcionalmente, la voz y la foto.</p>
+        <p style="margin:0"><strong>En una frase:</strong> esta app para niños (8–12) solo
+        pide el <strong>correo de un adulto</strong> para crear la cuenta de la familia (se
+        guarda en el propio dispositivo, no se envía a nadie), no guarda el historial del chat
+        y <strong>no almacena la foto</strong>. Lo que sí sale del dispositivo es el
+        <em>texto</em> de la pregunta (para traducirlo y generar la respuesta) y,
+        opcionalmente, la voz y la foto.</p>
       </div>
 
       <h2>Por qué esto importa</h2>
@@ -127,6 +129,12 @@
               <td>—</td>
               <td>Vive en el navegador; se borra al recargar</td>
             </tr>
+            <tr>
+              <td><strong>Cuenta de familia</strong> (correo del adulto, nombre, contraseña)</td>
+              <td><strong>No</strong> (se queda en este dispositivo)</td>
+              <td>—</td>
+              <td>Sí, en el equipo: correo y nombre en claro, contraseña <strong>cifrada</strong> (hasheada)</td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -152,19 +160,22 @@
           mostrarlas al niño.</li>
         <li><strong>Sin historial guardado</strong> y <strong>claves protegidas</strong>,
           fuera del control de versiones.</li>
+        <li><strong>Cuenta de familia protegida:</strong> la contraseña se guarda cifrada
+          (hasheada), nunca en claro, y el acceso está protegido contra intentos repetidos.</li>
         <li><strong>Acceso protegido:</strong> candado del túnel y PIN de adulto para la
           configuración.</li>
       </ul>
 
       <h2>Cumplimiento RGPD / LOPDGDD</h2>
       <ul class="check">
-        <li><strong>Minimización:</strong> solo lo imprescindible; sin datos personales.</li>
-        <li><strong>Consentimiento parental:</strong> explícito para la foto; para el chat y la
-          voz (el núcleo de la app) se entiende otorgado por el uso, ya que no se piden datos
-          ni se guarda nada.</li>
+        <li><strong>Minimización:</strong> solo lo imprescindible; el único dato personal es la
+          cuenta de familia (correo del <em>adulto</em> + nombre + contraseña), sin datos del niño.</li>
+        <li><strong>Consentimiento parental:</strong> explícito para la foto; el alta de la
+          cuenta la hace un adulto con su correo, lo que refuerza el consentimiento. Para el chat
+          y la voz (el núcleo de la app) se entiende otorgado por el uso.</li>
         <li><strong>Información transparente:</strong> esta misma página, enlazada desde la app.</li>
-        <li><strong>Derecho de supresión:</strong> al no guardar historial ni fotos, no hay
-          datos que borrar (salvo la caché de audio local, borrable a mano).</li>
+        <li><strong>Derecho de supresión:</strong> no se guarda historial ni fotos; la cuenta de
+          familia se puede borrar (hoy a mano) y cerrar sesión elimina el acceso del dispositivo.</li>
         <li><strong>Medidas técnicas:</strong> las de la sección anterior.</li>
       </ul>
       <ul class="pend">
@@ -179,6 +190,8 @@
           barrera más fuerte disponible.</li>
         <li>El filtro de contenido es una protección básica, no un servicio profesional de
           moderación.</li>
+        <li>Todavía no se puede borrar la cuenta de familia desde la app (se hace a mano en el
+          equipo); el correo del adulto se guarda en claro (es un contacto, no un secreto).</li>
       </ul>
 
       <p class="nota">Documento técnico completo para desarrolladores: <code>docs/PRIVACIDAD.md</code>

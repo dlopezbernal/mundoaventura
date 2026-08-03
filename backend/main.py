@@ -28,6 +28,7 @@ from backend.routers import apis as apis_router
 from backend.routers import config as config_router
 from backend.routers import conversacion, errores, generation, transcription
 from backend.routers import documentos as documentos_router
+from backend.routers import familias as familias_router
 from backend.routers import personajes as personajes_router
 from backend.routers import ubicaciones as ubicaciones_router
 from backend.schemas.respuestas import HealthResponse, RootResponse
@@ -179,6 +180,9 @@ app.include_router(personajes_router.router)
 app.include_router(documentos_router.router, dependencies=_admin)
 # Configuración · Ubicaciones: catálogo (GET público; escrituras protegidas por ruta).
 app.include_router(ubicaciones_router.router)
+# Familias (Hito 9.2): cuentas + sesión persistente. Endpoints públicos (son la puerta
+# de entrada); sin sesión válida, el frontend no deja jugar.
+app.include_router(familias_router.router)
 
 
 # ---------------------------------------------------------------------------

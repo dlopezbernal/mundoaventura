@@ -678,6 +678,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/familias/estado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estado
+         * @description ¿Hay ya alguna familia registrada? (el frontend muestra alta o login).
+         */
+        get: operations["estado_api_familias_estado_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Me
+         * @description Devuelve la familia de la sesión actual, o autenticada=false si no hay.
+         */
+        get: operations["me_api_familias_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signup
+         * @description Da de alta una familia (auto-login). 400 si el email ya existe o es inválido.
+         */
+        post: operations["signup_api_familias_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description Inicia sesión. 400 si las credenciales fallan; 429 si la IP está bloqueada.
+         */
+        post: operations["login_api_familias_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description Cierra la sesión invalidando el token del dispositivo.
+         */
+        post: operations["logout_api_familias_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -1126,6 +1226,83 @@ export interface components {
             nombre: string;
             /** Detalle */
             detalle: string;
+        };
+        /**
+         * FamiliaAuthResponse
+         * @description Respuesta de alta o inicio de sesión: token de sesión + datos de la familia.
+         */
+        FamiliaAuthResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Token */
+            token: string;
+            familia: components["schemas"]["FamiliaDTO"];
+        };
+        /**
+         * FamiliaDTO
+         * @description Datos públicos de una familia (NUNCA el hash de la contraseña).
+         */
+        FamiliaDTO: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Nombre Familia */
+            nombre_familia: string;
+        };
+        /**
+         * FamiliaLogin
+         * @description Inicio de sesión de una familia.
+         */
+        FamiliaLogin: {
+            /**
+             * Email
+             * @description Correo del adulto.
+             */
+            email: string;
+            /**
+             * Password
+             * @description Contraseña de la familia.
+             */
+            password: string;
+        };
+        /**
+         * FamiliaSesion
+         * @description Estado de la sesión de familia (GET /api/familias/me).
+         */
+        FamiliaSesion: {
+            /** Autenticada */
+            autenticada: boolean;
+            familia?: components["schemas"]["FamiliaDTO"] | null;
+        };
+        /**
+         * FamiliaSignup
+         * @description Alta de una familia (self-signup).
+         */
+        FamiliaSignup: {
+            /**
+             * Email
+             * @description Correo del adulto (credencial de acceso).
+             */
+            email: string;
+            /**
+             * Password
+             * @description Contraseña de la familia.
+             */
+            password: string;
+            /**
+             * Nombre Familia
+             * @description Nombre de la familia, para personalizar la app.
+             */
+            nombre_familia: string;
+        };
+        /**
+         * FamiliasEstado
+         * @description ¿Hay ya alguna familia registrada? (para adaptar el primer arranque).
+         */
+        FamiliasEstado: {
+            /** Hay Familias */
+            hay_familias: boolean;
         };
         /**
          * GenerateRequest
@@ -2910,6 +3087,154 @@ export interface operations {
             path: {
                 ubicacion_id: string;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    estado_api_familias_estado_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliasEstado"];
+                };
+            };
+        };
+    };
+    me_api_familias_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaSesion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    signup_api_familias_signup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaSignup"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaAuthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_familias_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaAuthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_familias_logout_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

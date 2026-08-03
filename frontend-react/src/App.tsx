@@ -22,8 +22,16 @@ import PlaceSelect from "./screens/PlaceSelect";
 import SceneChat from "./screens/SceneChat";
 import Admin from "./screens/Admin";
 import Configuracion from "./screens/Configuracion";
-import { BackendError, checkHealth, getPersonajes, getUbicaciones } from "./api/client";
-import type { PersonajeDTO, UbicacionDTO } from "./api/types";
+import LoginFamilia from "./screens/LoginFamilia";
+import {
+  BackendError,
+  checkHealth,
+  familiaLogout,
+  familiaMe,
+  getPersonajes,
+  getUbicaciones,
+} from "./api/client";
+import type { FamiliaDTO, PersonajeDTO, UbicacionDTO } from "./api/types";
 import { useFlow } from "./state/useFlow";
 
 // Modo desarrollo: muestra el botón "Probar conexión" en el HUD (como el DEBUG
@@ -40,6 +48,9 @@ async function probarConexion() {
 }
 
 export default function App() {
+  // Sesión de familia (Hito 9.2): la app va detrás del login de familia.
+  // undefined = comprobando todavía; null = sin sesión (mostrar login).
+  const [familia, setFamilia] = useState<FamiliaDTO | null | undefined>(undefined);
   // Catálogos cargados por API: null = cargando todavía.
   const [personajes, setPersonajes] = useState<PersonajeDTO[] | null>(null);
   const [ubicaciones, setUbicaciones] = useState<UbicacionDTO[] | null>(null);
@@ -60,9 +71,26 @@ export default function App() {
     }
   }, []);
 
+  // Al arrancar comprobamos si hay una sesión de familia persistida en el dispositivo.
   useEffect(() => {
-    void cargarCatalogos();
-  }, [cargarCatalogos]);
+    let vivo = true;
+    void (async () => {
+      try {
+        const est = await familiaMe();
+        if (vivo) setFamilia(est.autenticada ? (est.familia ?? null) : null);
+      } catch {
+        if (vivo) setFamilia(null);
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  // Los catálogos solo se cargan una vez hay familia con sesión (jugar requiere login).
+  useEffect(() => {
+    if (familia) void cargarCatalogos();
+  }, [familia, cargarCatalogos]);
 
   /** Al cerrar Admin, recargamos los catálogos (pudieron cambiar) y volvemos al flujo. */
   function cerrarAdmin() {
@@ -70,13 +98,56 @@ export default function App() {
     void cargarCatalogos();
   }
 
+  /** Cierra la sesión de familia y vuelve a la pantalla de login. */
+  async function salirFamilia() {
+    await familiaLogout();
+    setMostrarAdmin(false);
+    setMostrarConfig(false);
+    setPersonajes(null);
+    setUbicaciones(null);
+    setFamilia(null);
+  }
+
+  // Mientras comprobamos la sesión, un estado de carga sobrio (sin HUD).
+  if (familia === undefined) {
+    return (
+      <>
+        <Background />
+        <main className="holo-wrap">
+          <section className="holo-cargando" role="status">
+            <span className="holo-cargando-emoji" aria-hidden="true">
+              ⏳
+            </span>
+            <p>Cargando…</p>
+          </section>
+          <div className="crt-scan" aria-hidden="true" />
+        </main>
+      </>
+    );
+  }
+
+  // Sin sesión de familia: puerta de entrada (login / alta), sin HUD ni flujo.
+  if (familia === null) {
+    return (
+      <>
+        <Background />
+        <main className="holo-wrap">
+          <LoginFamilia onListo={setFamilia} />
+          <div className="crt-scan" aria-hidden="true" />
+        </main>
+      </>
+    );
+  }
+
   return (
     <>
       <Background />
       <main className="holo-wrap">
         <Hud
+          nombreFamilia={familia.nombre_familia}
           onAbrirConfig={() => setMostrarConfig(true)}
           onAbrirAdmin={() => setMostrarAdmin(true)}
+          onSalir={() => void salirFamilia()}
           onProbarConexion={DEBUG ? probarConexion : undefined}
         />
 
