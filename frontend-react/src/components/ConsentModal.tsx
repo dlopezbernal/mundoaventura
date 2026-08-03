@@ -1,20 +1,19 @@
 /**
- * ConsentModal — Consentimiento de adulto antes de subir la foto (Hito 9)
- * ========================================================================
+ * ConsentModal — Consentimiento de adulto antes de subir la foto (Hito 9 / 9.2c)
+ * ==============================================================================
  *
  * Antes de que el niño suba una foto de su cuarto, un ADULTO debe autorizarlo,
  * porque la foto sale del dispositivo hacia un tercero (Replicate). La pantalla
  * explica QUÉ se hace con la foto, A QUIÉN se envía y que NO se almacena, y pide
- * confirmación de adulto:
- *   - Si ya hay una sesión de adulto abierta (PIN), basta con confirmar.
- *   - Si hay PIN pero no hay sesión, se pide el PIN.
- *   - Si no hay PIN configurado, una casilla "soy el adulto responsable".
+ * confirmación de adulto con el PIN DE LA FAMILIA (Hito 9.2c):
+ *   - Si la familia tiene PIN configurado, se pide ese PIN.
+ *   - Si no hay PIN, una casilla "soy el adulto responsable".
  *
  * Es la barrera de RGPD/LOPDGDD (consentimiento parental para menores de 14).
  */
 
 import { useEffect, useState } from "react";
-import { adminLogin, adminStatus, BackendError } from "../api/client";
+import { BackendError, familiaMe, familiaVerificarPin } from "../api/client";
 import Modal from "./Modal/Modal";
 import styles from "./ConsentModal.module.css";
 
@@ -23,7 +22,7 @@ interface Props {
   onCancelar: () => void;
 }
 
-type Modo = "cargando" | "adulto-ok" | "pin" | "casilla";
+type Modo = "cargando" | "pin" | "casilla";
 
 export default function ConsentModal({ onConsentir, onCancelar }: Props) {
   const [modo, setModo] = useState<Modo>("cargando");
@@ -32,17 +31,15 @@ export default function ConsentModal({ onConsentir, onCancelar }: Props) {
   const [error, setError] = useState("");
   const [verificando, setVerificando] = useState(false);
 
-  // Al abrir, averigua si hay PIN configurado y/o sesión de adulto activa.
+  // Al abrir, mira si la familia tiene PIN configurado (→ pedirlo) o no (→ casilla).
   useEffect(() => {
     let vivo = true;
-    adminStatus()
+    familiaMe()
       .then((s) => {
         if (!vivo) return;
-        if (s.sesion_activa) setModo("adulto-ok");
-        else if (s.configurado) setModo("pin");
-        else setModo("casilla");
+        setModo(s.familia?.tiene_pin ? "pin" : "casilla");
       })
-      .catch(() => vivo && setModo("casilla")); // sin backend de admin: casilla
+      .catch(() => vivo && setModo("casilla")); // sin sesión de familia legible: casilla
     return () => {
       vivo = false;
     };
@@ -52,8 +49,8 @@ export default function ConsentModal({ onConsentir, onCancelar }: Props) {
     setVerificando(true);
     setError("");
     try {
-      await adminLogin(pin);
-      onConsentir();
+      if (await familiaVerificarPin(pin)) onConsentir();
+      else setError("El PIN no es correcto.");
     } catch (exc) {
       setError(exc instanceof BackendError ? exc.message : "No pude comprobar el PIN.");
     } finally {
@@ -83,13 +80,9 @@ export default function ConsentModal({ onConsentir, onCancelar }: Props) {
 
         {modo === "cargando" && <p className={styles.cargando}>Un momento…</p>}
 
-        {modo === "adulto-ok" && (
-          <p className={styles.ok}>✅ Hay una sesión de adulto abierta. Puedes continuar.</p>
-        )}
-
         {modo === "pin" && (
           <div className={styles.campo}>
-            <label htmlFor="consent-pin">Escribe el PIN de adulto para autorizar:</label>
+            <label htmlFor="consent-pin">Escribe el PIN de la familia para autorizar:</label>
             <input
               id="consent-pin"
               type="password"
@@ -119,11 +112,6 @@ export default function ConsentModal({ onConsentir, onCancelar }: Props) {
           <button type="button" className="btn btn-secundario" onClick={onCancelar}>
             Cancelar
           </button>
-          {modo === "adulto-ok" && (
-            <button type="button" className="btn btn-primario" onClick={onConsentir}>
-              Subir la foto
-            </button>
-          )}
           {modo === "pin" && (
             <button
               type="button"

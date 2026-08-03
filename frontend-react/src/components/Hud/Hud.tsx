@@ -14,6 +14,10 @@ import styles from "./Hud.module.css";
 interface Props {
   /** Nombre de la familia con sesión iniciada (para el saludo). */
   nombreFamilia: string;
+  /** Niño con perfil activo, si hay uno elegido (multi-perfil, H9.2c). */
+  ninoActivo?: string | null;
+  /** Reabre "¿quién juega?" para cambiar de niño (solo si hay varios). */
+  onCambiarNino?: () => void;
   /** Abre la pantalla de Configuración del adulto (cambiar PIN). */
   onAbrirConfig: () => void;
   /** Abre la pantalla de Administración (config global y compartida). */
@@ -26,6 +30,8 @@ interface Props {
 
 export default function Hud({
   nombreFamilia,
+  ninoActivo,
+  onCambiarNino,
   onAbrirConfig,
   onAbrirAdmin,
   onSalir,
@@ -35,7 +41,14 @@ export default function Hud({
     <header className={styles.hud}>
       <span className={styles.logo}>🌀 MÁQUINA DEL TIEMPO</span>
       <div className={styles.readout}>
-        <span className={styles.saludo}>Hola, {nombreFamilia}</span>
+        <span className={styles.saludo}>
+          Hola, {ninoActivo ?? nombreFamilia}
+          {onCambiarNino && (
+            <button type="button" className={styles.cambiarNino} onClick={onCambiarNino}>
+              cambiar
+            </button>
+          )}
+        </span>
         {onProbarConexion && (
           <button type="button" className={styles.debug} onClick={onProbarConexion}>
             🔌 CONEXIÓN

@@ -63,6 +63,8 @@ _COLUMNAS_NUEVAS: dict[str, list[tuple[str, str]]] = {
         ("codigo_hash", "TEXT"),
         ("codigo_expira", "TEXT"),
         ("codigo_intentos", "INTEGER"),
+        ("ninos", "TEXT"),
+        ("pin_familia_hash", "TEXT"),
     ],
 }
 
@@ -91,6 +93,9 @@ def _migrar_columnas_faltantes(engine) -> None:
                     con.exec_driver_sql(
                         f"UPDATE {tabla} SET verificada = 1 WHERE verificada IS NULL"
                     )
+                elif nombre == "ninos":
+                    # Backfill: lista de niños vacía (JSON) para las filas previas.
+                    con.exec_driver_sql(f"UPDATE {tabla} SET ninos = '[]' WHERE ninos IS NULL")
                 con.commit()
 
 

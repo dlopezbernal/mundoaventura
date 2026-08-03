@@ -20,12 +20,14 @@ credencial es email+contraseña y la sesión es duradera.
 """
 
 import hashlib
+import json
 import logging
 import re
 import secrets
 import time
 from datetime import UTC, datetime, timedelta
 
+from fastapi import Header, HTTPException
 from sqlmodel import select
 
 from backend import config, db
@@ -33,6 +35,11 @@ from backend.models import Familia, SesionFamilia
 from backend.services import email_service, seguridad
 
 logger = logging.getLogger(__name__)
+
+# Multi-perfil (Hito 9.2c): límites de la lista de niños y forma del PIN de familia.
+_MAX_NINOS = 8
+_MAX_LARGO_NOMBRE = 30
+_RE_PIN_FAMILIA = re.compile(r"^\d{4}$")  # exactamente 4 dígitos
 
 # Vida de una sesión de familia (días). Larga a propósito: el sentido es no volver a
 # pedir login en el equipo de casa. Se renueva al iniciar sesión.
@@ -106,9 +113,34 @@ def _validar_signup(email: str, password: str, nombre_familia: str) -> None:
         raise ValueError("Escribe un nombre de familia.")
 
 
+def _ninos_lista(fam: Familia) -> list[str]:
+    """Decodifica la lista de nombres de niños (JSON) de la fila; [] si está mal formada."""
+    try:
+        datos = json.loads(fam.ninos or "[]")
+        return [str(n) for n in datos] if isinstance(datos, list) else []
+    except (ValueError, TypeError):
+        return []
+
+
+def _sanear_nombre_nino(nombre: str) -> str:
+    """Normaliza un nombre de niño: recorta, colapsa espacios y limita la longitud.
+
+    Solo se usa como texto de presentación ("Hola, …") y, en 2c-2, para personalizar
+    el prompt del chat; aquí se deja legible y acotado (el saneado anti-inyección para
+    el prompt vive en el servicio del chat)."""
+    limpio = " ".join((nombre or "").split())
+    return limpio[:_MAX_LARGO_NOMBRE]
+
+
 def _dto(fam: Familia) -> dict:
-    """Vista pública de una familia (SIN el hash de la contraseña)."""
-    return {"id": fam.id, "email": fam.email, "nombre_familia": fam.nombre_familia}
+    """Vista pública de una familia (SIN el hash de la contraseña ni del PIN)."""
+    return {
+        "id": fam.id,
+        "email": fam.email,
+        "nombre_familia": fam.nombre_familia,
+        "ninos": _ninos_lista(fam),
+        "tiene_pin": bool(fam.pin_familia_hash),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -358,3 +390,91 @@ def hay_familias() -> bool:
     db.init_db()
     with db.get_session() as sesion:
         return sesion.exec(select(Familia)).first() is not None
+
+
+# ---------------------------------------------------------------------------
+# Perfil de familia: nombre + niños (multi-perfil, Hito 9.2c)
+# ---------------------------------------------------------------------------
+def actualizar_perfil(
+    familia_id: str, nombre_familia: str | None = None, ninos: list[str] | None = None
+) -> dict:
+    """Edita el nombre de la familia y/o la lista de niños. Devuelve el perfil actualizado.
+
+    Lanza ValueError (→ 400) si el nombre queda vacío o la lista de niños no es válida.
+    """
+    db.init_db()
+    with db.get_session() as sesion:
+        fam = sesion.get(Familia, familia_id)
+        if fam is None:
+            raise ValueError("La familia no existe.")
+        if nombre_familia is not None:
+            limpio = (nombre_familia or "").strip()
+            if not limpio:
+                raise ValueError("El nombre de familia no puede estar vacío.")
+            fam.nombre_familia = limpio
+        if ninos is not None:
+            limpios = [_sanear_nombre_nino(n) for n in ninos]
+            limpios = [n for n in limpios if n]  # descarta vacíos
+            if len(limpios) > _MAX_NINOS:
+                raise ValueError(f"Como mucho {_MAX_NINOS} niños por familia.")
+            fam.ninos = json.dumps(limpios, ensure_ascii=False)
+        sesion.add(fam)
+        sesion.commit()
+        sesion.refresh(fam)
+        return _dto(fam)
+
+
+# ---------------------------------------------------------------------------
+# PIN de familia (protege foto + edición de perfil; NO da acceso a Admin)
+# ---------------------------------------------------------------------------
+def set_pin_familia(familia_id: str, pin_nuevo: str, pin_actual: str | None = None) -> None:
+    """Pone o cambia el PIN de familia (4 dígitos). Si ya había uno, exige el actual.
+
+    Lanza ValueError (→ 400) si el PIN nuevo no son 4 dígitos o el actual no coincide.
+    """
+    db.init_db()
+    with db.get_session() as sesion:
+        fam = sesion.get(Familia, familia_id)
+        if fam is None:
+            raise ValueError("La familia no existe.")
+        if fam.pin_familia_hash and not seguridad.verificar(
+            (pin_actual or "").strip(), fam.pin_familia_hash
+        ):
+            raise ValueError("El PIN actual no es correcto.")
+        if not _RE_PIN_FAMILIA.match((pin_nuevo or "").strip()):
+            raise ValueError("El PIN de familia debe tener exactamente 4 dígitos.")
+        fam.pin_familia_hash = seguridad.hashear(pin_nuevo.strip())
+        sesion.add(fam)
+        sesion.commit()
+
+
+def verificar_pin_familia(familia_id: str, pin: str) -> bool:
+    """¿Es correcto el PIN de familia? (consentimiento de foto / editar perfil).
+
+    Si la familia NO tiene PIN configurado, devuelve True (no hay barrera que superar).
+    """
+    db.init_db()
+    with db.get_session() as sesion:
+        fam = sesion.get(Familia, familia_id)
+        if fam is None:
+            return False
+        if not fam.pin_familia_hash:
+            return True
+        return seguridad.verificar((pin or "").strip(), fam.pin_familia_hash)
+
+
+# ---------------------------------------------------------------------------
+# Dependencia de FastAPI: exige una sesión de familia válida
+# ---------------------------------------------------------------------------
+def requiere_familia(x_family_token: str | None = Header(default=None)) -> dict:
+    """Deja pasar solo con una sesión de familia válida; devuelve la familia (dict).
+
+    Protege los endpoints de gestión del perfil (editar niños, PIN). El flujo del
+    niño (jugar) NO la lleva: va abierto dentro de la sesión ya iniciada.
+    """
+    familia = validar_sesion(x_family_token)
+    if familia is None:
+        raise HTTPException(
+            status_code=401, detail="Inicia sesión con tu familia para gestionar el perfil."
+        )
+    return familia

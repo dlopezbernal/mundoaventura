@@ -384,6 +384,73 @@
   letter-spacing: normal;
   font-size: 1rem;
 }
+/* Lista editable de niños en el perfil de familia (Hito 9.2c). */
+.ninosLista {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ninoItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  background: rgba(8, 14, 40, 0.5);
+  font-size: 0.9rem;
+}
+.ninoQuitar {
+  background: none;
+  border: none;
+  color: var(--pink);
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+  padding: 0;
+}
+.ninoQuitar:hover {
+  filter: brightness(1.3);
+}
+
+/* Lista de perfiles de niño en "¿Quién juega?" (Hito 9.2c). */
+.perfilLista {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin: 4px 0 14px;
+}
+.perfilBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 96px;
+  padding: 14px 12px;
+  border: 1px solid var(--holo);
+  border-radius: 14px;
+  background: rgba(8, 14, 40, 0.6);
+  color: #fff;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.perfilBtn:hover {
+  filter: brightness(1.2);
+  transform: translateY(-2px);
+}
+.perfilEmoji {
+  font-size: 2rem;
+}
+.perfilNombre {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
 /* Enlace en línea con aspecto de botón-texto (cambiar entre login/alta). */
 .linkBtn {
   background: none;

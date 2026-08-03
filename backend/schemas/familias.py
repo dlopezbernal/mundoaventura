@@ -36,3 +36,23 @@ class FamiliaReenviar(BaseModel):
     """Reenvío del código de verificación a un alta pendiente."""
 
     email: str = Field(description="Correo del adulto.")
+
+
+class FamiliaPerfilUpdate(BaseModel):
+    """Edición del perfil de la familia (nombre + nombres de los niños)."""
+
+    nombre_familia: str | None = Field(default=None, description="Nuevo nombre de la familia.")
+    ninos: list[str] | None = Field(default=None, description="Lista de nombres de los niños.")
+
+
+class FamiliaPinSet(BaseModel):
+    """Poner o cambiar el PIN de familia (4 dígitos). Requiere el actual si ya existe."""
+
+    pin_nuevo: str = Field(description="Nuevo PIN de familia (4 dígitos).")
+    pin_actual: str | None = Field(default=None, description="PIN actual (si ya había uno).")
+
+
+class FamiliaPinVerificar(BaseModel):
+    """Comprobación del PIN de familia (consentimiento de foto / editar perfil)."""
+
+    pin: str = Field(description="PIN de familia a comprobar.")

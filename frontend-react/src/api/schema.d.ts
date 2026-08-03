@@ -823,6 +823,68 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/familias/perfil": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Actualizar Perfil
+         * @description Edita el nombre de la familia y/o la lista de niños. 400 si algo no es válido.
+         */
+        put: operations["actualizar_perfil_api_familias_perfil_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Poner Pin
+         * @description Pone o cambia el PIN de familia (4 dígitos). 400 si el actual no coincide o el nuevo no vale.
+         */
+        put: operations["poner_pin_api_familias_pin_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/pin/verificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verificar Pin
+         * @description Comprueba el PIN de familia (consentimiento de foto / editar perfil).
+         *
+         *     Responde 200 con ``ok`` según el PIN sea correcto o no (no es un error de la petición).
+         */
+        post: operations["verificar_pin_api_familias_pin_verificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -1285,7 +1347,7 @@ export interface components {
         };
         /**
          * FamiliaDTO
-         * @description Datos públicos de una familia (NUNCA el hash de la contraseña).
+         * @description Datos públicos de una familia (NUNCA el hash de la contraseña ni del PIN).
          */
         FamiliaDTO: {
             /** Id */
@@ -1294,6 +1356,16 @@ export interface components {
             email: string;
             /** Nombre Familia */
             nombre_familia: string;
+            /**
+             * Ninos
+             * @default []
+             */
+            ninos: string[];
+            /**
+             * Tiene Pin
+             * @default false
+             */
+            tiene_pin: boolean;
         };
         /**
          * FamiliaLogin
@@ -1310,6 +1382,49 @@ export interface components {
              * @description Contraseña de la familia.
              */
             password: string;
+        };
+        /**
+         * FamiliaPerfilUpdate
+         * @description Edición del perfil de la familia (nombre + nombres de los niños).
+         */
+        FamiliaPerfilUpdate: {
+            /**
+             * Nombre Familia
+             * @description Nuevo nombre de la familia.
+             */
+            nombre_familia?: string | null;
+            /**
+             * Ninos
+             * @description Lista de nombres de los niños.
+             */
+            ninos?: string[] | null;
+        };
+        /**
+         * FamiliaPinSet
+         * @description Poner o cambiar el PIN de familia (4 dígitos). Requiere el actual si ya existe.
+         */
+        FamiliaPinSet: {
+            /**
+             * Pin Nuevo
+             * @description Nuevo PIN de familia (4 dígitos).
+             */
+            pin_nuevo: string;
+            /**
+             * Pin Actual
+             * @description PIN actual (si ya había uno).
+             */
+            pin_actual?: string | null;
+        };
+        /**
+         * FamiliaPinVerificar
+         * @description Comprobación del PIN de familia (consentimiento de foto / editar perfil).
+         */
+        FamiliaPinVerificar: {
+            /**
+             * Pin
+             * @description PIN de familia a comprobar.
+             */
+            pin: string;
         };
         /**
          * FamiliaReenviar
@@ -3406,6 +3521,111 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    actualizar_perfil_api_familias_perfil_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaPerfilUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    poner_pin_api_familias_pin_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaPinSet"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verificar_pin_api_familias_pin_verificar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaPinVerificar"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

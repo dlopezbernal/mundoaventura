@@ -16,16 +16,20 @@ El token de sesión viaja en la cabecera ``X-Family-Token`` (lo manda el fronten
 cada petición). La contraseña se guarda hasheada; el token solo se guarda hasheado.
 """
 
-from fastapi import APIRouter, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from backend.schemas.familias import (
     FamiliaLogin,
+    FamiliaPerfilUpdate,
+    FamiliaPinSet,
+    FamiliaPinVerificar,
     FamiliaReenviar,
     FamiliaSignup,
     FamiliaVerificar,
 )
 from backend.schemas.respuestas import (
     FamiliaAuthResponse,
+    FamiliaDTO,
     FamiliaReenviarResponse,
     FamiliaSesion,
     FamiliasEstado,
@@ -33,6 +37,9 @@ from backend.schemas.respuestas import (
     OkResponse,
 )
 from backend.services import email_service, familias_service
+
+# Dependencia: exige sesión de familia y entrega la familia (dict) al handler.
+_familia = Depends(familias_service.requiere_familia)
 
 router = APIRouter(prefix="/api/familias", tags=["Familias"])
 
@@ -111,3 +118,34 @@ def logout(x_family_token: str | None = Header(default=None)):
     """Cierra la sesión invalidando el token del dispositivo."""
     familias_service.logout(x_family_token)
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# Perfil de familia (multi-perfil, Hito 9.2c) — requieren sesión de familia
+# ---------------------------------------------------------------------------
+@router.put("/perfil", response_model=FamiliaDTO)
+def actualizar_perfil(req: FamiliaPerfilUpdate, familia: dict = _familia):
+    """Edita el nombre de la familia y/o la lista de niños. 400 si algo no es válido."""
+    try:
+        return familias_service.actualizar_perfil(familia["id"], req.nombre_familia, req.ninos)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.put("/pin", response_model=OkResponse)
+def poner_pin(req: FamiliaPinSet, familia: dict = _familia):
+    """Pone o cambia el PIN de familia (4 dígitos). 400 si el actual no coincide o el nuevo no vale."""
+    try:
+        familias_service.set_pin_familia(familia["id"], req.pin_nuevo, req.pin_actual)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True}
+
+
+@router.post("/pin/verificar", response_model=OkResponse)
+def verificar_pin(req: FamiliaPinVerificar, familia: dict = _familia):
+    """Comprueba el PIN de familia (consentimiento de foto / editar perfil).
+
+    Responde 200 con ``ok`` según el PIN sea correcto o no (no es un error de la petición).
+    """
+    return {"ok": familias_service.verificar_pin_familia(familia["id"], req.pin)}

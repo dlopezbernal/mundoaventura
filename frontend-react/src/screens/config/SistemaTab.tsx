@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { adminExport, adminImport, BackendError } from "../../api/client";
 import styles from "../Settings.module.css";
+import CambiarPin from "./CambiarPin";
 import ConfigForm from "./ConfigForm";
 
 interface Props {
@@ -82,6 +83,9 @@ export default function SistemaTab({ onLogout }: Props) {
 
       {/* Opciones generales */}
       <ConfigForm categorias={["general"]} intro="Opciones generales de la aplicación." />
+
+      {/* PIN de administración (cambiar el PIN que protege esta zona) */}
+      <CambiarPin onCambiado={onLogout} />
 
       {/* Copia / restauración */}
       <div className={styles.pjForm}>

@@ -23,6 +23,7 @@ import SceneChat from "./screens/SceneChat";
 import Admin from "./screens/Admin";
 import Configuracion from "./screens/Configuracion";
 import LoginFamilia from "./screens/LoginFamilia";
+import QuienJuega from "./screens/QuienJuega";
 import {
   BackendError,
   checkHealth,
@@ -47,10 +48,23 @@ async function probarConexion() {
   }
 }
 
+// Niño con perfil activo, recordado en el dispositivo (Hito 9.2c).
+const NINO_KEY = "mdt_nino_activo";
+function guardarNinoActivo(nino: string | null) {
+  try {
+    if (nino) localStorage.setItem(NINO_KEY, nino);
+    else localStorage.removeItem(NINO_KEY);
+  } catch {
+    /* localStorage puede no estar disponible */
+  }
+}
+
 export default function App() {
   // Sesión de familia (Hito 9.2): la app va detrás del login de familia.
   // undefined = comprobando todavía; null = sin sesión (mostrar login).
   const [familia, setFamilia] = useState<FamiliaDTO | null | undefined>(undefined);
+  // Niño con perfil activo (multi-perfil, H9.2c). null = aún sin elegir.
+  const [ninoActivo, setNinoActivo] = useState<string | null>(null);
   // Catálogos cargados por API: null = cargando todavía.
   const [personajes, setPersonajes] = useState<PersonajeDTO[] | null>(null);
   const [ubicaciones, setUbicaciones] = useState<UbicacionDTO[] | null>(null);
@@ -92,6 +106,24 @@ export default function App() {
     if (familia) void cargarCatalogos();
   }, [familia, cargarCatalogos]);
 
+  // Reconcilia el niño activo con la familia: recupera el recordado si sigue existiendo,
+  // autoselecciona cuando hay uno solo, y lo limpia si ya no está en la lista.
+  useEffect(() => {
+    if (!familia) return;
+    setNinoActivo((actual) => {
+      const guardado = actual ?? localStorage.getItem(NINO_KEY);
+      if (guardado && familia.ninos.includes(guardado)) return guardado;
+      if (familia.ninos.length === 1) return familia.ninos[0];
+      return null; // 0 niños, o varios sin selección válida (→ "¿quién juega?")
+    });
+  }, [familia]);
+
+  /** Elige (o deselecciona) el niño que juega y lo recuerda en el dispositivo. */
+  function elegirNino(nino: string | null) {
+    setNinoActivo(nino);
+    guardarNinoActivo(nino);
+  }
+
   /** Al cerrar Admin, recargamos los catálogos (pudieron cambiar) y volvemos al flujo. */
   function cerrarAdmin() {
     setMostrarAdmin(false);
@@ -105,6 +137,7 @@ export default function App() {
     setMostrarConfig(false);
     setPersonajes(null);
     setUbicaciones(null);
+    elegirNino(null);
     setFamilia(null);
   }
 
@@ -145,6 +178,8 @@ export default function App() {
       <main className="holo-wrap">
         <Hud
           nombreFamilia={familia.nombre_familia}
+          ninoActivo={ninoActivo}
+          onCambiarNino={familia.ninos.length > 1 ? () => elegirNino(null) : undefined}
           onAbrirConfig={() => setMostrarConfig(true)}
           onAbrirAdmin={() => setMostrarAdmin(true)}
           onSalir={() => void salirFamilia()}
@@ -154,7 +189,18 @@ export default function App() {
         {mostrarAdmin ? (
           <Admin onCerrar={cerrarAdmin} />
         ) : mostrarConfig ? (
-          <Configuracion onCerrar={() => setMostrarConfig(false)} />
+          <Configuracion
+            familia={familia}
+            onActualizado={setFamilia}
+            onCerrar={() => setMostrarConfig(false)}
+          />
+        ) : familia.ninos.length > 1 && ninoActivo === null ? (
+          <QuienJuega
+            nombreFamilia={familia.nombre_familia}
+            ninos={familia.ninos}
+            onElegir={elegirNino}
+            onGestionar={() => setMostrarConfig(true)}
+          />
         ) : errorCarga ? (
           <section className="holo-cargando" role="alert">
             <p>😢 No pude cargar el catálogo.</p>

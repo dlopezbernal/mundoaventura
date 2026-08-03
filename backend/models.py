@@ -103,6 +103,12 @@ class Familia(SQLModel, table=True):
     codigo_hash: str | None = None  # 'salt$hash' del OTP; None si no hay código vivo
     codigo_expira: datetime | None = None
     codigo_intentos: int = 0  # intentos fallidos del código actual (anti-fuerza-bruta)
+    # Multi-perfil (Hito 9.2c). `ninos` guarda la lista de nombres (hermanos) como JSON
+    # (p. ej. '["Marco","Lucía"]'). `pin_familia_hash` es el PIN de adulto DE LA FAMILIA
+    # (4 dígitos, hasheado): protege el consentimiento de la foto y la edición del perfil,
+    # y NO da acceso a Admin. None = aún sin PIN configurado.
+    ninos: str = "[]"
+    pin_familia_hash: str | None = None
     creado_en: datetime = Field(default_factory=_ahora_utc)
 
 

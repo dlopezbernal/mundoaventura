@@ -334,11 +334,13 @@ class ImportResult(BaseModel):
 
 # --- Familias (cuentas + sesión, Hito 9.2) ---
 class FamiliaDTO(BaseModel):
-    """Datos públicos de una familia (NUNCA el hash de la contraseña)."""
+    """Datos públicos de una familia (NUNCA el hash de la contraseña ni del PIN)."""
 
     id: str
     email: str
     nombre_familia: str
+    ninos: list[str] = []  # nombres de los niños (hermanos), para el multi-perfil
+    tiene_pin: bool = False  # ¿tiene PIN de familia configurado?
 
 
 class FamiliaSesion(BaseModel):

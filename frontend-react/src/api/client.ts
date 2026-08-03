@@ -22,6 +22,7 @@ import type {
   DocumentoContenido,
   DocumentoDTO,
   FamiliaAuthResponse,
+  FamiliaDTO,
   FamiliaReenviarResponse,
   FamiliaSesion,
   FamiliasEstado,
@@ -976,4 +977,44 @@ export async function familiaLogout(): Promise<void> {
   } finally {
     setFamilyToken(null);
   }
+}
+
+/**
+ * Edita el perfil de la familia (nombre y/o lista de niños). PUT /api/familias/perfil.
+ * Devuelve la familia actualizada (con `ninos` y `tiene_pin`). Requiere sesión.
+ */
+export async function familiaActualizarPerfil(cambios: {
+  nombre_familia?: string;
+  ninos?: string[];
+}): Promise<FamiliaDTO> {
+  const response = await fetchBackend(
+    "/api/familias/perfil",
+    { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cambios) },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as FamiliaDTO;
+}
+
+/** Pone o cambia el PIN de familia (4 dígitos). PUT /api/familias/pin. */
+export async function familiaSetPin(pinNuevo: string, pinActual?: string): Promise<void> {
+  await fetchBackend(
+    "/api/familias/pin",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin_nuevo: pinNuevo, pin_actual: pinActual ?? null }),
+    },
+    TIMEOUT_CONFIG,
+  );
+}
+
+/** Comprueba el PIN de familia (consentimiento de foto / editar perfil). POST .../pin/verificar. */
+export async function familiaVerificarPin(pin: string): Promise<boolean> {
+  const response = await fetchBackend(
+    "/api/familias/pin/verificar",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { ok: boolean };
+  return body.ok;
 }

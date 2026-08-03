@@ -261,6 +261,76 @@ def test_endpoint_signup_email_duplicado_da_400():
     assert r.status_code == 400
 
 
+# ---------------------------------------------------------------------------
+# Perfil de familia: niños + PIN (multi-perfil, Hito 9.2c)
+# ---------------------------------------------------------------------------
+def test_dto_incluye_ninos_y_tiene_pin():
+    familia, _ = _alta("dto@ejemplo.com")
+    assert familia["ninos"] == [] and familia["tiene_pin"] is False
+
+
+def test_actualizar_perfil_ninos_y_nombre():
+    familia, _ = _alta("perfil@ejemplo.com", nombre="Antigua")
+    p = familias_service.actualizar_perfil(
+        familia["id"], nombre_familia="Los Nuevos", ninos=["  Marco ", "Lucía", "  "]
+    )
+    assert p["nombre_familia"] == "Los Nuevos"
+    assert p["ninos"] == ["Marco", "Lucía"]  # recorta y descarta vacíos
+
+
+def test_actualizar_perfil_topa_numero_de_ninos():
+    familia, _ = _alta("muchos@ejemplo.com")
+    with pytest.raises(ValueError):
+        familias_service.actualizar_perfil(familia["id"], ninos=[f"N{i}" for i in range(9)])
+
+
+def test_pin_familia_set_y_verificar():
+    familia, _ = _alta("pin@ejemplo.com")
+    assert familias_service.verificar_pin_familia(familia["id"], "0000") is True  # sin PIN → pasa
+    familias_service.set_pin_familia(familia["id"], "1234")
+    assert familias_service.verificar_pin_familia(familia["id"], "1234") is True
+    assert familias_service.verificar_pin_familia(familia["id"], "9999") is False
+
+
+def test_pin_familia_debe_ser_4_digitos():
+    familia, _ = _alta("pin4@ejemplo.com")
+    with pytest.raises(ValueError):
+        familias_service.set_pin_familia(familia["id"], "12")  # muy corto
+    with pytest.raises(ValueError):
+        familias_service.set_pin_familia(familia["id"], "abcd")  # no numérico
+
+
+def test_pin_familia_cambio_requiere_actual():
+    familia, _ = _alta("pinc@ejemplo.com")
+    familias_service.set_pin_familia(familia["id"], "1111")
+    with pytest.raises(ValueError):
+        familias_service.set_pin_familia(familia["id"], "2222", pin_actual="0000")  # actual mal
+    familias_service.set_pin_familia(familia["id"], "2222", pin_actual="1111")  # actual OK
+    assert familias_service.verificar_pin_familia(familia["id"], "2222") is True
+
+
+def test_endpoint_perfil_y_pin_requieren_sesion():
+    # Sin token de familia: 401.
+    assert _CLIENTE.put("/api/familias/perfil", json={"ninos": ["A"]}).status_code == 401
+    # Con token: se puede editar el perfil y el /me lo refleja.
+    r = _CLIENTE.post(
+        "/api/familias/signup",
+        json={"email": "epf@ejemplo.com", "password": "contrasena1", "nombre_familia": "EPF"},
+    )
+    token = r.json()["token"]
+    h = {"X-Family-Token": token}
+    r2 = _CLIENTE.put("/api/familias/perfil", json={"ninos": ["Ana", "Beto"]}, headers=h)
+    assert r2.status_code == 200 and r2.json()["ninos"] == ["Ana", "Beto"]
+    me = _CLIENTE.get("/api/familias/me", headers=h).json()
+    assert me["familia"]["ninos"] == ["Ana", "Beto"]
+    # PIN: ponerlo y verificarlo por endpoint.
+    assert (
+        _CLIENTE.put("/api/familias/pin", json={"pin_nuevo": "4321"}, headers=h).status_code == 200
+    )
+    ok = _CLIENTE.post("/api/familias/pin/verificar", json={"pin": "4321"}, headers=h).json()["ok"]
+    assert ok is True
+
+
 def test_endpoint_verificar(_con_verificacion):
     r = _CLIENTE.post(
         "/api/familias/signup",
