@@ -2,19 +2,22 @@
 services/admin_service.py — Acceso de administrador al área de configuración
 ============================================================================
 
-El menú de configuración contiene claves de API y operaciones destructivas
-(borrar personajes/documentos, importar ajustes), y la app la usan NIÑOS. Por eso
-toda la zona de ajustes queda detrás de un **PIN de adulto** (Hito 7):
+La zona de Administración contiene claves de API y operaciones destructivas (borrar
+personajes/documentos, importar ajustes), y la app la usan NIÑOS. Por eso va detrás de
+una **contraseña de administración** (introducida como PIN en el Hito 7 y robustecida en
+el Hito 9.2d a contraseña ≥ 8 + 2FA TOTP opcional):
 
-  1. La primera vez, el adulto CREA un PIN (setup). No se puede acceder a los
-     ajustes hasta que exista uno.
-  2. Para entrar, introduce el PIN (login) → el backend devuelve un TOKEN de sesión
-     temporal que el frontend envía en cada petición a los endpoints protegidos.
+  1. La primera vez, el adulto CREA la contraseña (setup). No se puede entrar hasta que
+     exista una.
+  2. Para entrar, introduce la contraseña (login); si el 2FA está activo, además un
+     código TOTP → el backend devuelve un TOKEN de sesión temporal que el frontend envía
+     en cada petición a los endpoints protegidos.
   3. `requiere_admin` es la dependencia de FastAPI que valida ese token.
 
-El PIN se guarda **hasheado** (PBKDF2-HMAC-SHA256 con sal), nunca en claro y nunca
-se envía al frontend. Los tokens viven en memoria (se pierden al reiniciar → habrá
-que volver a entrar), suficiente para una app local de un solo proceso.
+La contraseña se guarda **hasheada** (PBKDF2-HMAC-SHA256 con sal), nunca en claro y nunca
+se envía al frontend. Los tokens viven en memoria (se pierden al reiniciar → habrá que
+volver a entrar), suficiente para una app local de un solo proceso. El 2FA (secreto TOTP
++ códigos de recuperación) vive más abajo, en su propia sección.
 
 Además, `backup_sqlite()` hace una copia de seguridad del fichero SQLite antes de
 operaciones destructivas (p. ej. importar configuración), como pide el Hito 7.
@@ -70,7 +73,7 @@ _tokens: dict[str, float] = {}
 # ---------------------------------------------------------------------------
 # Anti-fuerza-bruta del login (Hito 2)
 # ---------------------------------------------------------------------------
-# Un PIN de 4 dígitos son ~10.000 combinaciones: sin freno, minutos de ataque. Tres
+# Una contraseña débil se rompe por fuerza bruta si no hay freno. Tres
 # barreras baratas: (1) un retardo fijo en CADA intento (encarece mucho el ataque,
 # imperceptible para el adulto); (2) tras varios fallos por IP, bloqueo temporal con
 # espera CRECIENTE; (3) log de los intentos fallidos.
@@ -192,17 +195,19 @@ def _validar_pin_nuevo(pin: str) -> None:
 # API pública del servicio
 # ---------------------------------------------------------------------------
 def esta_configurado() -> bool:
-    """¿Ya existe un PIN de adulto?"""
+    """¿Ya existe una contraseña de administración?"""
     return _leer_hash() is not None
 
 
 def configurar(pin: str) -> str:
-    """Crea el PIN por primera vez y devuelve un token de sesión (auto-login).
+    """Crea la contraseña por primera vez y devuelve un token de sesión (auto-login).
 
-    Lanza ValueError (→ 400) si ya hay un PIN configurado o el PIN es demasiado corto.
+    Lanza ValueError (→ 400) si ya hay una contraseña configurada o es demasiado corta.
     """
     if esta_configurado():
-        raise ValueError("Ya hay un PIN configurado. Usa 'cambiar PIN' para modificarlo.")
+        raise ValueError(
+            "Ya hay una contraseña configurada. Usa 'cambiar contraseña' para modificarla."
+        )
     _validar_pin_nuevo(pin)
     _guardar_hash(_hashear(pin.strip(), secrets.token_hex(16)))
     return _crear_token()
@@ -385,7 +390,7 @@ def requiere_admin(x_admin_token: str | None = Header(default=None)) -> None:
     if not validar_token(x_admin_token):
         raise HTTPException(
             status_code=401,
-            detail="Acceso restringido: introduce el PIN de adulto para entrar en la configuración.",
+            detail="Acceso restringido: introduce la contraseña de administración para entrar.",
         )
 
 
