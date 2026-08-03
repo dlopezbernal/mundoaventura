@@ -60,3 +60,5 @@ Thumbs.db
 evals/resultados/*
 !evals/resultados/BASELINE.csv
 !evals/resultados/BASELINE.html
+# Test ciego (H6): papeletas/clave/votos son artefactos de corrida, no se versionan.
+evals/test_ciego/
