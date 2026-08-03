@@ -22,6 +22,13 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from backend.schemas.admin import AdminCambiar, AdminPin, ImportRequest
+from backend.schemas.respuestas import (
+    AdminStatus,
+    ConfigExport,
+    ImportResult,
+    OkResponse,
+    TokenResponse,
+)
 from backend.services import (
     admin_service,
     personajes_service,
@@ -32,7 +39,7 @@ from backend.services import (
 router = APIRouter(prefix="/api/admin", tags=["Configuración · Admin"])
 
 
-@router.get("/status")
+@router.get("/status", response_model=AdminStatus)
 def estado(x_admin_token: str | None = Header(default=None)):
     """¿Hay PIN configurado? ¿El token de la cabecera sigue siendo válido?"""
     return {
@@ -41,7 +48,7 @@ def estado(x_admin_token: str | None = Header(default=None)):
     }
 
 
-@router.post("/setup")
+@router.post("/setup", response_model=TokenResponse)
 def setup(req: AdminPin):
     """Crea el PIN de adulto por primera vez (auto-login). 400 si ya existe o es corto."""
     try:
@@ -51,7 +58,7 @@ def setup(req: AdminPin):
     return {"ok": True, "token": token}
 
 
-@router.post("/login")
+@router.post("/login", response_model=TokenResponse)
 def login(req: AdminPin, request: Request):
     """Valida el PIN y devuelve un token de sesión.
 
@@ -68,14 +75,18 @@ def login(req: AdminPin, request: Request):
     return {"ok": True, "token": token}
 
 
-@router.post("/logout")
+@router.post("/logout", response_model=OkResponse)
 def logout(x_admin_token: str | None = Header(default=None)):
     """Cierra la sesión invalidando el token de la cabecera."""
     admin_service.cerrar_sesion(x_admin_token)
     return {"ok": True}
 
 
-@router.post("/change", dependencies=[Depends(admin_service.requiere_admin)])
+@router.post(
+    "/change",
+    dependencies=[Depends(admin_service.requiere_admin)],
+    response_model=OkResponse,
+)
 def cambiar_pin(req: AdminCambiar):
     """Cambia el PIN (requiere el actual). 400 si el actual no es correcto."""
     try:
@@ -85,7 +96,11 @@ def cambiar_pin(req: AdminCambiar):
     return {"ok": True}
 
 
-@router.get("/export", dependencies=[Depends(admin_service.requiere_admin)])
+@router.get(
+    "/export",
+    dependencies=[Depends(admin_service.requiere_admin)],
+    response_model=ConfigExport,
+)
 def exportar():
     """Devuelve la configuración completa (ajustes + catálogos), SIN secretos."""
     ajustes = {e["clave"]: e["valor"] for e in settings_service.exportar()}
@@ -111,7 +126,11 @@ _CAMPOS_PERSONAJE = (
 _CAMPOS_UBICACION = ("nombre", "emoji", "prompt_imagen", "activo")
 
 
-@router.post("/import", dependencies=[Depends(admin_service.requiere_admin)])
+@router.post(
+    "/import",
+    dependencies=[Depends(admin_service.requiere_admin)],
+    response_model=ImportResult,
+)
 def importar(req: ImportRequest):
     """Restaura una configuración exportada. Hace COPIA DE SEGURIDAD del SQLite antes.
 

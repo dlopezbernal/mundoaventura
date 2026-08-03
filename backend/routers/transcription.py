@@ -16,12 +16,13 @@ from backend import config
 from backend.ratelimit import limiter
 from backend.routers import errores
 from backend.routers.limites import leer_con_limite
+from backend.schemas.respuestas import TranscribeResponse
 from backend.services import voice_service
 
 router = APIRouter(prefix="/api", tags=["Transcripción (voz)"])
 
 
-@router.post("/transcribe")
+@router.post("/transcribe", response_model=TranscribeResponse)
 @limiter.limit(lambda: config.RATE_LIMIT_TRANSCRIBE)
 async def transcribe(request: Request, audio: UploadFile = File(...)):
     """Transcribe el audio de la pregunta del niño a texto en español."""

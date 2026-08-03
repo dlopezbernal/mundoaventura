@@ -37,18 +37,32 @@ from backend.schemas.documentos import (
     DocumentoCopiarRequest,
     DocumentoUrlRequest,
 )
+from backend.schemas.respuestas import (
+    CopiaResponse,
+    DocumentoContenido,
+    DocumentoMutacion,
+    DocumentosResponse,
+    OkResponse,
+    ReindexEstado,
+    ReindexResponse,
+    SubidaDocumentoResponse,
+)
 from backend.services import documentos_service
 
 router = APIRouter(prefix="/api", tags=["Configuración · Documentos"])
 
 
-@router.get("/personajes/{personaje_id}/documentos")
+@router.get("/personajes/{personaje_id}/documentos", response_model=DocumentosResponse)
 def listar_documentos(personaje_id: str):
     """Lista los documentos (metadatos) de un personaje."""
     return {"documentos": documentos_service.listar(personaje_id)}
 
 
-@router.post("/personajes/{personaje_id}/documentos")
+@router.post(
+    "/personajes/{personaje_id}/documentos",
+    response_model=SubidaDocumentoResponse,
+    response_model_exclude_none=True,
+)
 async def subir_documento(
     personaje_id: str,
     archivos: list[UploadFile] = File(...),
@@ -93,7 +107,7 @@ async def subir_documento(
     return {"ok": True, **resultado}
 
 
-@router.post("/personajes/{personaje_id}/documentos/url")
+@router.post("/personajes/{personaje_id}/documentos/url", response_model=DocumentoMutacion)
 def ingerir_url(personaje_id: str, req: DocumentoUrlRequest):
     """Ingesta un artículo de Wikipedia desde su URL (traducido automáticamente si hace falta)."""
     try:
@@ -107,7 +121,10 @@ def ingerir_url(personaje_id: str, req: DocumentoUrlRequest):
     return {"ok": True, "documento": documento}
 
 
-@router.get("/personajes/{personaje_id}/documentos/{documento_id}/contenido")
+@router.get(
+    "/personajes/{personaje_id}/documentos/{documento_id}/contenido",
+    response_model=DocumentoContenido,
+)
 def obtener_contenido(personaje_id: str, documento_id: int):
     """Devuelve el texto actual de un documento (para el visor)."""
     try:
@@ -116,7 +133,10 @@ def obtener_contenido(personaje_id: str, documento_id: int):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
-@router.put("/personajes/{personaje_id}/documentos/{documento_id}/contenido")
+@router.put(
+    "/personajes/{personaje_id}/documentos/{documento_id}/contenido",
+    response_model=DocumentoMutacion,
+)
 def actualizar_contenido(personaje_id: str, documento_id: int, req: DocumentoContenidoRequest):
     """Edita el texto de un documento .txt/.md existente y reindexa al personaje."""
     try:
@@ -138,7 +158,10 @@ def descargar_documento(personaje_id: str, documento_id: int):
     return FileResponse(ruta, filename=ruta.name)
 
 
-@router.post("/personajes/{personaje_id}/documentos/{documento_id}/copiar")
+@router.post(
+    "/personajes/{personaje_id}/documentos/{documento_id}/copiar",
+    response_model=CopiaResponse,
+)
 def copiar_documento(personaje_id: str, documento_id: int, req: DocumentoCopiarRequest):
     """Copia (de forma independiente) un documento a uno o varios personajes destino.
 
@@ -158,7 +181,7 @@ def copiar_documento(personaje_id: str, documento_id: int, req: DocumentoCopiarR
     return {"ok": True, **resultado}
 
 
-@router.delete("/personajes/{personaje_id}/documentos/{documento_id}")
+@router.delete("/personajes/{personaje_id}/documentos/{documento_id}", response_model=OkResponse)
 def borrar_documento(personaje_id: str, documento_id: int):
     """Borra un documento (fichero + metadatos) y reindexa al personaje."""
     try:
@@ -168,19 +191,19 @@ def borrar_documento(personaje_id: str, documento_id: int):
     return {"ok": True}
 
 
-@router.post("/personajes/{personaje_id}/reindex")
+@router.post("/personajes/{personaje_id}/reindex", response_model=ReindexResponse)
 def reindexar_personaje(personaje_id: str):
     """Reindexado INCREMENTAL de un personaje (solo sus chunks)."""
     return {"ok": True, "resultado": documentos_service.reindexar_personaje(personaje_id)}
 
 
-@router.post("/reindex")
+@router.post("/reindex", response_model=ReindexResponse)
 def reindexar_todo():
     """Reindexado GLOBAL: borra y reconstruye toda la colección."""
     return {"ok": True, "resultado": documentos_service.reindexar_todo()}
 
 
-@router.get("/reindex/estado")
+@router.get("/reindex/estado", response_model=ReindexEstado)
 def estado_reindex_todo():
     """Progreso del reindexado GLOBAL en curso (sondeado por el frontend para la barra)."""
     return documentos_service.estado_reindexado_todo()
