@@ -22,12 +22,15 @@ operaciones destructivas (p. ej. importar configuración), como pide el Hito 7.
 
 import hashlib
 import hmac
+import json
 import logging
 import secrets
 import shutil
 import time
 from datetime import UTC, datetime
 
+import pyotp
+import segno
 from fastapi import Header, HTTPException
 
 from backend import config, db
@@ -35,14 +38,26 @@ from backend.models import Setting
 
 logger = logging.getLogger(__name__)
 
-# Clave RESERVADA en la tabla `settings` para el hash del PIN. No está en el
-# `_SPEC` de settings_service, así que ni se exporta, ni se importa, ni aparece
-# en el menú de ajustes: es interna de este servicio.
+# Claves RESERVADAS en la tabla `settings`. Ninguna está en el `_SPEC` de
+# settings_service, así que ni se exportan, ni se importan, ni aparecen en el menú de
+# ajustes: son internas de este servicio.
 _CLAVE_PIN = "admin_pin_hash"
+# 2FA (Hito 9.2d): el secreto TOTP activo, el secreto "pendiente" durante el
+# enrolamiento (antes de confirmar), y los códigos de recuperación (hasheados).
+_CLAVE_2FA_SECRET = "admin_2fa_secret"
+_CLAVE_2FA_PENDIENTE = "admin_2fa_pendiente"
+_CLAVE_2FA_RECOVERY = "admin_2fa_recovery"
 
 # Parámetros del hash (PBKDF2). 200k iteraciones = buen equilibrio en 2025.
 _ITERACIONES = 200_000
-_LONGITUD_MIN_PIN = 4
+# Longitud mínima de la CONTRASEÑA de administración (Hito 9.2d): se sube de 4 a 8 al
+# robustecer el acceso pensando en internet. Solo se comprueba al crear/cambiar, así
+# que una credencial más corta ya existente sigue sirviendo para entrar.
+_LONGITUD_MIN_PIN = 8
+# Nº de códigos de recuperación de un solo uso que se generan al activar el 2FA.
+_NUM_RECOVERY = 8
+# Ventana de validación TOTP: ±1 intervalo (30 s) para tolerar desfases de reloj.
+_TOTP_WINDOW = 1
 
 # Vigencia de un token de sesión (segundos). 12 h: cómodo para un adulto que
 # configura la app en una sesión sin tener que reintroducir el PIN a cada paso.
@@ -78,6 +93,10 @@ class BloqueoLoginError(Exception):
         )
 
 
+class Requiere2FAError(Exception):
+    """La contraseña es correcta pero falta el código 2FA (el router lo señaliza al frontend)."""
+
+
 def _comprobar_bloqueo(ip: str) -> None:
     """Lanza BloqueoLoginError si la IP está bloqueada ahora mismo."""
     entrada = _fallos_login.get(ip)
@@ -107,24 +126,44 @@ def _limpiar_fallos(ip: str) -> None:
 # ---------------------------------------------------------------------------
 # Almacenamiento del PIN (hash) en la tabla settings
 # ---------------------------------------------------------------------------
-def _leer_hash() -> str | None:
+def _leer_clave(clave: str) -> str | None:
+    """Lee el valor de una clave reservada de la tabla settings (o None)."""
     db.init_db()
     with db.get_session() as sesion:
-        fila = sesion.get(Setting, _CLAVE_PIN)
+        fila = sesion.get(Setting, clave)
         return fila.valor if fila else None
 
 
-def _guardar_hash(valor: str) -> None:
+def _guardar_clave(clave: str, valor: str) -> None:
+    """Crea o actualiza una clave reservada de la tabla settings."""
     db.init_db()
     with db.get_session() as sesion:
-        fila = sesion.get(Setting, _CLAVE_PIN)
+        fila = sesion.get(Setting, clave)
         if fila is None:
-            fila = Setting(clave=_CLAVE_PIN, valor=valor, tipo="str")
+            fila = Setting(clave=clave, valor=valor, tipo="str")
         else:
             fila.valor = valor
             fila.actualizado_en = datetime.now(UTC)
         sesion.add(fila)
         sesion.commit()
+
+
+def _borrar_clave(clave: str) -> None:
+    """Elimina una clave reservada de la tabla settings (si existe)."""
+    db.init_db()
+    with db.get_session() as sesion:
+        fila = sesion.get(Setting, clave)
+        if fila is not None:
+            sesion.delete(fila)
+            sesion.commit()
+
+
+def _leer_hash() -> str | None:
+    return _leer_clave(_CLAVE_PIN)
+
+
+def _guardar_hash(valor: str) -> None:
+    _guardar_clave(_CLAVE_PIN, valor)
 
 
 def _hashear(pin: str, salt_hex: str) -> str:
@@ -144,7 +183,9 @@ def _verificar(pin: str, guardado: str) -> bool:
 
 def _validar_pin_nuevo(pin: str) -> None:
     if not pin or len(pin.strip()) < _LONGITUD_MIN_PIN:
-        raise ValueError(f"El PIN debe tener al menos {_LONGITUD_MIN_PIN} caracteres.")
+        raise ValueError(
+            f"La contraseña de administración debe tener al menos {_LONGITUD_MIN_PIN} caracteres."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -167,21 +208,29 @@ def configurar(pin: str) -> str:
     return _crear_token()
 
 
-def login(pin: str, ip: str = "?") -> str:
-    """Valida el PIN y devuelve un token de sesión.
+def login(pin: str, ip: str = "?", codigo: str | None = None) -> str:
+    """Valida la contraseña (y el 2FA si está activo) y devuelve un token de sesión.
 
-    Lanza BloqueoLoginError (→ 429) si la IP está bloqueada por intentos, o
-    ValueError (→ 400) si no hay PIN o es incorrecto. Aplica un retardo fijo y
-    cuenta los fallos por IP para frenar la fuerza bruta (ver arriba).
+    Lanza BloqueoLoginError (→ 429) si la IP está bloqueada; ValueError (→ 400) si no
+    hay contraseña o es incorrecta, o si el código 2FA no es válido; y Requiere2FAError
+    si la contraseña es correcta pero el 2FA está activo y no se ha aportado código
+    (el router lo traduce a "pide el código" sin dar todavía la sesión).
     """
     _comprobar_bloqueo(ip)
     time.sleep(_RETARDO_LOGIN)  # coste fijo por intento: encarece el ataque
     guardado = _leer_hash()
     if guardado is None:
-        raise ValueError("Aún no hay un PIN configurado. Créalo primero.")
+        raise ValueError("Aún no hay una contraseña configurada. Créala primero.")
     if not _verificar(pin.strip(), guardado):
         _registrar_fallo(ip)
-        raise ValueError("PIN incorrecto.")
+        raise ValueError("Contraseña incorrecta.")
+    # Contraseña correcta. Si el 2FA está activo, exigimos el segundo factor.
+    if dos_factor_activo():
+        if not codigo or not codigo.strip():
+            raise Requiere2FAError()
+        if not _verificar_2fa(codigo.strip()):
+            _registrar_fallo(ip)
+            raise ValueError("Código de verificación incorrecto.")
     _limpiar_fallos(ip)  # login correcto: borrón y cuenta nueva
     return _crear_token()
 
@@ -195,8 +244,104 @@ def cambiar(pin_actual: str, pin_nuevo: str) -> None:
         raise ValueError("El PIN actual no es correcto.")
     _validar_pin_nuevo(pin_nuevo)
     _guardar_hash(_hashear(pin_nuevo.strip(), secrets.token_hex(16)))
-    # Al cambiar el PIN invalidamos todas las sesiones abiertas.
+    # Al cambiar la contraseña invalidamos todas las sesiones abiertas.
     _tokens.clear()
+
+
+# ---------------------------------------------------------------------------
+# Doble factor (2FA TOTP) — Hito 9.2d
+# ---------------------------------------------------------------------------
+# El área de Admin gestiona la configuración GLOBAL (claves API, catálogo…) y se
+# planea exponer por internet, así que además de la contraseña ofrece un segundo
+# factor TOTP (Google Authenticator, Aegis, etc.). Es un TOGGLE: por defecto está
+# DESACTIVADO —un clon nuevo y el tribunal entran solo con la contraseña—, y se activa
+# con un clic (enrolamiento por QR + confirmar código + códigos de recuperación).
+def dos_factor_activo() -> bool:
+    """¿Está el 2FA activo? (hay un secreto TOTP confirmado)."""
+    return _leer_clave(_CLAVE_2FA_SECRET) is not None
+
+
+def _verificar_totp(secreto: str, codigo: str) -> bool:
+    """Comprueba un código TOTP contra el secreto (con ventana de ±1 intervalo)."""
+    return pyotp.TOTP(secreto).verify(codigo, valid_window=_TOTP_WINDOW)
+
+
+def _verificar_y_consumir_recovery(codigo: str) -> bool:
+    """¿`codigo` es un código de recuperación válido? Si lo es, lo CONSUME (un solo uso)."""
+    guardado = _leer_clave(_CLAVE_2FA_RECOVERY)
+    if not guardado:
+        return False
+    hashes: list[str] = json.loads(guardado)
+    for h in hashes:
+        if _verificar(codigo, h):
+            hashes.remove(h)  # un solo uso: se retira tras acertar
+            _guardar_clave(_CLAVE_2FA_RECOVERY, json.dumps(hashes))
+            logger.warning(
+                "2FA de admin: se usó un código de recuperación (quedan %s).", len(hashes)
+            )
+            return True
+    return False
+
+
+def _verificar_2fa(codigo: str) -> bool:
+    """Valida el segundo factor: primero como TOTP y, si no, como código de recuperación."""
+    secreto = _leer_clave(_CLAVE_2FA_SECRET)
+    if secreto and _verificar_totp(secreto, codigo):
+        return True
+    return _verificar_y_consumir_recovery(codigo)
+
+
+def iniciar_enrolamiento_2fa() -> dict:
+    """Arranca el enrolamiento: genera un secreto PENDIENTE y devuelve QR + URI + clave.
+
+    No activa el 2FA todavía: hace falta confirmar con un código válido
+    (`confirmar_enrolamiento_2fa`). Si ya estaba activo, lanza ValueError.
+    """
+    if dos_factor_activo():
+        raise ValueError("El 2FA ya está activado.")
+    secreto = pyotp.random_base32()
+    _guardar_clave(_CLAVE_2FA_PENDIENTE, secreto)
+    uri = pyotp.TOTP(secreto).provisioning_uri(
+        name="administración", issuer_name="La Máquina del Tiempo"
+    )
+    # QR como data URI (SVG, generado por segno sin dependencias de imagen): el frontend
+    # solo lo pinta en un <img>. Además devolvemos el secreto en claro para entrada manual.
+    qr_svg = segno.make(uri).svg_data_uri(scale=5)
+    return {"secret": secreto, "otpauth_uri": uri, "qr_svg": qr_svg}
+
+
+def confirmar_enrolamiento_2fa(codigo: str) -> list[str]:
+    """Confirma el enrolamiento con un código del autenticador y activa el 2FA.
+
+    Devuelve los códigos de recuperación (en claro, SOLO esta vez). Lanza ValueError si
+    no hay enrolamiento en curso o el código no es válido.
+    """
+    pendiente = _leer_clave(_CLAVE_2FA_PENDIENTE)
+    if not pendiente:
+        raise ValueError("No hay un enrolamiento de 2FA en curso. Empieza de nuevo.")
+    if not _verificar_totp(pendiente, (codigo or "").strip()):
+        raise ValueError("El código no es válido. Revisa la hora del móvil e inténtalo otra vez.")
+    # Promovemos el secreto pendiente a activo y generamos los códigos de recuperación.
+    _guardar_clave(_CLAVE_2FA_SECRET, pendiente)
+    _borrar_clave(_CLAVE_2FA_PENDIENTE)
+    codigos = [f"{secrets.token_hex(2)}-{secrets.token_hex(2)}" for _ in range(_NUM_RECOVERY)]
+    _guardar_clave(
+        _CLAVE_2FA_RECOVERY,
+        json.dumps([_hashear(c, secrets.token_hex(16)) for c in codigos]),
+    )
+    logger.warning("2FA de admin ACTIVADO (con %s códigos de recuperación).", len(codigos))
+    return codigos
+
+
+def desactivar_2fa(pin: str) -> None:
+    """Desactiva el 2FA. Exige la CONTRASEÑA actual (re-autenticación). Lanza ValueError si falla."""
+    guardado = _leer_hash()
+    if guardado is None or not _verificar((pin or "").strip(), guardado):
+        raise ValueError("La contraseña no es correcta.")
+    _borrar_clave(_CLAVE_2FA_SECRET)
+    _borrar_clave(_CLAVE_2FA_PENDIENTE)
+    _borrar_clave(_CLAVE_2FA_RECOVERY)
+    logger.warning("2FA de admin DESACTIVADO.")
 
 
 # ---------------------------------------------------------------------------

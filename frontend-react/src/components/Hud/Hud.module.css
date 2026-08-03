@@ -44,6 +44,33 @@
   align-items: center;
 }
 
+/* Saludo a la familia/niño con sesión iniciada (Hito 9.2). */
+.saludo {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: #8fa3e0;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Enlace "cambiar" de perfil de niño, junto al saludo. */
+.cambiarNino {
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--holo);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.cambiarNino:hover {
+  color: #fff;
+}
+
 /* Botón de Configuración/Setup (acción principal del HUD). */
 .config {
   font-family: var(--font-pixel);
@@ -74,6 +101,10 @@
 }
 
 @media (max-width: 640px) {
+  /* En móvil ocultamos el saludo para que la barra no se rompa. */
+  .saludo {
+    display: none;
+  }
   /* En móvil el botón conserva solo el icono para no romper la barra. */
   .config {
     font-size: 0;

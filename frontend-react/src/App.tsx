@@ -22,8 +22,17 @@ import PlaceSelect from "./screens/PlaceSelect";
 import SceneChat from "./screens/SceneChat";
 import Admin from "./screens/Admin";
 import Configuracion from "./screens/Configuracion";
-import { BackendError, checkHealth, getPersonajes, getUbicaciones } from "./api/client";
-import type { PersonajeDTO, UbicacionDTO } from "./api/types";
+import LoginFamilia from "./screens/LoginFamilia";
+import QuienJuega from "./screens/QuienJuega";
+import {
+  BackendError,
+  checkHealth,
+  familiaLogout,
+  familiaMe,
+  getPersonajes,
+  getUbicaciones,
+} from "./api/client";
+import type { FamiliaDTO, NinoDTO, PersonajeDTO, UbicacionDTO } from "./api/types";
 import { useFlow } from "./state/useFlow";
 
 // Modo desarrollo: muestra el botón "Probar conexión" en el HUD (como el DEBUG
@@ -39,7 +48,23 @@ async function probarConexion() {
   }
 }
 
+// Niño con perfil activo, recordado en el dispositivo (Hito 9.2c).
+const NINO_KEY = "mdt_nino_activo";
+function guardarNinoActivo(nino: string | null) {
+  try {
+    if (nino) localStorage.setItem(NINO_KEY, nino);
+    else localStorage.removeItem(NINO_KEY);
+  } catch {
+    /* localStorage puede no estar disponible */
+  }
+}
+
 export default function App() {
+  // Sesión de familia (Hito 9.2): la app va detrás del login de familia.
+  // undefined = comprobando todavía; null = sin sesión (mostrar login).
+  const [familia, setFamilia] = useState<FamiliaDTO | null | undefined>(undefined);
+  // Niño con perfil activo (multi-perfil, H9.2c). null = aún sin elegir.
+  const [ninoActivo, setNinoActivo] = useState<NinoDTO | null>(null);
   // Catálogos cargados por API: null = cargando todavía.
   const [personajes, setPersonajes] = useState<PersonajeDTO[] | null>(null);
   const [ubicaciones, setUbicaciones] = useState<UbicacionDTO[] | null>(null);
@@ -60,9 +85,45 @@ export default function App() {
     }
   }, []);
 
+  // Al arrancar comprobamos si hay una sesión de familia persistida en el dispositivo.
   useEffect(() => {
-    void cargarCatalogos();
-  }, [cargarCatalogos]);
+    let vivo = true;
+    void (async () => {
+      try {
+        const est = await familiaMe();
+        if (vivo) setFamilia(est.autenticada ? (est.familia ?? null) : null);
+      } catch {
+        if (vivo) setFamilia(null);
+      }
+    })();
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  // Los catálogos solo se cargan una vez hay familia con sesión (jugar requiere login).
+  useEffect(() => {
+    if (familia) void cargarCatalogos();
+  }, [familia, cargarCatalogos]);
+
+  // Reconcilia el niño activo con la familia: recupera el recordado (por nombre) si
+  // sigue existiendo, autoselecciona cuando hay uno solo, y lo limpia si ya no está.
+  useEffect(() => {
+    if (!familia) return;
+    setNinoActivo((actual) => {
+      const nombre = actual?.nombre ?? localStorage.getItem(NINO_KEY);
+      const encontrado = nombre ? familia.ninos.find((n) => n.nombre === nombre) : undefined;
+      if (encontrado) return encontrado;
+      if (familia.ninos.length === 1) return familia.ninos[0];
+      return null; // 0 niños, o varios sin selección válida (→ "¿quién juega?")
+    });
+  }, [familia]);
+
+  /** Elige (o deselecciona) el niño que juega y lo recuerda en el dispositivo. */
+  function elegirNino(nino: NinoDTO | null) {
+    setNinoActivo(nino);
+    guardarNinoActivo(nino?.nombre ?? null);
+  }
 
   /** Al cerrar Admin, recargamos los catálogos (pudieron cambiar) y volvemos al flujo. */
   function cerrarAdmin() {
@@ -70,20 +131,85 @@ export default function App() {
     void cargarCatalogos();
   }
 
+  /** Cierra la sesión de familia y vuelve a la pantalla de login. */
+  async function salirFamilia() {
+    await familiaLogout();
+    setMostrarAdmin(false);
+    setMostrarConfig(false);
+    setPersonajes(null);
+    setUbicaciones(null);
+    elegirNino(null);
+    setFamilia(null);
+  }
+
+  // Mientras comprobamos la sesión, un estado de carga sobrio (sin HUD).
+  if (familia === undefined) {
+    return (
+      <>
+        <Background />
+        <main className="holo-wrap">
+          <section className="holo-cargando" role="status">
+            <span className="holo-cargando-emoji" aria-hidden="true">
+              ⏳
+            </span>
+            <p>Cargando…</p>
+          </section>
+          <div className="crt-scan" aria-hidden="true" />
+        </main>
+      </>
+    );
+  }
+
+  // Sin sesión de familia: puerta de entrada (login / alta), sin HUD ni flujo.
+  if (familia === null) {
+    return (
+      <>
+        <Background />
+        <main className="holo-wrap">
+          <LoginFamilia onListo={setFamilia} />
+          <div className="crt-scan" aria-hidden="true" />
+        </main>
+      </>
+    );
+  }
+
   return (
     <>
       <Background />
       <main className="holo-wrap">
         <Hud
-          onAbrirConfig={() => setMostrarConfig(true)}
-          onAbrirAdmin={() => setMostrarAdmin(true)}
+          nombreFamilia={familia.nombre_familia}
+          ninoActivo={ninoActivo?.nombre ?? null}
+          onCambiarNino={familia.ninos.length > 1 ? () => elegirNino(null) : undefined}
+          // Abrir una pantalla de adulto CIERRA la otra: si no, al alternar entre los
+          // botones del HUD, Admin (que tiene prioridad en el render) se quedaba "clavado".
+          onAbrirConfig={() => {
+            setMostrarAdmin(false);
+            setMostrarConfig(true);
+          }}
+          onAbrirAdmin={() => {
+            setMostrarConfig(false);
+            setMostrarAdmin(true);
+          }}
+          onSalir={() => void salirFamilia()}
           onProbarConexion={DEBUG ? probarConexion : undefined}
         />
 
         {mostrarAdmin ? (
           <Admin onCerrar={cerrarAdmin} />
         ) : mostrarConfig ? (
-          <Configuracion onCerrar={() => setMostrarConfig(false)} />
+          <Configuracion
+            familia={familia}
+            onActualizado={setFamilia}
+            onCerrar={() => setMostrarConfig(false)}
+          />
+        ) : familia.ninos.length > 1 && ninoActivo === null ? (
+          <QuienJuega
+            nombreFamilia={familia.nombre_familia}
+            ninos={familia.ninos}
+            onElegir={elegirNino}
+            onGestionar={() => setMostrarConfig(true)}
+          />
         ) : errorCarga ? (
           <section className="holo-cargando" role="alert">
             <p>😢 No pude cargar el catálogo.</p>
@@ -113,6 +239,7 @@ export default function App() {
             key={[...personajes.map((p) => p.id), "|", ...ubicaciones.map((u) => u.id)].join(",")}
             personajes={personajes}
             ubicaciones={ubicaciones}
+            ninoActivo={ninoActivo}
           />
         )}
 
@@ -131,9 +258,11 @@ export default function App() {
 function Asistente({
   personajes,
   ubicaciones,
+  ninoActivo,
 }: {
   personajes: PersonajeDTO[];
   ubicaciones: UbicacionDTO[];
+  ninoActivo: NinoDTO | null;
 }) {
   const flow = useFlow(personajes, ubicaciones);
   const { estado, ubicacionLista, nombreLugar } = flow;
@@ -178,6 +307,8 @@ function Asistente({
           personajeNombre={personaje.nombre}
           personajeEmoji={personaje.emoji ?? "🎭"}
           nombreLugar={nombreLugar()}
+          nombreNino={ninoActivo?.nombre ?? null}
+          sexoNino={ninoActivo?.sexo ?? null}
           onReintentar={() =>
             estado.ubicacionId &&
             flow.generarEscena(estado.personajeId, estado.ubicacionId, estado.fotoFile)

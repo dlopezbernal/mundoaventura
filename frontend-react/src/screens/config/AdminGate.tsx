@@ -28,6 +28,8 @@ export default function AdminGate({ onListo }: Props) {
   const [modo, setModo] = useState<Modo>("cargando");
   const [pin, setPin] = useState("");
   const [pin2, setPin2] = useState("");
+  const [codigo, setCodigo] = useState(""); // segundo factor (2FA), si está activo
+  const [pide2fa, setPide2fa] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
@@ -54,13 +56,23 @@ export default function AdminGate({ onListo }: Props) {
   async function enviar() {
     setError(null);
     if (modo === "setup" && pin !== pin2) {
-      setError("El PIN y su confirmación no coinciden.");
+      setError("La contraseña y su confirmación no coinciden.");
       return;
     }
     setOcupado(true);
     try {
-      if (modo === "setup") await adminSetup(pin);
-      else await adminLogin(pin);
+      if (modo === "setup") {
+        await adminSetup(pin);
+      } else {
+        // Login: si el backend pide 2FA, mostramos el campo de código y esperamos a
+        // que el adulto lo introduzca (no entramos todavía).
+        const requiere2fa = await adminLogin(pin, pide2fa ? codigo : undefined);
+        if (requiere2fa) {
+          setPide2fa(true);
+          setOcupado(false);
+          return;
+        }
+      }
       onListo();
     } catch (exc) {
       setError(exc instanceof BackendError ? exc.message : String(exc));
@@ -83,13 +95,21 @@ export default function AdminGate({ onListo }: Props) {
     <div className={styles.gate}>
       <div className={styles.gateCard}>
         <span className={styles.gateIcono} aria-hidden="true">
-          🔐
+          {pide2fa ? "📲" : "🔐"}
         </span>
-        <h2 className={styles.gateTitulo}>{esSetup ? "Crea un PIN de adulto" : "Zona de adultos"}</h2>
+        <h2 className={styles.gateTitulo}>
+          {pide2fa
+            ? "Verificación en dos pasos"
+            : esSetup
+              ? "Crea la contraseña de administración"
+              : "Administración"}
+        </h2>
         <p className={styles.gateTexto}>
-          {esSetup
-            ? "Protege la configuración con un PIN (mínimo 4 caracteres). Lo pedirá cada vez que un adulto quiera entrar en los ajustes."
-            : "Introduce el PIN de adulto para entrar en la configuración."}
+          {pide2fa
+            ? "Introduce el código de tu app de autenticación (o un código de recuperación)."
+            : esSetup
+              ? "Protege la administración con una contraseña (mínimo 8 caracteres). Se pedirá para entrar en esta zona."
+              : "Introduce la contraseña de administración para entrar."}
         </p>
 
         <form
@@ -98,30 +118,49 @@ export default function AdminGate({ onListo }: Props) {
             void enviar();
           }}
         >
-          <input
-            className={styles.input}
-            type="password"
-            value={pin}
-            placeholder={esSetup ? "PIN nuevo" : "PIN"}
-            autoComplete="off"
-            autoFocus
-            onChange={(e) => setPin(e.target.value)}
-          />
-          {esSetup && (
+          {pide2fa ? (
             <input
-              className={styles.input}
-              type="password"
-              value={pin2}
-              placeholder="Repite el PIN"
-              autoComplete="off"
-              onChange={(e) => setPin2(e.target.value)}
+              className={`${styles.input} ${styles.campoTexto}`}
+              type="text"
+              inputMode="numeric"
+              value={codigo}
+              placeholder="Código de 6 dígitos"
+              autoComplete="one-time-code"
+              autoFocus
+              onChange={(e) => setCodigo(e.target.value)}
             />
+          ) : (
+            <>
+              <input
+                className={styles.input}
+                type="password"
+                value={pin}
+                placeholder={esSetup ? "Contraseña nueva" : "Contraseña"}
+                autoComplete="off"
+                autoFocus
+                onChange={(e) => setPin(e.target.value)}
+              />
+              {esSetup && (
+                <input
+                  className={styles.input}
+                  type="password"
+                  value={pin2}
+                  placeholder="Repite la contraseña"
+                  autoComplete="off"
+                  onChange={(e) => setPin2(e.target.value)}
+                />
+              )}
+            </>
           )}
 
           {error && <p className={styles.testNo}>❌ {error}</p>}
 
-          <button type="submit" className="btn btn-primario" disabled={ocupado || !pin}>
-            {ocupado ? "…" : esSetup ? "Crear PIN y entrar" : "Entrar"}
+          <button
+            type="submit"
+            className="btn btn-primario"
+            disabled={ocupado || (pide2fa ? !codigo : !pin)}
+          >
+            {ocupado ? "…" : pide2fa ? "Verificar y entrar" : esSetup ? "Crear y entrar" : "Entrar"}
           </button>
         </form>
       </div>

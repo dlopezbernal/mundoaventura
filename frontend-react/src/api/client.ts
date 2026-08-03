@@ -10,6 +10,9 @@
  */
 
 import type {
+  Admin2FAEnrol,
+  Admin2FARecovery,
+  AdminLoginResponse,
   AdminStatus,
   ApiProviderStatus,
   ApiTestResult,
@@ -21,6 +24,13 @@ import type {
   CopiaResult,
   DocumentoContenido,
   DocumentoDTO,
+  FamiliaAuthResponse,
+  FamiliaDTO,
+  NinoDTO,
+  FamiliaReenviarResponse,
+  FamiliaSesion,
+  FamiliasEstado,
+  FamiliaSignupResponse,
   GenerateRequest,
   GenerateResponse,
   HealthResponse,
@@ -95,6 +105,32 @@ export function getAdminToken(): string | null {
   return _adminToken;
 }
 
+// ---------------------------------------------------------------------------
+// Token de FAMILIA (Hito 9.2). La app va detrás de una sesión de familia. A
+// diferencia del token de admin (sessionStorage: se borra al cerrar la pestaña),
+// el de familia se guarda en localStorage para que la sesión PERSISTA en el
+// dispositivo (no volver a pedir login). Se envía como X-Family-Token.
+// ---------------------------------------------------------------------------
+const _FAMILY_KEY = "mdt_family_token";
+let _familyToken: string | null =
+  typeof localStorage !== "undefined" ? localStorage.getItem(_FAMILY_KEY) : null;
+
+/** Guarda (o borra, con null) el token de sesión de familia. */
+export function setFamilyToken(token: string | null): void {
+  _familyToken = token;
+  try {
+    if (token) localStorage.setItem(_FAMILY_KEY, token);
+    else localStorage.removeItem(_FAMILY_KEY);
+  } catch {
+    /* localStorage puede no estar disponible; el token vive en memoria igualmente */
+  }
+}
+
+/** Token de familia actual (o null si no hay sesión). */
+export function getFamilyToken(): string | null {
+  return _familyToken;
+}
+
 /**
  * fetch con timeout vía AbortController.
  * Lanza BackendError con mensaje amigable si la petición falla, expira o el
@@ -113,6 +149,9 @@ async function fetchBackend(
   // del flujo del niño lo ignoran, y los protegidos lo exigen.
   const headers: Record<string, string> = { ...((options.headers as Record<string, string>) ?? {}) };
   if (_adminToken) headers["X-Admin-Token"] = _adminToken;
+  // Token de familia (sesión de la app): los endpoints de familia lo exigen; los
+  // demás lo ignoran. Enviarlo en todas es inofensivo.
+  if (_familyToken) headers["X-Family-Token"] = _familyToken;
   // Candado del túnel: los endpoints del niño lo exigen si el backend tiene
   // ACCESS_CODE; los demás lo ignoran. Enviarlo en todas es inofensivo.
   if (ACCESS_CODE) headers["X-Access-Code"] = ACCESS_CODE;
@@ -236,8 +275,15 @@ export async function generateOnPhoto(
 export async function ask(
   personajeId: string,
   pregunta: string,
+  nombreNino?: string | null,
+  sexoNino?: string | null,
 ): Promise<AskResponse> {
-  const payload: AskRequest = { personaje_id: personajeId, pregunta };
+  const payload: AskRequest = {
+    personaje_id: personajeId,
+    pregunta,
+    nombre_nino: nombreNino ?? null,
+    sexo_nino: sexoNino ?? null,
+  };
   const response = await fetchBackend(
     "/api/ask",
     {
@@ -301,13 +347,21 @@ export async function askStream(
   pregunta: string,
   cb: StreamCallbacks,
   signal?: AbortSignal,
+  nombreNino?: string | null,
+  sexoNino?: string | null,
 ): Promise<void> {
-  const payload: AskRequest = { personaje_id: personajeId, pregunta };
+  const payload: AskRequest = {
+    personaje_id: personajeId,
+    pregunta,
+    nombre_nino: nombreNino ?? null,
+    sexo_nino: sexoNino ?? null,
+  };
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     Accept: "text/event-stream",
   };
   if (_adminToken) headers["X-Admin-Token"] = _adminToken;
+  if (_familyToken) headers["X-Family-Token"] = _familyToken;
   if (ACCESS_CODE) headers["X-Access-Code"] = ACCESS_CODE;
 
   let response: Response;
@@ -803,14 +857,56 @@ async function _postPin(path: string, pin: string): Promise<void> {
   setAdminToken(body.token); // guarda el token y lo aplica a las siguientes peticiones
 }
 
-/** Crea el PIN por primera vez (auto-login). POST /api/admin/setup. */
+/** Crea la contraseña de administración por primera vez (auto-login). POST /api/admin/setup. */
 export async function adminSetup(pin: string): Promise<void> {
   await _postPin("/api/admin/setup", pin);
 }
 
-/** Inicia sesión con el PIN. POST /api/admin/login. */
-export async function adminLogin(pin: string): Promise<void> {
-  await _postPin("/api/admin/login", pin);
+/**
+ * Inicia sesión de administración. POST /api/admin/login.
+ * Si el 2FA está activo y no se pasa `codigo`, la respuesta trae `requiere_2fa=true`
+ * y NO hay token: el frontend pide el código y reintenta. Con token, se guarda.
+ * Devuelve `requiere_2fa` para que la UI sepa si debe pedir el segundo factor.
+ */
+export async function adminLogin(pin: string, codigo?: string): Promise<boolean> {
+  const response = await fetchBackend(
+    "/api/admin/login",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin, codigo: codigo ?? null }),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as AdminLoginResponse;
+  if (body.token) setAdminToken(body.token);
+  return body.requiere_2fa;
+}
+
+/** Inicia el enrolamiento 2FA (QR + clave). No activa aún. POST /api/admin/2fa/enrolar. */
+export async function admin2faEnrolar(): Promise<Admin2FAEnrol> {
+  const response = await fetchBackend("/api/admin/2fa/enrolar", { method: "POST" }, TIMEOUT_CONFIG);
+  return (await response.json()) as Admin2FAEnrol;
+}
+
+/** Confirma el enrolamiento con un código y activa el 2FA. POST /api/admin/2fa/confirmar. */
+export async function admin2faConfirmar(codigo: string): Promise<string[]> {
+  const response = await fetchBackend(
+    "/api/admin/2fa/confirmar",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ codigo }) },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as Admin2FARecovery;
+  return body.recovery_codes;
+}
+
+/** Desactiva el 2FA (exige la contraseña actual). POST /api/admin/2fa/desactivar. */
+export async function admin2faDesactivar(pin: string): Promise<void> {
+  await fetchBackend(
+    "/api/admin/2fa/desactivar",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) },
+    TIMEOUT_CONFIG,
+  );
 }
 
 /** Cierra la sesión (invalida el token en el backend y lo olvida aquí). */
@@ -849,4 +945,136 @@ export async function adminImport(datos: unknown): Promise<ImportResult> {
     TIMEOUT_DOCS,
   );
   return (await response.json()) as ImportResult;
+}
+
+// ---------------------------------------------------------------------------
+// Familias (Hito 9.2): cuentas (email + contraseña) + sesión persistente.
+// La sesión gatea el uso de la app; el token se guarda en localStorage.
+// ---------------------------------------------------------------------------
+
+/** ¿Hay ya alguna familia registrada? (alta vs login en el primer arranque). */
+export async function familiaEstado(): Promise<FamiliasEstado> {
+  const response = await fetchBackend("/api/familias/estado", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as FamiliasEstado;
+}
+
+/** ¿Hay sesión de familia válida? Devuelve los datos de la familia o autenticada=false. */
+export async function familiaMe(): Promise<FamiliaSesion> {
+  const response = await fetchBackend("/api/familias/me", { method: "GET" }, TIMEOUT_CONFIG);
+  return (await response.json()) as FamiliaSesion;
+}
+
+/** POST que devuelve un token de sesión (login/verificar): lo guarda y lo aplica. */
+async function _postFamiliaAuth(
+  path: string,
+  cuerpo: Record<string, string>,
+): Promise<FamiliaAuthResponse> {
+  const response = await fetchBackend(
+    path,
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cuerpo) },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as FamiliaAuthResponse;
+  setFamilyToken(body.token); // guarda el token y lo aplica a las siguientes peticiones
+  return body;
+}
+
+/**
+ * Alta de una familia. POST /api/familias/signup.
+ * Sin verificación de correo: la respuesta trae `token` (se guarda) y `familia`.
+ * Con verificación: `verificacion_requerida=true` y NO hay token todavía (hay que
+ * llamar a `familiaVerificar` con el código).
+ */
+export async function familiaSignup(
+  email: string,
+  password: string,
+  nombreFamilia: string,
+): Promise<FamiliaSignupResponse> {
+  const response = await fetchBackend(
+    "/api/familias/signup",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, nombre_familia: nombreFamilia }),
+    },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as FamiliaSignupResponse;
+  if (body.token) setFamilyToken(body.token); // solo hay token si no hacía falta verificar
+  return body;
+}
+
+/** Verifica el código (OTP) de un alta pendiente y abre sesión. POST /api/familias/verificar. */
+export async function familiaVerificar(
+  email: string,
+  codigo: string,
+): Promise<FamiliaAuthResponse> {
+  return _postFamiliaAuth("/api/familias/verificar", { email, codigo });
+}
+
+/** Reenvía el código de verificación. POST /api/familias/reenviar. */
+export async function familiaReenviar(email: string): Promise<FamiliaReenviarResponse> {
+  const response = await fetchBackend(
+    "/api/familias/reenviar",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as FamiliaReenviarResponse;
+}
+
+/** Inicia sesión de familia. POST /api/familias/login. */
+export async function familiaLogin(
+  email: string,
+  password: string,
+): Promise<FamiliaAuthResponse> {
+  return _postFamiliaAuth("/api/familias/login", { email, password });
+}
+
+/** Cierra la sesión de familia (invalida el token en el backend y lo olvida aquí). */
+export async function familiaLogout(): Promise<void> {
+  try {
+    await fetchBackend("/api/familias/logout", { method: "POST" }, TIMEOUT_CONFIG);
+  } finally {
+    setFamilyToken(null);
+  }
+}
+
+/**
+ * Edita el perfil de la familia (nombre y/o lista de niños). PUT /api/familias/perfil.
+ * Devuelve la familia actualizada (con `ninos` y `tiene_pin`). Requiere sesión.
+ */
+export async function familiaActualizarPerfil(cambios: {
+  nombre_familia?: string;
+  ninos?: NinoDTO[];
+}): Promise<FamiliaDTO> {
+  const response = await fetchBackend(
+    "/api/familias/perfil",
+    { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cambios) },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as FamiliaDTO;
+}
+
+/** Pone o cambia el PIN de familia (4 dígitos). PUT /api/familias/pin. */
+export async function familiaSetPin(pinNuevo: string, pinActual?: string): Promise<void> {
+  await fetchBackend(
+    "/api/familias/pin",
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin_nuevo: pinNuevo, pin_actual: pinActual ?? null }),
+    },
+    TIMEOUT_CONFIG,
+  );
+}
+
+/** Comprueba el PIN de familia (consentimiento de foto / editar perfil). POST .../pin/verificar. */
+export async function familiaVerificarPin(pin: string): Promise<boolean> {
+  const response = await fetchBackend(
+    "/api/familias/pin/verificar",
+    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { ok: boolean };
+  return body.ok;
 }

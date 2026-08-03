@@ -113,7 +113,7 @@ export interface paths {
         };
         /**
          * Estado
-         * @description ¿Hay PIN configurado? ¿El token de la cabecera sigue siendo válido?
+         * @description ¿Hay contraseña configurada? ¿El token sigue válido? ¿Está el 2FA activo?
          */
         get: operations["estado_api_admin_status_get"];
         put?: never;
@@ -155,10 +155,11 @@ export interface paths {
         put?: never;
         /**
          * Login
-         * @description Valida el PIN y devuelve un token de sesión.
+         * @description Valida la contraseña (y el 2FA si está activo) y devuelve un token de sesión.
          *
-         *     400 si el PIN es incorrecto; 429 si la IP está temporalmente bloqueada por
-         *     demasiados intentos fallidos (anti-fuerza-bruta, ver admin_service).
+         *     Si el 2FA está activo y no se ha aportado código, responde 200 con
+         *     `requiere_2fa=true` y sin token (el frontend pide el código y reintenta). 400 si la
+         *     contraseña o el código son incorrectos; 429 si la IP está bloqueada.
          */
         post: operations["login_api_admin_login_post"];
         delete?: never;
@@ -198,9 +199,69 @@ export interface paths {
         put?: never;
         /**
          * Cambiar Pin
-         * @description Cambia el PIN (requiere el actual). 400 si el actual no es correcto.
+         * @description Cambia la contraseña (requiere la actual). 400 si la actual no es correcta.
          */
         post: operations["cambiar_pin_api_admin_change_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/2fa/enrolar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Enrolar 2Fa
+         * @description Inicia el enrolamiento 2FA: devuelve el QR + la clave (aún NO activa el 2FA).
+         */
+        post: operations["enrolar_2fa_api_admin_2fa_enrolar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/2fa/confirmar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirmar 2Fa
+         * @description Confirma el enrolamiento con un código y activa el 2FA. Devuelve los códigos de recuperación.
+         */
+        post: operations["confirmar_2fa_api_admin_2fa_confirmar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/2fa/desactivar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Desactivar 2Fa
+         * @description Desactiva el 2FA (exige la contraseña actual). 400 si la contraseña no es correcta.
+         */
+        post: operations["desactivar_2fa_api_admin_2fa_desactivar_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -678,6 +739,213 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/familias/estado": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Estado
+         * @description ¿Hay ya alguna familia registrada? (el frontend muestra alta o login).
+         */
+        get: operations["estado_api_familias_estado_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Me
+         * @description Devuelve la familia de la sesión actual, o autenticada=false si no hay.
+         */
+        get: operations["me_api_familias_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/signup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Signup
+         * @description Da de alta una familia.
+         *
+         *     Sin verificación de correo (por defecto): responde con sesión iniciada. Con
+         *     verificación activa: la cuenta queda pendiente y se envía un código. 400 si el
+         *     correo ya está registrado o los datos no son válidos; 502 si no se pudo enviar
+         *     el correo de verificación.
+         */
+        post: operations["signup_api_familias_signup_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/verificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verificar
+         * @description Verifica el código (OTP) y devuelve la sesión. 400 si falla; 429 si IP bloqueada.
+         */
+        post: operations["verificar_api_familias_verificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/reenviar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reenviar
+         * @description Reenvía el código de verificación a un alta pendiente. 400 si no procede.
+         */
+        post: operations["reenviar_api_familias_reenviar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Login
+         * @description Inicia sesión. 400 si las credenciales fallan; 429 si la IP está bloqueada.
+         */
+        post: operations["login_api_familias_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Logout
+         * @description Cierra la sesión invalidando el token del dispositivo.
+         */
+        post: operations["logout_api_familias_logout_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/perfil": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Actualizar Perfil
+         * @description Edita el nombre de la familia y/o la lista de niños. 400 si algo no es válido.
+         */
+        put: operations["actualizar_perfil_api_familias_perfil_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Poner Pin
+         * @description Pone o cambia el PIN de familia (4 dígitos). 400 si el actual no coincide o el nuevo no vale.
+         */
+        put: operations["poner_pin_api_familias_pin_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/familias/pin/verificar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verificar Pin
+         * @description Comprueba el PIN de familia (consentimiento de foto / editar perfil).
+         *
+         *     Responde 200 con ``ok`` según el PIN sea correcto o no (no es un error de la petición).
+         */
+        post: operations["verificar_pin_api_familias_pin_verificar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -726,41 +994,113 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         /**
-         * AdminCambiar
-         * @description Cambio de PIN: requiere el actual.
+         * Admin2FAConfirmar
+         * @description Confirmación del enrolamiento 2FA con un código del autenticador.
          */
-        AdminCambiar: {
+        Admin2FAConfirmar: {
             /**
-             * Pin Actual
-             * @description PIN actual.
+             * Codigo
+             * @description Código de 6 dígitos del autenticador.
              */
-            pin_actual: string;
-            /**
-             * Pin Nuevo
-             * @description PIN nuevo.
-             */
-            pin_nuevo: string;
+            codigo: string;
         };
         /**
-         * AdminPin
-         * @description PIN de adulto (para crear el PIN o iniciar sesión).
+         * Admin2FADesactivar
+         * @description Desactivación del 2FA: exige la contraseña actual (re-autenticación).
          */
-        AdminPin: {
+        Admin2FADesactivar: {
             /**
              * Pin
-             * @description PIN de adulto.
+             * @description Contraseña de administración actual.
              */
             pin: string;
         };
         /**
+         * Admin2FAEnrol
+         * @description Datos del enrolamiento 2FA: QR (data URI), URI otpauth y la clave en texto.
+         */
+        Admin2FAEnrol: {
+            /** Secret */
+            secret: string;
+            /** Otpauth Uri */
+            otpauth_uri: string;
+            /** Qr Svg */
+            qr_svg: string;
+        };
+        /**
+         * Admin2FARecovery
+         * @description Códigos de recuperación (en claro, se muestran una sola vez tras activar el 2FA).
+         */
+        Admin2FARecovery: {
+            /** Ok */
+            ok: boolean;
+            /** Recovery Codes */
+            recovery_codes: string[];
+        };
+        /**
+         * AdminCambiar
+         * @description Cambio de contraseña de administración: requiere la actual.
+         */
+        AdminCambiar: {
+            /**
+             * Pin Actual
+             * @description Contraseña actual.
+             */
+            pin_actual: string;
+            /**
+             * Pin Nuevo
+             * @description Contraseña nueva.
+             */
+            pin_nuevo: string;
+        };
+        /**
+         * AdminLoginResponse
+         * @description Resultado del login de admin: token, o 'requiere_2fa' si falta el segundo factor.
+         */
+        AdminLoginResponse: {
+            /** Ok */
+            ok: boolean;
+            /**
+             * Requiere 2Fa
+             * @default false
+             */
+            requiere_2fa: boolean;
+            /**
+             * Token
+             * @default
+             */
+            token: string;
+        };
+        /**
+         * AdminPin
+         * @description Contraseña de administración (crear o iniciar sesión), con código 2FA opcional.
+         */
+        AdminPin: {
+            /**
+             * Pin
+             * @description Contraseña de administración.
+             */
+            pin: string;
+            /**
+             * Codigo
+             * @description Código 2FA (TOTP o recuperación).
+             */
+            codigo?: string | null;
+        };
+        /**
          * AdminStatus
-         * @description ¿Hay PIN configurado? ¿La sesión del token es válida?
+         * @description ¿Hay contraseña configurada? ¿La sesión es válida? ¿Está el 2FA activo?
          */
         AdminStatus: {
             /** Configurado */
             configurado: boolean;
             /** Sesion Activa */
             sesion_activa: boolean;
+            /**
+             * Dos Factor Activo
+             * @default false
+             */
+            dos_factor_activo: boolean;
         };
         /**
          * ApiProviderStatus
@@ -846,6 +1186,16 @@ export interface components {
              * @description La pregunta del niño, en texto.
              */
             pregunta: string;
+            /**
+             * Nombre Nino
+             * @description Nombre del niño que juega (para personalizar).
+             */
+            nombre_nino?: string | null;
+            /**
+             * Sexo Nino
+             * @description Sexo del niño: 'chico', 'chica' o vacío.
+             */
+            sexo_nino?: string | null;
         };
         /**
          * AskResponse
@@ -1128,6 +1478,193 @@ export interface components {
             detalle: string;
         };
         /**
+         * FamiliaAuthResponse
+         * @description Respuesta de inicio de sesión o verificación: token de sesión + datos de la familia.
+         */
+        FamiliaAuthResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Token */
+            token: string;
+            familia: components["schemas"]["FamiliaDTO"];
+        };
+        /**
+         * FamiliaDTO
+         * @description Datos públicos de una familia (NUNCA el hash de la contraseña ni del PIN).
+         */
+        FamiliaDTO: {
+            /** Id */
+            id: string;
+            /** Email */
+            email: string;
+            /** Nombre Familia */
+            nombre_familia: string;
+            /**
+             * Ninos
+             * @default []
+             */
+            ninos: components["schemas"]["NinoDTO"][];
+            /**
+             * Tiene Pin
+             * @default false
+             */
+            tiene_pin: boolean;
+        };
+        /**
+         * FamiliaLogin
+         * @description Inicio de sesión de una familia.
+         */
+        FamiliaLogin: {
+            /**
+             * Email
+             * @description Correo del adulto.
+             */
+            email: string;
+            /**
+             * Password
+             * @description Contraseña de la familia.
+             */
+            password: string;
+        };
+        /**
+         * FamiliaPerfilUpdate
+         * @description Edición del perfil de la familia (nombre + niños con nombre y sexo).
+         */
+        FamiliaPerfilUpdate: {
+            /**
+             * Nombre Familia
+             * @description Nuevo nombre de la familia.
+             */
+            nombre_familia?: string | null;
+            /**
+             * Ninos
+             * @description Lista de niños (nombre+sexo).
+             */
+            ninos?: components["schemas"]["NinoInput"][] | null;
+        };
+        /**
+         * FamiliaPinSet
+         * @description Poner o cambiar el PIN de familia (4 dígitos). Requiere el actual si ya existe.
+         */
+        FamiliaPinSet: {
+            /**
+             * Pin Nuevo
+             * @description Nuevo PIN de familia (4 dígitos).
+             */
+            pin_nuevo: string;
+            /**
+             * Pin Actual
+             * @description PIN actual (si ya había uno).
+             */
+            pin_actual?: string | null;
+        };
+        /**
+         * FamiliaPinVerificar
+         * @description Comprobación del PIN de familia (consentimiento de foto / editar perfil).
+         */
+        FamiliaPinVerificar: {
+            /**
+             * Pin
+             * @description PIN de familia a comprobar.
+             */
+            pin: string;
+        };
+        /**
+         * FamiliaReenviar
+         * @description Reenvío del código de verificación a un alta pendiente.
+         */
+        FamiliaReenviar: {
+            /**
+             * Email
+             * @description Correo del adulto.
+             */
+            email: string;
+        };
+        /**
+         * FamiliaReenviarResponse
+         * @description Respuesta de reenviar el código de verificación.
+         */
+        FamiliaReenviarResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Canal */
+            canal: string;
+        };
+        /**
+         * FamiliaSesion
+         * @description Estado de la sesión de familia (GET /api/familias/me).
+         */
+        FamiliaSesion: {
+            /** Autenticada */
+            autenticada: boolean;
+            familia?: components["schemas"]["FamiliaDTO"] | null;
+        };
+        /**
+         * FamiliaSignup
+         * @description Alta de una familia (self-signup).
+         */
+        FamiliaSignup: {
+            /**
+             * Email
+             * @description Correo del adulto (credencial de acceso).
+             */
+            email: string;
+            /**
+             * Password
+             * @description Contraseña de la familia.
+             */
+            password: string;
+            /**
+             * Nombre Familia
+             * @description Nombre de la familia, para personalizar la app.
+             */
+            nombre_familia: string;
+        };
+        /**
+         * FamiliaSignupResponse
+         * @description Respuesta del alta de familia.
+         *
+         *     Si la verificación de correo está desactivada, viene con sesión iniciada
+         *     (`token` + `familia`). Si está activada, `verificacion_requerida=True` y NO hay
+         *     token: hay que verificar el código (`canal` dice si se envió por email o quedó en
+         *     la consola del backend, en modo desarrollo).
+         */
+        FamiliaSignupResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Verificacion Requerida */
+            verificacion_requerida: boolean;
+            /** Canal */
+            canal?: string | null;
+            familia?: components["schemas"]["FamiliaDTO"] | null;
+            /** Token */
+            token?: string | null;
+        };
+        /**
+         * FamiliaVerificar
+         * @description Verificación del correo con el código (OTP) recibido.
+         */
+        FamiliaVerificar: {
+            /**
+             * Email
+             * @description Correo del adulto.
+             */
+            email: string;
+            /**
+             * Codigo
+             * @description Código de verificación recibido por correo.
+             */
+            codigo: string;
+        };
+        /**
+         * FamiliasEstado
+         * @description ¿Hay ya alguna familia registrada? (para adaptar el primer arranque).
+         */
+        FamiliasEstado: {
+            /** Hay Familias */
+            hay_familias: boolean;
+        };
+        /**
          * GenerateRequest
          * @description Petición del endpoint POST /api/generate.
          */
@@ -1216,6 +1753,36 @@ export interface components {
             resumen: components["schemas"]["ResumenImport"];
             /** Backup */
             backup?: string | null;
+        };
+        /**
+         * NinoDTO
+         * @description Un niño del perfil de familia: nombre + sexo (para avatar y género gramatical).
+         */
+        NinoDTO: {
+            /** Nombre */
+            nombre: string;
+            /**
+             * Sexo
+             * @default
+             */
+            sexo: string;
+        };
+        /**
+         * NinoInput
+         * @description Un niño en la edición del perfil: nombre + sexo (chico/chica/'').
+         */
+        NinoInput: {
+            /**
+             * Nombre
+             * @description Nombre del niño.
+             */
+            nombre: string;
+            /**
+             * Sexo
+             * @description Sexo: 'chico', 'chica' o '' (sin especificar).
+             * @default
+             */
+            sexo: string;
         };
         /**
          * OkResponse
@@ -1460,7 +2027,7 @@ export interface components {
         };
         /**
          * TokenResponse
-         * @description Token de sesión de adulto (setup/login).
+         * @description Token de sesión de adulto (setup).
          */
         TokenResponse: {
             /** Ok */
@@ -1872,7 +2439,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TokenResponse"];
+                    "application/json": components["schemas"]["AdminLoginResponse"];
                 };
             };
             /** @description Validation Error */
@@ -1929,6 +2496,107 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AdminCambiar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    enrolar_2fa_api_admin_2fa_enrolar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Admin2FAEnrol"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirmar_2fa_api_admin_2fa_confirmar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Admin2FAConfirmar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Admin2FARecovery"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    desactivar_2fa_api_admin_2fa_desactivar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["Admin2FADesactivar"];
             };
         };
         responses: {
@@ -2913,6 +3581,325 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    estado_api_familias_estado_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliasEstado"];
+                };
+            };
+        };
+    };
+    me_api_familias_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaSesion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    signup_api_familias_signup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaSignup"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaSignupResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verificar_api_familias_verificar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaVerificar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaAuthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reenviar_api_familias_reenviar_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaReenviar"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaReenviarResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    login_api_familias_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaLogin"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaAuthResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    logout_api_familias_logout_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    actualizar_perfil_api_familias_perfil_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaPerfilUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FamiliaDTO"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    poner_pin_api_familias_pin_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaPinSet"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verificar_pin_api_familias_pin_verificar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FamiliaPinVerificar"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

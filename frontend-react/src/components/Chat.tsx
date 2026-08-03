@@ -38,6 +38,10 @@ interface Props {
   /** Nombre visible del personaje (ej. "T-Rex"). */
   nombre: string;
   emoji: string;
+  /** Nombre del niño que juega (multi-perfil, H9.2c): personaliza la respuesta. */
+  nombreNino?: string | null;
+  /** Sexo del niño ('chico'/'chica'/''): género gramatical de la respuesta. */
+  sexoNino?: string | null;
 }
 
 /**
@@ -71,7 +75,7 @@ interface Grabacion {
   cancelada: boolean;
 }
 
-export default function Chat({ personajeId, nombre, emoji }: Props) {
+export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino }: Props) {
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [pregunta, setPregunta] = useState("");
   const [pensando, setPensando] = useState(false);
@@ -220,7 +224,7 @@ export default function Chat({ personajeId, nombre, emoji }: Props) {
           }
         },
         onError: (mensaje) => burbujaError(mensaje),
-      });
+      }, undefined, nombreNino, sexoNino);
     } catch (exc) {
       const mensaje =
         exc instanceof BackendError

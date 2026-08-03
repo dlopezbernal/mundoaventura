@@ -45,10 +45,11 @@ export default function CambiarPin({ onCambiado }: Props) {
 
   return (
     <div className={styles.pjForm}>
-      <h3 className={styles.pjFormTitulo}>🔐 Cambiar PIN de adulto</h3>
+      <h3 className={styles.pjFormTitulo}>🔐 Cambiar PIN de administración</h3>
       <p className={styles.filaAyuda}>
-        El PIN protege la zona de adultos (consentimiento de la foto y la administración).
-        Para cambiarlo necesitas el actual.
+        Este PIN protege la zona de Administración (config global de la app). El
+        consentimiento de la foto usa el PIN de familia, aparte. Para cambiarlo necesitas
+        el actual.
       </p>
       {error && <p className={styles.testNo}>❌ {error}</p>}
       <label className={styles.pjLabel}>

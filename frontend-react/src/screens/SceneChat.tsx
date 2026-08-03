@@ -22,6 +22,10 @@ interface Props {
   personajeNombre: string;
   personajeEmoji: string;
   nombreLugar: string;
+  /** Nombre del niño que juega (multi-perfil, H9.2c): personaliza el chat. */
+  nombreNino?: string | null;
+  /** Sexo del niño ('chico'/'chica'/''): personaliza el género en el chat. */
+  sexoNino?: string | null;
   onReintentar: () => void;
   onCambiarLugar: () => void;
   onReiniciar: () => void;
@@ -36,6 +40,8 @@ export default function SceneChat({
   personajeNombre,
   personajeEmoji,
   nombreLugar,
+  nombreNino,
+  sexoNino,
   onReintentar,
   onCambiarLugar,
   onReiniciar,
@@ -93,6 +99,8 @@ export default function SceneChat({
         personajeId={personajeId}
         nombre={personajeNombre}
         emoji={personajeEmoji}
+        nombreNino={nombreNino}
+        sexoNino={sexoNino}
       />
     </div>
   );

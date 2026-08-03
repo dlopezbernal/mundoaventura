@@ -41,6 +41,8 @@ def ask(request: Request, req: AskRequest):
         result = chat_service.responder(
             personaje_id=req.personaje_id,
             pregunta=req.pregunta,
+            nombre_nino=req.nombre_nino,
+            sexo_nino=req.sexo_nino,
         )
     except ValueError as exc:
         # Personaje inexistente o falta el token -> 400 (petición incorrecta).
@@ -72,7 +74,9 @@ def ask_stream(request: Request, req: AskRequest):
 
     def generar() -> Iterator[str]:
         try:
-            for evento in chat_service.responder_streaming(req.personaje_id, req.pregunta):
+            for evento in chat_service.responder_streaming(
+                req.personaje_id, req.pregunta, req.nombre_nino, req.sexo_nino
+            ):
                 yield _sse(evento)
         except ValueError as exc:
             # Personaje inexistente, falta de token o DeepL caído -> mensaje claro.

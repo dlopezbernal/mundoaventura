@@ -78,6 +78,57 @@ class UsoDiario(SQLModel, table=True):
     imagenes: int = 0
 
 
+class Familia(SQLModel, table=True):
+    """Cuenta de una familia (Hito 9.2): la credencial de acceso a la aplicación.
+
+    La familia se da de alta ella misma (self-signup). El **email del adulto** es la
+    credencial de login (única, normalizada en minúsculas) y sirve de contacto para el
+    consentimiento parental; la **contraseña** se guarda hasheada (PBKDF2, ver
+    `seguridad.py`), nunca en claro. El **nombre de familia** personaliza la interfaz.
+    Los nombres de los niños y el PIN de adulto se añaden/gestionan en fases posteriores.
+    """
+
+    __tablename__ = "familias"
+
+    id: str = Field(primary_key=True)
+    email: str = Field(index=True, unique=True)  # credencial de login (normalizada)
+    password_hash: str  # 'salt$hash' (PBKDF2); nunca la contraseña en claro
+    nombre_familia: str
+    activo: bool = True
+    # Verificación del correo (Hito 9.2). Si EMAIL_VERIFICACION está activo, el alta
+    # nace con verificada=False y se activa al teclear el código (OTP) que se envía por
+    # email. Con la verificación desactivada (por defecto), nace ya verificada=True.
+    # Los campos de código son transitorios (se limpian al verificar o al caducar).
+    verificada: bool = True
+    codigo_hash: str | None = None  # 'salt$hash' del OTP; None si no hay código vivo
+    codigo_expira: datetime | None = None
+    codigo_intentos: int = 0  # intentos fallidos del código actual (anti-fuerza-bruta)
+    # Multi-perfil (Hito 9.2c). `ninos` guarda la lista de nombres (hermanos) como JSON
+    # (p. ej. '["Marco","Lucía"]'). `pin_familia_hash` es el PIN de adulto DE LA FAMILIA
+    # (4 dígitos, hasheado): protege el consentimiento de la foto y la edición del perfil,
+    # y NO da acceso a Admin. None = aún sin PIN configurado.
+    ninos: str = "[]"
+    pin_familia_hash: str | None = None
+    creado_en: datetime = Field(default_factory=_ahora_utc)
+
+
+class SesionFamilia(SQLModel, table=True):
+    """Sesión PERSISTENTE de una familia (token de vida larga en el dispositivo).
+
+    A diferencia del token de admin (en memoria, se pierde al reiniciar el backend), la
+    sesión de familia sobrevive a reinicios para NO volver a pedir login en ese equipo.
+    Se guarda solo el **hash** del token (SHA-256), nunca el token en claro, junto con su
+    caducidad; el token real vive en el `localStorage` del navegador.
+    """
+
+    __tablename__ = "sesiones_familia"
+
+    token_hash: str = Field(primary_key=True)
+    familia_id: str = Field(index=True)
+    creado_en: datetime = Field(default_factory=_ahora_utc)
+    expira_en: datetime
+
+
 class Documento(SQLModel, table=True):
     """Metadato de un documento del RAG (el fichero vive en documentos/<id>/)."""
 

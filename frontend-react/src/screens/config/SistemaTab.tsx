@@ -15,7 +15,9 @@
 import { useState } from "react";
 import { adminExport, adminImport, BackendError } from "../../api/client";
 import styles from "../Settings.module.css";
+import CambiarPin from "./CambiarPin";
 import ConfigForm from "./ConfigForm";
+import Seguridad2FA from "./Seguridad2FA";
 
 interface Props {
   /** Cierra la sesión de adulto (vuelve a la pantalla del PIN). */
@@ -82,6 +84,12 @@ export default function SistemaTab({ onLogout }: Props) {
 
       {/* Opciones generales */}
       <ConfigForm categorias={["general"]} intro="Opciones generales de la aplicación." />
+
+      {/* Contraseña de administración (cambiar la que protege esta zona) */}
+      <CambiarPin onCambiado={onLogout} />
+
+      {/* Verificación en dos pasos (2FA) — toggle de seguridad */}
+      <Seguridad2FA />
 
       {/* Copia / restauración */}
       <div className={styles.pjForm}>

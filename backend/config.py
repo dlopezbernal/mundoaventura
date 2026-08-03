@@ -375,6 +375,30 @@ def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
 DEBUG: bool = _leer_bool("DEBUG", "false")
 
 
+# ---------------------------------------------------------------------------
+# 5) Verificación del correo de la cuenta de familia (Hito 9.2)
+# ---------------------------------------------------------------------------
+# Al dar de alta una familia se puede exigir VERIFICAR el correo del adulto con un
+# código de un solo uso (OTP) que se le envía por email. Es el patrón habitual en
+# apps de internet y refuerza el consentimiento parental (confirma que un adulto
+# controla ese buzón). Es un TOGGLE de despliegue (como ACCESS_CODE):
+#   - EMAIL_VERIFICACION=false (por defecto): el alta es inmediata, sin correo —
+#     cómodo en local y para el tribunal (no hace falta montar un servidor SMTP).
+#   - EMAIL_VERIFICACION=true: el alta queda "pendiente" hasta teclear el código.
+EMAIL_VERIFICACION: bool = _leer_bool("EMAIL_VERIFICACION", "false")
+
+# Envío de correo (SMTP). Si SMTP_HOST está vacío —o con DEBUG activo— el código NO
+# se envía: se ESCRIBE EN EL LOG del backend (fallback de consola), para poder probar
+# el flujo completo sin un servidor de correo real. Con SMTP configurado, se envía de
+# verdad. Credenciales de despliegue (van en el .env, nunca en la BBDD ni en export).
+SMTP_HOST: str = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER: str = os.getenv("SMTP_USER", "").strip()
+SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")  # sin strip: puede acabar en espacio
+SMTP_FROM: str = os.getenv("SMTP_FROM", "").strip()  # remitente; si vacío, se usa SMTP_USER
+SMTP_STARTTLS: bool = _leer_bool("SMTP_STARTTLS", "true")
+
+
 def describe() -> dict:
     """Devuelve la configuración actual en forma de diccionario.
 
@@ -395,5 +419,7 @@ def describe() -> dict:
         "evaluator_umbral_bajo": EVALUATOR_UMBRAL_BAJO,
         "evaluator_umbral_alto": EVALUATOR_UMBRAL_ALTO,
         "deepl_configurado": bool(DEEPL_API_KEY),
+        "email_verificacion": EMAIL_VERIFICACION,
+        "smtp_configurado": bool(SMTP_HOST),
         "debug": DEBUG,
     }

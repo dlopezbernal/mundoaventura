@@ -64,10 +64,22 @@ export type ReindexEstado = Schemas["ReindexEstado"];
 export type UbicacionDTO = Schemas["UbicacionDTO"];
 export type UbicacionCrear = Schemas["UbicacionCrear"];
 
-// --- Admin (PIN, import/export) ---
+// --- Admin (contraseña, 2FA, import/export) ---
 export type AdminStatus = Schemas["AdminStatus"];
+export type AdminLoginResponse = Schemas["AdminLoginResponse"];
+export type Admin2FAEnrol = Schemas["Admin2FAEnrol"];
+export type Admin2FARecovery = Schemas["Admin2FARecovery"];
 export type ConfigExport = Schemas["ConfigExport"];
 export type ImportResult = Schemas["ImportResult"];
+
+// --- Familias (cuentas + sesión, Hito 9.2) ---
+export type FamiliaDTO = Schemas["FamiliaDTO"];
+export type NinoDTO = Schemas["NinoDTO"];
+export type FamiliaSesion = Schemas["FamiliaSesion"];
+export type FamiliaAuthResponse = Schemas["FamiliaAuthResponse"];
+export type FamiliaSignupResponse = Schemas["FamiliaSignupResponse"];
+export type FamiliaReenviarResponse = Schemas["FamiliaReenviarResponse"];
+export type FamiliasEstado = Schemas["FamiliasEstado"];
 
 // --- Salud ---
 export type HealthResponse = Schemas["HealthResponse"];

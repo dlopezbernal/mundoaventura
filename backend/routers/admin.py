@@ -21,8 +21,17 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
-from backend.schemas.admin import AdminCambiar, AdminPin, ImportRequest
+from backend.schemas.admin import (
+    Admin2FAConfirmar,
+    Admin2FADesactivar,
+    AdminCambiar,
+    AdminPin,
+    ImportRequest,
+)
 from backend.schemas.respuestas import (
+    Admin2FAEnrol,
+    Admin2FARecovery,
+    AdminLoginResponse,
     AdminStatus,
     ConfigExport,
     ImportResult,
@@ -41,10 +50,11 @@ router = APIRouter(prefix="/api/admin", tags=["Configuración · Admin"])
 
 @router.get("/status", response_model=AdminStatus)
 def estado(x_admin_token: str | None = Header(default=None)):
-    """¿Hay PIN configurado? ¿El token de la cabecera sigue siendo válido?"""
+    """¿Hay contraseña configurada? ¿El token sigue válido? ¿Está el 2FA activo?"""
     return {
         "configurado": admin_service.esta_configurado(),
         "sesion_activa": admin_service.validar_token(x_admin_token),
+        "dos_factor_activo": admin_service.dos_factor_activo(),
     }
 
 
@@ -58,21 +68,24 @@ def setup(req: AdminPin):
     return {"ok": True, "token": token}
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post("/login", response_model=AdminLoginResponse)
 def login(req: AdminPin, request: Request):
-    """Valida el PIN y devuelve un token de sesión.
+    """Valida la contraseña (y el 2FA si está activo) y devuelve un token de sesión.
 
-    400 si el PIN es incorrecto; 429 si la IP está temporalmente bloqueada por
-    demasiados intentos fallidos (anti-fuerza-bruta, ver admin_service).
+    Si el 2FA está activo y no se ha aportado código, responde 200 con
+    `requiere_2fa=true` y sin token (el frontend pide el código y reintenta). 400 si la
+    contraseña o el código son incorrectos; 429 si la IP está bloqueada.
     """
     ip = request.client.host if request.client else "?"
     try:
-        token = admin_service.login(req.pin, ip)
+        token = admin_service.login(req.pin, ip, req.codigo)
+    except admin_service.Requiere2FAError:
+        return {"ok": False, "requiere_2fa": True, "token": ""}
     except admin_service.BloqueoLoginError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"ok": True, "token": token}
+    return {"ok": True, "requiere_2fa": False, "token": token}
 
 
 @router.post("/logout", response_model=OkResponse)
@@ -88,9 +101,50 @@ def logout(x_admin_token: str | None = Header(default=None)):
     response_model=OkResponse,
 )
 def cambiar_pin(req: AdminCambiar):
-    """Cambia el PIN (requiere el actual). 400 si el actual no es correcto."""
+    """Cambia la contraseña (requiere la actual). 400 si la actual no es correcta."""
     try:
         admin_service.cambiar(req.pin_actual, req.pin_nuevo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True}
+
+
+@router.post(
+    "/2fa/enrolar",
+    dependencies=[Depends(admin_service.requiere_admin)],
+    response_model=Admin2FAEnrol,
+)
+def enrolar_2fa():
+    """Inicia el enrolamiento 2FA: devuelve el QR + la clave (aún NO activa el 2FA)."""
+    try:
+        return admin_service.iniciar_enrolamiento_2fa()
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.post(
+    "/2fa/confirmar",
+    dependencies=[Depends(admin_service.requiere_admin)],
+    response_model=Admin2FARecovery,
+)
+def confirmar_2fa(req: Admin2FAConfirmar):
+    """Confirma el enrolamiento con un código y activa el 2FA. Devuelve los códigos de recuperación."""
+    try:
+        codigos = admin_service.confirmar_enrolamiento_2fa(req.codigo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "recovery_codes": codigos}
+
+
+@router.post(
+    "/2fa/desactivar",
+    dependencies=[Depends(admin_service.requiere_admin)],
+    response_model=OkResponse,
+)
+def desactivar_2fa(req: Admin2FADesactivar):
+    """Desactiva el 2FA (exige la contraseña actual). 400 si la contraseña no es correcta."""
+    try:
+        admin_service.desactivar_2fa(req.pin)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True}

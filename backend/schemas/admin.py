@@ -13,16 +13,32 @@ from pydantic import BaseModel, Field
 
 
 class AdminPin(BaseModel):
-    """PIN de adulto (para crear el PIN o iniciar sesión)."""
+    """Contraseña de administración (crear o iniciar sesión), con código 2FA opcional."""
 
-    pin: str = Field(description="PIN de adulto.")
+    pin: str = Field(description="Contraseña de administración.")
+    # Segundo factor (Hito 9.2d): solo se envía si el 2FA está activo. En el primer
+    # intento de login puede ir vacío; el backend responde 'requiere_2fa' y el frontend
+    # lo reenvía con el código.
+    codigo: str | None = Field(default=None, description="Código 2FA (TOTP o recuperación).")
 
 
 class AdminCambiar(BaseModel):
-    """Cambio de PIN: requiere el actual."""
+    """Cambio de contraseña de administración: requiere la actual."""
 
-    pin_actual: str = Field(description="PIN actual.")
-    pin_nuevo: str = Field(description="PIN nuevo.")
+    pin_actual: str = Field(description="Contraseña actual.")
+    pin_nuevo: str = Field(description="Contraseña nueva.")
+
+
+class Admin2FAConfirmar(BaseModel):
+    """Confirmación del enrolamiento 2FA con un código del autenticador."""
+
+    codigo: str = Field(description="Código de 6 dígitos del autenticador.")
+
+
+class Admin2FADesactivar(BaseModel):
+    """Desactivación del 2FA: exige la contraseña actual (re-autenticación)."""
+
+    pin: str = Field(description="Contraseña de administración actual.")
 
 
 class ImportRequest(BaseModel):

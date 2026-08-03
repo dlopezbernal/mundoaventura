@@ -301,17 +301,41 @@ class ApiRevealResponse(BaseModel):
 
 # --- Admin ---
 class AdminStatus(BaseModel):
-    """¿Hay PIN configurado? ¿La sesión del token es válida?"""
+    """¿Hay contraseña configurada? ¿La sesión es válida? ¿Está el 2FA activo?"""
 
     configurado: bool
     sesion_activa: bool
+    dos_factor_activo: bool = False
 
 
 class TokenResponse(BaseModel):
-    """Token de sesión de adulto (setup/login)."""
+    """Token de sesión de adulto (setup)."""
 
     ok: bool
     token: str
+
+
+class AdminLoginResponse(BaseModel):
+    """Resultado del login de admin: token, o 'requiere_2fa' si falta el segundo factor."""
+
+    ok: bool
+    requiere_2fa: bool = False
+    token: str = ""  # vacío mientras falte el 2FA
+
+
+class Admin2FAEnrol(BaseModel):
+    """Datos del enrolamiento 2FA: QR (data URI), URI otpauth y la clave en texto."""
+
+    secret: str
+    otpauth_uri: str
+    qr_svg: str
+
+
+class Admin2FARecovery(BaseModel):
+    """Códigos de recuperación (en claro, se muestran una sola vez tras activar el 2FA)."""
+
+    ok: bool
+    recovery_codes: list[str]
 
 
 class ConfigExport(BaseModel):
@@ -330,6 +354,68 @@ class ImportResult(BaseModel):
     ok: bool
     resumen: ResumenImport
     backup: str | None = None
+
+
+# --- Familias (cuentas + sesión, Hito 9.2) ---
+class NinoDTO(BaseModel):
+    """Un niño del perfil de familia: nombre + sexo (para avatar y género gramatical)."""
+
+    nombre: str
+    sexo: str = ""  # "chico" | "chica" | "" (sin especificar)
+
+
+class FamiliaDTO(BaseModel):
+    """Datos públicos de una familia (NUNCA el hash de la contraseña ni del PIN)."""
+
+    id: str
+    email: str
+    nombre_familia: str
+    ninos: list[NinoDTO] = []  # niños (hermanos) del multi-perfil, con nombre y sexo
+    tiene_pin: bool = False  # ¿tiene PIN de familia configurado?
+
+
+class FamiliaSesion(BaseModel):
+    """Estado de la sesión de familia (GET /api/familias/me)."""
+
+    autenticada: bool
+    familia: FamiliaDTO | None = None
+
+
+class FamiliaAuthResponse(BaseModel):
+    """Respuesta de inicio de sesión o verificación: token de sesión + datos de la familia."""
+
+    ok: bool
+    token: str
+    familia: FamiliaDTO
+
+
+class FamiliaSignupResponse(BaseModel):
+    """Respuesta del alta de familia.
+
+    Si la verificación de correo está desactivada, viene con sesión iniciada
+    (`token` + `familia`). Si está activada, `verificacion_requerida=True` y NO hay
+    token: hay que verificar el código (`canal` dice si se envió por email o quedó en
+    la consola del backend, en modo desarrollo).
+    """
+
+    ok: bool
+    verificacion_requerida: bool
+    canal: str | None = None  # "email" | "consola" | None
+    familia: FamiliaDTO | None = None
+    token: str | None = None
+
+
+class FamiliaReenviarResponse(BaseModel):
+    """Respuesta de reenviar el código de verificación."""
+
+    ok: bool
+    canal: str  # "email" | "consola"
+
+
+class FamiliasEstado(BaseModel):
+    """¿Hay ya alguna familia registrada? (para adaptar el primer arranque)."""
+
+    hay_familias: bool
 
 
 # --- Transcripción ---

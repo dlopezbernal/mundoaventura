@@ -79,7 +79,7 @@ def test_responder_streaming_emite_meta_y_luego_tokens(monkeypatch):
         "etiqueta": "RAG",
         "respuesta_fija": None,
     }
-    monkeypatch.setattr(rag_service, "_preparar", lambda pid, p: prep)
+    monkeypatch.setattr(rag_service, "_preparar", lambda pid, p, *a: prep)
     monkeypatch.setattr(
         rag_service.llm_service,
         "completar_streaming",
@@ -112,7 +112,7 @@ def test_responder_streaming_sin_info_un_solo_token_sin_llm(monkeypatch):
         "etiqueta": None,
         "respuesta_fija": "Uy, eso no lo sé todavía.",
     }
-    monkeypatch.setattr(rag_service, "_preparar", lambda pid, p: prep)
+    monkeypatch.setattr(rag_service, "_preparar", lambda pid, p, *a: prep)
 
     def _no_debe_llamarse(*a, **k):
         raise AssertionError("SIN_INFO no debe llamar al LLM de streaming")

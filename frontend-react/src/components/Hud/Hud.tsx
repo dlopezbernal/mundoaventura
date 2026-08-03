@@ -2,28 +2,53 @@
  * Hud — Barra HUD superior
  * =========================
  *
- * Marca de la app (icono de máquina del tiempo sci-fi + título) y, a la derecha,
- * dos accesos de adulto (H9.2): "Configuración" (ligero: gestionar el PIN) y "Admin"
- * (la config global y peligrosa). Opcionalmente muestra el botón de diagnóstico
- * "Probar conexión" (solo en modo DEBUG), que se le pasa como acción.
+ * Marca de la app (icono de máquina del tiempo sci-fi + título), un saludo a la
+ * familia con sesión iniciada (Hito 9.2) y, a la derecha, los accesos de adulto:
+ * "Configuración" (ligero: gestionar el PIN), "Admin" (la config global y peligrosa)
+ * y "Salir" (cierra la sesión de familia). Opcionalmente muestra el botón de
+ * diagnóstico "Probar conexión" (solo en modo DEBUG), que se le pasa como acción.
  */
 
 import styles from "./Hud.module.css";
 
 interface Props {
+  /** Nombre de la familia con sesión iniciada (para el saludo). */
+  nombreFamilia: string;
+  /** Niño con perfil activo, si hay uno elegido (multi-perfil, H9.2c). */
+  ninoActivo?: string | null;
+  /** Reabre "¿quién juega?" para cambiar de niño (solo si hay varios). */
+  onCambiarNino?: () => void;
   /** Abre la pantalla de Configuración del adulto (cambiar PIN). */
   onAbrirConfig: () => void;
   /** Abre la pantalla de Administración (config global y compartida). */
   onAbrirAdmin: () => void;
+  /** Cierra la sesión de familia (vuelve a la pantalla de login). */
+  onSalir: () => void;
   /** Contenido extra a la derecha (p. ej. el botón de diagnóstico en DEBUG). */
   onProbarConexion?: () => void;
 }
 
-export default function Hud({ onAbrirConfig, onAbrirAdmin, onProbarConexion }: Props) {
+export default function Hud({
+  nombreFamilia,
+  ninoActivo,
+  onCambiarNino,
+  onAbrirConfig,
+  onAbrirAdmin,
+  onSalir,
+  onProbarConexion,
+}: Props) {
   return (
     <header className={styles.hud}>
       <span className={styles.logo}>🌀 MÁQUINA DEL TIEMPO</span>
       <div className={styles.readout}>
+        <span className={styles.saludo}>
+          Hola, {ninoActivo ?? nombreFamilia}
+          {onCambiarNino && (
+            <button type="button" className={styles.cambiarNino} onClick={onCambiarNino}>
+              cambiar
+            </button>
+          )}
+        </span>
         {onProbarConexion && (
           <button type="button" className={styles.debug} onClick={onProbarConexion}>
             🔌 CONEXIÓN
@@ -34,6 +59,9 @@ export default function Hud({ onAbrirConfig, onAbrirAdmin, onProbarConexion }: P
         </button>
         <button type="button" className={styles.config} onClick={onAbrirAdmin}>
           🛡️ ADMIN
+        </button>
+        <button type="button" className={styles.config} onClick={onSalir}>
+          🚪 SALIR
         </button>
       </div>
     </header>

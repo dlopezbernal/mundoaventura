@@ -57,6 +57,15 @@ def init_db() -> None:
 # instalaciones con una BBDD previa se quedarán con el esquema viejo.
 _COLUMNAS_NUEVAS: dict[str, list[tuple[str, str]]] = {
     "documentos": [("actualizado_en", "TEXT"), ("copiado_de_id", "INTEGER")],
+    # Verificación de correo (H9.2): añadida a `familias` tras su creación inicial.
+    "familias": [
+        ("verificada", "INTEGER"),
+        ("codigo_hash", "TEXT"),
+        ("codigo_expira", "TEXT"),
+        ("codigo_intentos", "INTEGER"),
+        ("ninos", "TEXT"),
+        ("pin_familia_hash", "TEXT"),
+    ],
 }
 
 
@@ -78,6 +87,15 @@ def _migrar_columnas_faltantes(engine) -> None:
                     con.exec_driver_sql(
                         f"UPDATE {tabla} SET actualizado_en = creado_en WHERE actualizado_en IS NULL"
                     )
+                elif nombre == "verificada":
+                    # Backfill: las familias creadas ANTES de la verificación se dan por
+                    # verificadas (si no, quedarían bloqueadas al no poder teclear código).
+                    con.exec_driver_sql(
+                        f"UPDATE {tabla} SET verificada = 1 WHERE verificada IS NULL"
+                    )
+                elif nombre == "ninos":
+                    # Backfill: lista de niños vacía (JSON) para las filas previas.
+                    con.exec_driver_sql(f"UPDATE {tabla} SET ninos = '[]' WHERE ninos IS NULL")
                 con.commit()
 
 

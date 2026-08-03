@@ -40,7 +40,7 @@ def test_ask_degrada_en_personaje_al_superar_el_limite(monkeypatch):
     monkeypatch.setattr(
         rag_service,
         "responder",
-        lambda personaje_id, pregunta: {
+        lambda personaje_id, pregunta, *a: {
             "success": True,
             "personaje_id": personaje_id,
             "pregunta": pregunta,
