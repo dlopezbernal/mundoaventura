@@ -40,11 +40,14 @@ candidatos:
     etiqueta: h6-gemini-flash
     papel: "Favorito calidad/precio; salida estructurada que limpiaría el Evaluator."
     provider: openai
-    model: gemini-2.0-flash
+    # EJECUTADO: gemini-2.0-flash tiene cuota free-tier 0 (inservible) → se usó gemini-2.5-flash.
+    # Es un modelo *thinking*: se corrió con reasoning_effort='none' (si no, trunca a ~12 palabras
+    # a max_tokens=300). Ver ADR-007 (ajustes obligados durante la ejecución).
+    model: gemini-2.5-flash
     base_url: https://generativelanguage.googleapis.com/v1beta/openai/
     clave_env: LLM_API_KEY   # clave de Google AI Studio
-    precio_entrada_usd_m: 0.10
-    precio_salida_usd_m: 0.40
+    precio_entrada_usd_m: 0.30
+    precio_salida_usd_m: 2.50
     rgpd: "OJO: en el tramo GRATUITO Google puede usar las entradas para entrenar. En una app infantil se decide conscientemente y se escribe en la memoria (doc H6 §2)."
 
   - id: mistral-small
@@ -73,7 +76,9 @@ candidatos:
     etiqueta: h6-ollama-local
     papel: "Fila 100% local: ¿cuánto se pierde por no depender de nadie? El que hace la tabla interesante."
     provider: openai
-    model: qwen3:4b            # alternativa: gemma3:4b — lo que quepa en 6 GB VRAM
+    # EJECUTADO: gemma3:4b (qwen3:4b es *thinking* → trunca a 300 tok). gemma3:4b no es
+    # thinking, buen español y cabe en 6 GB. Ver ADR-007.
+    model: gemma3:4b
     base_url: http://localhost:11434/v1
     clave_env: ""              # Ollama no exige clave (el SDK usa un marcador "sk-no-key")
     precio_entrada_usd_m: 0.0  # coste marginal cero (electricidad aparte)
@@ -85,9 +90,13 @@ candidatos:
 #   2) Se VALIDA antes de usarlo: 20 respuestas puntuadas a mano; acuerdo ≥85% ⇒ se usa.
 # Se configura igual que un candidato openai-compatible, con SU propia clave.
 juez:
-  id: juez-gemini-pro
+  id: juez-gpt4o
   provider: openai
-  model: gemini-2.5-pro            # más potente que los 5 candidatos
-  base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+  # EJECUTADO: gemini-2.5-pro está RETIRADO ("no longer available to new users"). Se probaron
+  # 3 jueces (gpt-4o, claude-sonnet-4-5, gemini-pro-latest). Ninguno validó ≥85% contra 20
+  # muestras a mano (mejor: gpt-4o 75% con prompt corregido que acepta el roleplay 1ª persona).
+  # gpt-4o se usa como señal INDICATIVA de calidad (no validada). Ver ADR-007 + resultados_h6.yaml.
+  model: gpt-4o
+  base_url: ""                     # endpoint OpenAI por defecto
   clave_env: LLM_API_KEY
-  notas: "Alternativas válidas como juez: gpt-4o, claude-*. Requisito: más fuerte que todo candidato."
+  notas: "Juez no validado (75%<85%): indicativo. gemini-pro-latest inservible (thinking trunca a 300 tok)."
