@@ -150,3 +150,10 @@ def verificar_pin(req: FamiliaPinVerificar, familia: dict = _familia):
     Responde 200 con ``ok`` según el PIN sea correcto o no (no es un error de la petición).
     """
     return {"ok": familias_service.verificar_pin_familia(familia["id"], req.pin)}
+
+
+@router.delete("/cuenta", response_model=OkResponse)
+def eliminar_cuenta(familia: dict = _familia):
+    """Elimina la cuenta de la familia y todos sus datos (derecho de supresión RGPD)."""
+    familias_service.eliminar(familia["id"])
+    return {"ok": True}

@@ -946,6 +946,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/familias/cuenta": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Eliminar Cuenta
+         * @description Elimina la cuenta de la familia y todos sus datos (derecho de supresión RGPD).
+         */
+        delete: operations["eliminar_cuenta_api_familias_cuenta_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -3900,6 +3920,37 @@ export interface operations {
                 "application/json": components["schemas"]["FamiliaPinVerificar"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    eliminar_cuenta_api_familias_cuenta_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-family-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

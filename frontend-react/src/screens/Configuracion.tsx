@@ -22,11 +22,18 @@ interface Props {
   familia: FamiliaDTO;
   /** Notifica a App la familia actualizada (nombre/niños/PIN). */
   onActualizado: (fam: FamiliaDTO) => void;
+  /** Se llama tras eliminar la cuenta (volver al login). */
+  onCuentaEliminada: () => void;
   /** Cierra la pantalla y vuelve al flujo. */
   onCerrar: () => void;
 }
 
-export default function Configuracion({ familia, onActualizado, onCerrar }: Props) {
+export default function Configuracion({
+  familia,
+  onActualizado,
+  onCuentaEliminada,
+  onCerrar,
+}: Props) {
   // Si no hay PIN, no hay puerta: se entra directo.
   const [desbloqueado, setDesbloqueado] = useState(!familia.tiene_pin);
   const [pin, setPin] = useState("");
@@ -91,7 +98,11 @@ export default function Configuracion({ familia, onActualizado, onCerrar }: Prop
           </div>
         </div>
       ) : (
-        <PerfilFamilia familia={familia} onActualizado={onActualizado} />
+        <PerfilFamilia
+          familia={familia}
+          onActualizado={onActualizado}
+          onEliminada={onCuentaEliminada}
+        />
       )}
 
       <footer className={styles.footer}>
