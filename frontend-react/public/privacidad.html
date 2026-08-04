@@ -78,10 +78,12 @@
       <div class="card">
         <p style="margin:0"><strong>En una frase:</strong> esta app para niños (8–12) solo
         pide el <strong>correo de un adulto</strong> para crear la cuenta de la familia (se
-        guarda en el propio dispositivo, no se envía a nadie), no guarda el historial del chat
-        y <strong>no almacena la foto</strong>. Lo que sí sale del dispositivo es el
+        guarda en el propio dispositivo, no se envía a nadie), no muestra al niño el historial
+        del chat y <strong>no almacena la foto</strong>. Lo que sí sale del dispositivo es el
         <em>texto</em> de la pregunta (para traducirlo y generar la respuesta) y,
-        opcionalmente, la voz y la foto.</p>
+        opcionalmente, la voz y la foto. Para el adulto hay un <strong>registro de uso</strong>
+        local (auditoría): guarda metadatos por defecto y el texto de las conversaciones solo
+        si el adulto lo activa.</p>
       </div>
 
       <h2>Por qué esto importa</h2>
@@ -124,7 +126,7 @@
               <td>Solo el audio, en una caché local regenerable</td>
             </tr>
             <tr>
-              <td><strong>Historial del chat</strong></td>
+              <td><strong>Historial del chat</strong> (para el niño)</td>
               <td>No</td>
               <td>—</td>
               <td>Vive en el navegador; se borra al recargar</td>
@@ -134,6 +136,13 @@
               <td><strong>No</strong> (se queda en este dispositivo)</td>
               <td>—</td>
               <td>Sí, en el equipo: correo y nombre en claro, contraseña <strong>cifrada</strong> (hasheada)</td>
+            </tr>
+            <tr>
+              <td><strong>Registro de uso</strong> (auditoría, para el adulto)</td>
+              <td><strong>No</strong> (se queda en este dispositivo)</td>
+              <td>—</td>
+              <td>Sí, en el equipo: metadatos (evento, familia, niño, hora); el <strong>texto</strong>
+                de preguntas/respuestas solo si el adulto lo activa. Se borra por antigüedad y con la cuenta</td>
             </tr>
           </tbody>
         </table>
@@ -158,8 +167,9 @@
           al personaje para que diga cosas indebidas.</li>
         <li><strong>Filtro de las respuestas</strong> no basadas en los documentos, antes de
           mostrarlas al niño.</li>
-        <li><strong>Sin historial guardado</strong> y <strong>claves protegidas</strong>,
-          fuera del control de versiones.</li>
+        <li><strong>Sin historial de chat para el niño</strong> y <strong>claves protegidas</strong>,
+          fuera del control de versiones. El registro de uso para el adulto se puede desactivar,
+          limita su antigüedad y solo guarda el texto si se activa a propósito.</li>
         <li><strong>Cuenta de familia protegida:</strong> la contraseña se guarda cifrada
           (hasheada), nunca en claro, y el acceso está protegido contra intentos repetidos.</li>
         <li><strong>Acceso protegido:</strong> candado del túnel y PIN de adulto para la
@@ -168,16 +178,19 @@
 
       <h2>Cumplimiento RGPD / LOPDGDD</h2>
       <ul class="check">
-        <li><strong>Minimización:</strong> solo lo imprescindible; el único dato personal es la
-          cuenta de familia (correo del <em>adulto</em> + nombre + contraseña), sin datos del niño.</li>
+        <li><strong>Minimización:</strong> solo lo imprescindible; el dato personal de base es la
+          cuenta de familia (correo del <em>adulto</em> + nombre + contraseña). El registro de uso
+          está minimizado: metadatos por defecto, el texto es opt-in y tiene antigüedad limitada
+          (se puede desactivar del todo).</li>
         <li><strong>Consentimiento parental:</strong> explícito para la foto; el alta de la
           cuenta la hace un adulto con su correo (opcionalmente <em>verificado con un código</em>),
           lo que refuerza el consentimiento. Para el chat y la voz (el núcleo de la app) se
           entiende otorgado por el uso.</li>
         <li><strong>Información transparente:</strong> esta misma página, enlazada desde la app.</li>
-        <li><strong>Derecho de supresión:</strong> no se guarda historial ni fotos; la cuenta de
-          familia se puede <strong>eliminar desde la propia app</strong> (Configuración → "Eliminar
-          la cuenta"), y cerrar sesión elimina el acceso del dispositivo.</li>
+        <li><strong>Derecho de supresión:</strong> no se guardan fotos ni el chat del niño; la cuenta
+          de familia se puede <strong>eliminar desde la propia app</strong> (Configuración → "Eliminar
+          la cuenta"), lo que borra también <strong>todo su registro de uso</strong>. Cerrar sesión
+          elimina el acceso del dispositivo.</li>
         <li><strong>Medidas técnicas:</strong> las de la sección anterior.</li>
       </ul>
       <ul class="pend">
