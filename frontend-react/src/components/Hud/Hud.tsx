@@ -5,8 +5,8 @@
  * Marca de la app (icono de máquina del tiempo sci-fi + título), un saludo a la
  * familia con sesión iniciada (Hito 9.2) y, a la derecha, los accesos de adulto:
  * "Configuración" (ligero: gestionar el PIN), "Admin" (la config global y peligrosa)
- * y "Salir" (cierra la sesión de familia). Opcionalmente muestra el botón de
- * diagnóstico "Probar conexión" (solo en modo DEBUG), que se le pasa como acción.
+ * y "Salir" (cierra la sesión de familia). El diagnóstico "Probar conexión" ya no
+ * vive aquí: se movió a Admin → Sistema (solo tiene sentido para el administrador).
  *
  * Los accesos son botones de SOLO ICONO (más limpios/minimalistas): el texto vive
  * en `aria-label` (accesibilidad) y en `data-tip`, que la hoja de estilos muestra
@@ -28,8 +28,6 @@ interface Props {
   onAbrirAdmin: () => void;
   /** Cierra la sesión de familia (vuelve a la pantalla de login). */
   onSalir: () => void;
-  /** Contenido extra a la derecha (p. ej. el botón de diagnóstico en DEBUG). */
-  onProbarConexion?: () => void;
 }
 
 export default function Hud({
@@ -39,7 +37,6 @@ export default function Hud({
   onAbrirConfig,
   onAbrirAdmin,
   onSalir,
-  onProbarConexion,
 }: Props) {
   return (
     <header className={styles.hud}>
@@ -59,17 +56,6 @@ export default function Hud({
             </button>
           )}
         </span>
-        {onProbarConexion && (
-          <button
-            type="button"
-            className={styles.iconBtn}
-            data-tip="Probar conexión"
-            aria-label="Probar conexión"
-            onClick={onProbarConexion}
-          >
-            🔌
-          </button>
-        )}
         <button
           type="button"
           className={styles.iconBtn}

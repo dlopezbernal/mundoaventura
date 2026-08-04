@@ -26,7 +26,6 @@ import LoginFamilia from "./screens/LoginFamilia";
 import QuienJuega from "./screens/QuienJuega";
 import {
   BackendError,
-  checkHealth,
   familiaLogout,
   familiaMe,
   getPersonajes,
@@ -34,19 +33,6 @@ import {
 } from "./api/client";
 import type { FamiliaDTO, NinoDTO, PersonajeDTO, UbicacionDTO } from "./api/types";
 import { useFlow } from "./state/useFlow";
-
-// Modo desarrollo: muestra el botón "Probar conexión" en el HUD (como el DEBUG
-// de la app Flet). En la build para el niño no se define y desaparece.
-const DEBUG = import.meta.env.VITE_DEBUG === "true";
-
-async function probarConexion() {
-  try {
-    const info = await checkHealth();
-    window.alert(`✅ Backend OK\n${JSON.stringify(info, null, 2)}`);
-  } catch (exc) {
-    window.alert(`❌ ${exc instanceof Error ? exc.message : String(exc)}`);
-  }
-}
 
 // Niño con perfil activo, recordado en el dispositivo (Hito 9.2c).
 const NINO_KEY = "mdt_nino_activo";
@@ -197,7 +183,6 @@ export default function App() {
             setMostrarAdmin(true);
           }}
           onSalir={() => void salirFamilia()}
-          onProbarConexion={DEBUG ? probarConexion : undefined}
         />
 
         {mostrarAdmin ? (

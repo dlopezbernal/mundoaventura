@@ -9,11 +9,13 @@
  *     ubicaciones; nunca las claves API).
  *   - IMPORTAR una configuración desde un JSON (el backend hace una copia de
  *     seguridad del SQLite antes de aplicar los cambios).
+ *   - DIAGNÓSTICO de conexión con el backend (antes un botón del HUD, movido aquí
+ *     porque solo tiene sentido para el adulto administrador, no para la familia).
  *   - Cerrar sesión.
  */
 
 import { useState } from "react";
-import { adminExport, adminImport, BackendError } from "../../api/client";
+import { adminExport, adminImport, BackendError, checkHealth } from "../../api/client";
 import styles from "../Settings.module.css";
 import CambiarPin from "./CambiarPin";
 import ConfigForm from "./ConfigForm";
@@ -28,6 +30,24 @@ export default function SistemaTab({ onLogout }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [okMsg, setOkMsg] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  // Resultado del diagnóstico de conexión (JSON de /health), o null si no se ha probado.
+  const [salud, setSalud] = useState<string | null>(null);
+  const [probando, setProbando] = useState(false);
+
+  async function onProbarConexion() {
+    setError(null);
+    setOkMsg(null);
+    setSalud(null);
+    setProbando(true);
+    try {
+      const info = await checkHealth();
+      setSalud(JSON.stringify(info, null, 2));
+    } catch (exc) {
+      setError(exc instanceof BackendError ? exc.message : String(exc));
+    } finally {
+      setProbando(false);
+    }
+  }
 
   async function onExportar() {
     setError(null);
@@ -127,6 +147,26 @@ export default function SistemaTab({ onLogout }: Props) {
             📄 Ver política de privacidad
           </a>
         </div>
+      </div>
+
+      {/* Diagnóstico de conexión (antes en el HUD; solo útil para el adulto) */}
+      <div className={styles.pjForm}>
+        <h3 className={styles.pjFormTitulo}>🔌 Diagnóstico de conexión</h3>
+        <p className={styles.filaAyuda}>
+          Comprueba que el backend responde y que las plataformas están configuradas
+          (token de Replicate, DeepL y ElevenLabs).
+        </p>
+        <div className={styles.pjBarra}>
+          <button
+            type="button"
+            className={styles.testBtn}
+            onClick={() => void onProbarConexion()}
+            disabled={probando}
+          >
+            {probando ? "Probando…" : "🔌 Probar conexión"}
+          </button>
+        </div>
+        {salud && <pre className={styles.textarea}>{salud}</pre>}
       </div>
 
       {/* Sesión */}
