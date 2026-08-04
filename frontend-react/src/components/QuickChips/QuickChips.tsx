@@ -10,14 +10,7 @@
 import styles from "./QuickChips.module.css";
 
 /** Preguntas por defecto, pensadas para cualquier personaje. */
-const PREGUNTAS_RAPIDAS = [
-  "¿Qué comes?",
-  "¿Dónde vives?",
-  "¿Cómo es tu casa?",
-  "¿Qué te gusta hacer?",
-  "¿Tienes amigos?",
-  "Cuéntame algo curioso",
-];
+const PREGUNTAS_RAPIDAS = ["¿Dónde vives?", "¿Tienes amigos?", "Cuéntame algo"];
 
 interface Props {
   preguntas?: string[];
