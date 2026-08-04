@@ -32,8 +32,10 @@ sabemos que falta y por qué no está.
 El despliegue actual es un **túnel puntual** (Colab/ngrok) para pruebas y defensa, no un servidor
 permanente. Si el proyecto creciera a un servidor en la nube:
 
-- **Autenticación fuerte** en lugar del candado del túnel (`ACCESS_CODE` es una barrera ligera
+- ✅ **Autenticación fuerte** en lugar del candado del túnel (`ACCESS_CODE` es una barrera ligera
   contra escaneo, no autenticación real — [ADR-001](decisiones/ADR-001-candado-tunel.md)).
+  **Hecho** al preparar el VPS: los endpoints caros exigen sesión de familia
+  (`EXIGIR_SESION_FAMILIA`, por defecto ON). Ver [`DESPLIEGUE.md §6`](DESPLIEGUE.md).
 - **Verificación de correo obligatoria** (hoy `EMAIL_VERIFICACION` es un toggle por defecto OFF)
   y SMTP transaccional real en vez del fallback a consola.
 - **Almacenamiento gestionado**: SQLite es perfecto para local/túnel; un servidor multiusuario

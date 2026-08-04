@@ -30,7 +30,7 @@ from datetime import UTC, datetime, timedelta
 from fastapi import Header, HTTPException
 from sqlmodel import select
 
-from backend import db
+from backend import config, db
 from backend.models import Familia, SesionFamilia
 from backend.services import email_service, seguridad, settings_service
 
@@ -539,3 +539,34 @@ def familia_opcional(x_family_token: str | None = Header(default=None)) -> dict 
     actividad queremos ATRIBUIR a la familia en la auditoría cuando hay sesión.
     """
     return validar_sesion(x_family_token)
+
+
+def requiere_familia_flujo_nino(
+    x_family_token: str | None = Header(default=None),
+) -> dict | None:
+    """Exige sesión de familia en los endpoints CAROS del niño, si el despliegue lo pide.
+
+    El flujo del niño (generar escena, chatear, hablar) se diseñó ABIERTO dentro de la
+    sesión ya iniciada: no puede haber un login delante de un niño de 9 años a mitad de
+    partida. Eso valía con el túnel efímero, donde el candado `ACCESS_CODE` bastaba para
+    frenar el escaneo. En un servidor permanente no basta: `ACCESS_CODE` viaja dentro del
+    bundle de la SPA, así que es público de facto y deja `/api/generate`, `/api/ask` y
+    `/api/transcribe` al alcance de cualquiera con curl — y esos endpoints cuestan dinero.
+
+    Con `config.EXIGIR_SESION_FAMILIA` (por defecto true) se pide ADEMÁS el
+    `X-Family-Token`. Para el niño no cambia nada: la app ya exige iniciar sesión antes de
+    jugar y el frontend manda el token en todas las peticiones. Lo que se cierra es la
+    llamada directa de un desconocido.
+
+    Devuelve la familia (o None si el toggle está desactivado), no se usa el valor: se
+    monta como dependencia de router, por su efecto de cortar con 401.
+    """
+    if not config.EXIGIR_SESION_FAMILIA:
+        return None
+    familia = validar_sesion(x_family_token)
+    if familia is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Inicia sesión con tu familia para jugar.",
+        )
+    return familia
