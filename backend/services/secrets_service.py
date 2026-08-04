@@ -111,7 +111,7 @@ def revelar(proveedor: str) -> str | None:
     """Devuelve la clave COMPLETA de un proveedor (para el icono del ojo).
 
     Es una petición aparte, deliberadamente separada de `estado()`, para no enviar
-    nunca la clave completa "por si acaso". El endpoint va detrás del PIN de adulto
+    nunca la clave completa "por si acaso". El endpoint va detrás del acceso admin
     (requiere_admin, aplicado en bloque desde main.py).
     """
     if proveedor not in _PROVEEDORES:

@@ -82,9 +82,9 @@ export class BackendError extends Error {
 }
 
 // ---------------------------------------------------------------------------
-// Token de administrador (Hito 7). El área de configuración va detrás de un PIN
-// de adulto; tras iniciar sesión guardamos el token aquí y en sessionStorage (se
-// borra al cerrar la pestaña) y lo enviamos en cada petición como X-Admin-Token.
+// Token de administrador (Hito 7). El área de configuración va detrás de la
+// contraseña de administración; tras iniciar sesión guardamos el token aquí y en
+// sessionStorage (se borra al cerrar la pestaña) y lo enviamos como X-Admin-Token.
 // ---------------------------------------------------------------------------
 const _ADMIN_KEY = "mdt_admin_token";
 let _adminToken: string | null =
@@ -892,10 +892,10 @@ export async function borrarAvatarUbicacion(id: string): Promise<UbicacionDTO> {
 }
 
 // ---------------------------------------------------------------------------
-// Configuración · Admin (Hito 7): PIN de adulto + import/export.
+// Configuración · Admin (Hito 7): contraseña de administración + import/export.
 // ---------------------------------------------------------------------------
 
-/** ¿Hay PIN configurado? ¿La sesión (token) sigue activa? GET /api/admin/status. */
+/** ¿Hay contraseña configurada? ¿La sesión (token) sigue activa? GET /api/admin/status. */
 export async function adminStatus(): Promise<AdminStatus> {
   const response = await fetchBackend("/api/admin/status", { method: "GET" }, TIMEOUT_CONFIG);
   return (await response.json()) as AdminStatus;
@@ -972,7 +972,7 @@ export async function adminLogout(): Promise<void> {
   }
 }
 
-/** Cambia el PIN (requiere el actual). POST /api/admin/change. */
+/** Cambia la contraseña de admin (requiere la actual). POST /api/admin/change. */
 export async function adminChangePin(pinActual: string, pinNuevo: string): Promise<void> {
   await fetchBackend(
     "/api/admin/change",
@@ -992,7 +992,7 @@ export async function adminExport(): Promise<ConfigExport> {
 }
 
 // ---------------------------------------------------------------------------
-// Auditoría de uso (informe para el adulto, tras el PIN de admin).
+// Auditoría de uso (informe para el adulto, tras la contraseña de admin).
 // ---------------------------------------------------------------------------
 
 /** Construye la query de filtros común a listar/exportar auditoría. */

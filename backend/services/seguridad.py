@@ -5,9 +5,9 @@ services/seguridad.py — Hashing de credenciales (Hito 9.2)
 Utilidades compartidas para guardar credenciales **hasheadas**, nunca en claro:
 PBKDF2-HMAC-SHA256 con una sal por credencial, en formato ``salt$hash`` (hex).
 
-Es el mismo esquema que ya usaba el PIN de adulto (``admin_service``), extraído aquí
-para reutilizarlo sin duplicarlo cuando aparecieron las **cuentas de familia** (email
-+ contraseña). La comparación se hace en tiempo constante (``hmac.compare_digest``)
+Es el mismo esquema que ya usaba ``admin_service`` (para la credencial de admin),
+extraído aquí para reutilizarlo sin duplicarlo cuando aparecieron las **cuentas de
+familia** (email + contraseña). La comparación se hace en tiempo constante (``hmac.compare_digest``)
 para no filtrar información por el tiempo de respuesta.
 """
 

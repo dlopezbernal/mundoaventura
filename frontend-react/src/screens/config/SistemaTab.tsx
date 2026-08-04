@@ -4,7 +4,7 @@
  *
  * Zona de mantenimiento del adulto ya autenticado:
  *   - Opciones generales de la aplicación (modo desarrollo/DEBUG).
- *   - Cambiar el PIN de adulto (pide el actual).
+ *   - Cambiar la contraseña de administración (pide la actual).
  *   - EXPORTAR la configuración a un archivo JSON (ajustes + personajes +
  *     ubicaciones; nunca las claves API).
  *   - IMPORTAR una configuración desde un JSON (el backend hace una copia de
@@ -22,7 +22,7 @@ import ConfigForm from "./ConfigForm";
 import Seguridad2FA from "./Seguridad2FA";
 
 interface Props {
-  /** Cierra la sesión de adulto (vuelve a la pantalla del PIN). */
+  /** Cierra la sesión de adulto (vuelve a la pantalla de contraseña de admin). */
   onLogout: () => void;
 }
 

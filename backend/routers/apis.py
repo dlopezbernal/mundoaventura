@@ -10,7 +10,7 @@ Cuatro puertas de entrada (la lógica vive en services/secrets_service.py):
   POST /api/apis/{proveedor}/reveal  → devuelve la clave completa (icono del ojo 👁).
 
 Las claves NUNCA se devuelven completas salvo en /reveal (petición explícita y
-aparte). Toda esta zona va detrás del PIN de adulto (requiere_admin, aplicado en
+aparte). Toda esta zona va detrás del acceso admin (requiere_admin, aplicado en
 bloque desde main.py).
 """
 

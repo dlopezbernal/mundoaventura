@@ -12,9 +12,9 @@ código, para que la UI de configuración pueda mostrarlos y editarlos:
 Es IDEMPOTENTE: solo inserta lo que aún no existe; nunca pisa lo ya guardado (así
 un cambio hecho desde la UI no se revierte en el siguiente arranque).
 
-Importante (compatibilidad hacia atrás): el catálogo se SIEMBRA aquí, pero la app
-lo sigue LEYENDO del código por ahora; el cambio a consumirlo desde la BBDD llega
-en sus hitos (personajes → Hito 4, ubicaciones → Hito 6).
+El catálogo se SIEMBRA aquí (fuente: `personajes.py`/`ubicaciones.py`) y la app lo
+CONSUME ya desde la BBDD, vía `personajes_service` (Hito 4) y `ubicaciones_service`
+(Hito 6). El seeding solo cubre el primer arranque / los huecos.
 """
 
 from backend import db

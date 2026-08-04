@@ -2,9 +2,10 @@
 schemas/admin.py — Forma de los datos del acceso de administrador (Hito 7)
 ==========================================================================
 
-Entradas de los endpoints de administración (PIN de adulto e import/export). La
-validación fina (PIN correcto/longitud, datos válidos) la hace `admin_service` y
-los servicios de catálogo, que lanzan ValueError (→ HTTP 400).
+Entradas de los endpoints de administración (contraseña de admin —desde H9.2, ≥8
+caracteres + 2FA TOTP opcional— e import/export). La validación fina (contraseña
+correcta/longitud, 2FA, datos válidos) la hace `admin_service` y los servicios de
+catálogo, que lanzan ValueError (→ HTTP 400).
 """
 
 from typing import Any

@@ -5,9 +5,9 @@
  * Chasis "Arcade Holo" de la administración. Se abre desde el botón 🛡️ del HUD y
  * ocupa el lugar del flujo principal. Toda la config GLOBAL y COMPARTIDA vive aquí
  * (H9.2, Fase 1): cambiar algo afecta a TODOS los perfiles, y tocarla sin saber puede
- * romper la app — por eso se separó de "Configuración" (que solo gestiona el PIN).
- * Va detrás de un PIN de adulto: hasta autenticarse se muestra <AdminGate/>; luego,
- * las pestañas:
+ * romper la app — por eso se separó de "Configuración" (que solo gestiona el PIN de
+ * familia). Va detrás de la contraseña de administración: hasta autenticarse se
+ * muestra <AdminGate/>; luego, las pestañas:
  *
  *   - APIs         → claves de los proveedores (Hito 2).
  *   - IA           → motor de chat: recuperación, Evaluator/reranker, LLM y prompts.

@@ -10,8 +10,9 @@ Dos puertas de entrada (la lógica vive en services/settings_service.py):
   PUT /api/config → guarda ajustes y los aplica en caliente (sin reiniciar).
                     Devuelve qué ajustes cambiados requieren REINDEXAR ChromaDB.
 
-Los secretos NO se editan aquí: eso llega en la pestaña "APIs" (Hito 2). Aquí solo
-se muestran enmascarados (para pintar "configurado / falta").
+Los secretos NO se editan aquí: se editan en la pestaña "APIs" (`routers/apis.py` →
+`secrets_service`, que escribe el `.env`). Aquí solo se muestran enmascarados (para
+pintar "configurado / falta").
 """
 
 from fastapi import APIRouter, HTTPException

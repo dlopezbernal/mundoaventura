@@ -46,8 +46,9 @@ from backend.services import (
 logging_config.configurar_logging()
 logger = logging.getLogger(__name__)
 
-# Dependencia que exige el PIN de adulto (token de sesión) en los endpoints
-# sensibles del área de configuración. Los del flujo del niño no la llevan.
+# Dependencia que exige la sesión de admin (contraseña ≥8 + 2FA TOTP opcional desde
+# H9.2; token de sesión en memoria) en los endpoints sensibles del área de
+# configuración. Los del flujo del niño no la llevan.
 _admin = [Depends(admin_service.requiere_admin)]
 
 # Candado del túnel: código de acceso compartido para los endpoints del niño que
@@ -173,11 +174,11 @@ app.include_router(generation.router, dependencies=_acceso)
 app.include_router(conversacion.router, dependencies=_acceso)
 # Transcripción de voz (STT): la pregunta hablada del niño → texto (ElevenLabs Scribe).
 app.include_router(transcription.router, dependencies=_acceso)
-# Admin: acceso con PIN de adulto + import/export (endpoints públicos mínimos
-# para arrancar; los sensibles se protegen dentro del propio router).
+# Admin: acceso con contraseña de admin (+ 2FA opcional) + import/export (endpoints
+# públicos mínimos para arrancar; los sensibles se protegen dentro del propio router).
 app.include_router(admin_router.router)
 # Configuración: ajustes editables en caliente (SQLite + settings_service).
-# TODA la zona de config va detrás del PIN de adulto (requiere_admin).
+# TODA la zona de config va detrás del acceso admin (requiere_admin).
 app.include_router(config_router.router, dependencies=_admin)
 # Configuración · APIs: claves de los proveedores (leer/escribir el .env).
 app.include_router(apis_router.router, dependencies=_admin)
@@ -191,7 +192,7 @@ app.include_router(ubicaciones_router.router)
 # Familias (Hito 9.2): cuentas + sesión persistente. Endpoints públicos (son la puerta
 # de entrada); sin sesión válida, el frontend no deja jugar.
 app.include_router(familias_router.router)
-# Auditoría de uso: informe para el adulto (todo protegido por PIN de admin dentro
+# Auditoría de uso: informe para el adulto (todo protegido por el acceso admin dentro
 # del propio router).
 app.include_router(auditoria_router.router)
 
