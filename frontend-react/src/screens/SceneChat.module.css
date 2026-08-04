@@ -139,22 +139,31 @@
   margin-top: 16px;
   flex-wrap: wrap;
 }
+/* Mismo lenguaje que la consola de personaje/mundo (Console .cta/.back): CTA
+   biselada + secundario oscuro con borde. */
 .btn {
   font-family: var(--font-disp);
-  font-weight: 800;
-  letter-spacing: 0.04em;
   border-radius: 12px;
-  padding: 12px 22px;
-  border: 1px solid var(--edge);
 }
 .btnPrimario {
+  font-weight: 900;
+  font-size: 15px;
+  letter-spacing: 0.06em;
   color: #04121f;
   background: linear-gradient(90deg, var(--holo), var(--lime));
   border: none;
+  padding: 14px 28px;
+  clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%);
+  box-shadow: 0 0 22px rgba(62, 242, 255, 0.4);
 }
 .btnSecundario {
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.04em;
   color: var(--holo);
   background: rgba(4, 8, 28, 0.6);
+  border: 1px solid var(--edge);
+  padding: 12px 18px;
 }
 
 @media (max-width: 760px) {

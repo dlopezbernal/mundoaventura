@@ -50,10 +50,10 @@ export default function SceneView({
       </div>
       <p className={styles.caption}>{caption}</p>
       <div className={styles.botones}>
-        <button type="button" className="btn btn-primario" onClick={onCambiarLugar}>
+        <button type="button" className={styles.btnCta} onClick={onCambiarLugar}>
           🗺️ Cambiar de lugar
         </button>
-        <button type="button" className="btn btn-secundario" onClick={onEmpezarDeNuevo}>
+        <button type="button" className={styles.btnBack} onClick={onEmpezarDeNuevo}>
           🔄 Empezar de nuevo
         </button>
       </div>
