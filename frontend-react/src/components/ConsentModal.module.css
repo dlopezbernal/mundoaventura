@@ -23,11 +23,11 @@
 }
 
 .enlacePrivacidad a {
-  color: #8fa3e0;
+  color: var(--muted);
 }
 
 .cargando {
-  color: #8fa3e0;
+  color: var(--muted);
   font-style: italic;
 }
 

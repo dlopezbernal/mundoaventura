@@ -58,7 +58,7 @@ button {
   inset: 0;
   z-index: 60;
   pointer-events: none;
-  opacity: 0.3;
+  opacity: 0.1;
   background: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.4) 2px 3px);
 }
 
@@ -85,7 +85,7 @@ button {
   font-family: var(--font-body);
   font-weight: 500;
   font-size: 0.85rem;
-  color: #8fa3e0;
+  color: var(--muted);
   max-width: 42ch;
 }
 @keyframes holo-latido {

@@ -22,8 +22,9 @@
   color: #7183c4;
 }
 .node .label {
-  font-family: var(--font-pixel);
-  font-size: 8px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 14px;
   letter-spacing: 0.04em;
 }
 .on {
@@ -57,6 +58,6 @@
     width: 20px;
   }
   .node .label {
-    font-size: 7px;
+    font-size: 12px;
   }
 }

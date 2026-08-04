@@ -11,8 +11,12 @@
  * Los accesos son botones de SOLO ICONO (más limpios/minimalistas): el texto vive
  * en `aria-label` (accesibilidad) y en `data-tip`, que la hoja de estilos muestra
  * como tooltip al pasar por encima o al enfocar con teclado.
+ *
+ * Los accesos de adulto (⚙️🛡️🚪) van PLEGADOS por defecto: un botón ☰ los muestra/
+ * oculta, para que el niño no los vea salvo que un adulto los despliegue.
  */
 
+import { useState } from "react";
 import Marca from "../Marca/Marca";
 import styles from "./Hud.module.css";
 
@@ -39,6 +43,7 @@ export default function Hud({
   onAbrirAdmin,
   onSalir,
 }: Props) {
+  const [abierto, setAbierto] = useState(false);
   return (
     <header className={styles.hud}>
       <span className={styles.logo}>
@@ -60,32 +65,46 @@ export default function Hud({
             </button>
           )}
         </span>
+        {abierto && (
+          <>
+            <button
+              type="button"
+              className={styles.iconBtn}
+              data-tip="Configuración"
+              aria-label="Configuración"
+              onClick={onAbrirConfig}
+            >
+              ⚙️
+            </button>
+            <button
+              type="button"
+              className={styles.iconBtn}
+              data-tip="Admin"
+              aria-label="Admin"
+              onClick={onAbrirAdmin}
+            >
+              🛡️
+            </button>
+            <button
+              type="button"
+              className={`${styles.iconBtn} ${styles.salir}`}
+              data-tip="Salir"
+              aria-label="Salir"
+              onClick={onSalir}
+            >
+              🚪
+            </button>
+          </>
+        )}
         <button
           type="button"
           className={styles.iconBtn}
-          data-tip="Configuración"
-          aria-label="Configuración"
-          onClick={onAbrirConfig}
+          data-tip={abierto ? "Ocultar" : "Adultos"}
+          aria-label={abierto ? "Ocultar menú de adultos" : "Menú de adultos"}
+          aria-expanded={abierto}
+          onClick={() => setAbierto((a) => !a)}
         >
-          ⚙️
-        </button>
-        <button
-          type="button"
-          className={styles.iconBtn}
-          data-tip="Admin"
-          aria-label="Admin"
-          onClick={onAbrirAdmin}
-        >
-          🛡️
-        </button>
-        <button
-          type="button"
-          className={`${styles.iconBtn} ${styles.salir}`}
-          data-tip="Salir"
-          aria-label="Salir"
-          onClick={onSalir}
-        >
-          🚪
+          {abierto ? "✕" : "☰"}
         </button>
       </div>
     </header>

@@ -67,8 +67,8 @@ export default function CharacterSelect({ personajes, index, onMove, onNext }: P
   return (
     <section>
       <Coverflow
-        kicker="◇ ESCANEANDO LÍNEA TEMPORAL ◇"
-        title="SELECCIONA TU PERSONAJE"
+        kicker="Escaneando la línea temporal"
+        title="Selecciona tu personaje"
         subtitle="Rota los hologramas con ◀ ▶ · el proyectado en el centro es tu personaje"
         items={cartas}
         index={index}

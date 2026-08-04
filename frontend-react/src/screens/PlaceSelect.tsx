@@ -102,8 +102,8 @@ export default function PlaceSelect({
   return (
     <section>
       <Coverflow
-        kicker="◇ CALIBRANDO COORDENADAS ◇"
-        title="SELECCIONA TU MUNDO"
+        kicker="Calibrando coordenadas"
+        title="Selecciona tu mundo"
         subtitle="Gira los destinos · o sube una foto de tu cuarto para viajar desde casa"
         items={cartas}
         index={index}
