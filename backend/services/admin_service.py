@@ -112,7 +112,9 @@ def _registrar_fallo(ip: str) -> None:
     """Suma un fallo a la IP; al llegar a _MAX_FALLOS, la bloquea con espera creciente."""
     entrada = _fallos_login.setdefault(ip, {"fallos": 0, "bloqueos": 0, "hasta": 0.0})
     entrada["fallos"] += 1
-    logger.warning("PIN de admin incorrecto desde %s (fallo %s).", ip, int(entrada["fallos"]))
+    logger.warning(
+        "Contraseña de admin incorrecta desde %s (fallo %s).", ip, int(entrada["fallos"])
+    )
     if entrada["fallos"] >= _MAX_FALLOS:
         entrada["bloqueos"] += 1
         espera = min(_BLOQUEO_BASE * (2 ** (entrada["bloqueos"] - 1)), _MAX_BLOQUEO)
@@ -241,12 +243,12 @@ def login(pin: str, ip: str = "?", codigo: str | None = None) -> str:
 
 
 def cambiar(pin_actual: str, pin_nuevo: str) -> None:
-    """Cambia el PIN (requiere el actual). Lanza ValueError (→ 400) si no cuadra."""
+    """Cambia la contraseña (requiere la actual). Lanza ValueError (→ 400) si no cuadra."""
     guardado = _leer_hash()
     if guardado is None:
-        raise ValueError("Aún no hay un PIN configurado.")
+        raise ValueError("Aún no hay una contraseña configurada.")
     if not _verificar(pin_actual.strip(), guardado):
-        raise ValueError("El PIN actual no es correcto.")
+        raise ValueError("La contraseña actual no es correcta.")
     _validar_pin_nuevo(pin_nuevo)
     _guardar_hash(_hashear(pin_nuevo.strip(), secrets.token_hex(16)))
     # Al cambiar la contraseña invalidamos todas las sesiones abiertas.
