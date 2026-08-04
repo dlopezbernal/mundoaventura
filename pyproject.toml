@@ -1,7 +1,7 @@
 [project]
-name = "maquina-del-tiempo-backend"
+name = "mundoaventura-backend"
 version = "0.3.0"
-description = "Backend de IA (FastAPI) de la Máquina del Tiempo: escena (Replicate) + chat RAG por personaje."
+description = "Backend de IA (FastAPI) de MundoAventura: escena (Replicate) + chat RAG por personaje."
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 
