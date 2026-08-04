@@ -155,7 +155,16 @@ def exportar_csv(*, tipo: str | None = None, familia_id: str | None = None) -> s
         filas = sesion.exec(consulta.order_by(Auditoria.creado_en.desc())).all()
 
     buffer = io.StringIO()
-    campos = ["creado_en", "tipo", "familia_nombre", "familia_id", "nino", "detalle", "contenido", "ip"]
+    campos = [
+        "creado_en",
+        "tipo",
+        "familia_nombre",
+        "familia_id",
+        "nino",
+        "detalle",
+        "contenido",
+        "ip",
+    ]
     escritor = csv.DictWriter(buffer, fieldnames=campos, extrasaction="ignore")
     escritor.writeheader()
     for f in filas:

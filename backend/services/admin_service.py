@@ -306,9 +306,7 @@ def iniciar_enrolamiento_2fa() -> dict:
         raise ValueError("El 2FA ya está activado.")
     secreto = pyotp.random_base32()
     _guardar_clave(_CLAVE_2FA_PENDIENTE, secreto)
-    uri = pyotp.TOTP(secreto).provisioning_uri(
-        name="administración", issuer_name="MundoAventura"
-    )
+    uri = pyotp.TOTP(secreto).provisioning_uri(name="administración", issuer_name="MundoAventura")
     # QR como data URI (SVG, generado por segno sin dependencias de imagen): el frontend
     # solo lo pinta en un <img>. Además devolvemos el secreto en claro para entrada manual.
     qr_svg = segno.make(uri).svg_data_uri(scale=5)

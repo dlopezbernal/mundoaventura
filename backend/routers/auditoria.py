@@ -18,7 +18,11 @@ from fastapi.responses import PlainTextResponse
 from backend.schemas.respuestas import AuditoriaLista
 from backend.services import admin_service, auditoria_service
 
-router = APIRouter(prefix="/api/auditoria", tags=["Auditoría"], dependencies=[Depends(admin_service.requiere_admin)])
+router = APIRouter(
+    prefix="/api/auditoria",
+    tags=["Auditoría"],
+    dependencies=[Depends(admin_service.requiere_admin)],
+)
 
 
 @router.get("", response_model=AuditoriaLista)
