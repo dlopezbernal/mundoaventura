@@ -52,13 +52,16 @@ export default function SceneChat({
       {/* Panel izquierdo: carga → error → imagen. El chat (derecha) no espera. */}
       {cargando ? (
         <section className={styles.loading} role="status">
-          <span className={styles.loadingEmoji} aria-hidden="true">
-            🎨
-          </span>
-          <p className={styles.loadingText}>GENERANDO TU ESCENA…</p>
-          <div className={styles.bar} aria-hidden="true" />
+          <div className={styles.portal} aria-hidden="true">
+            <span className={styles.vortice} />
+            {[0, 1, 2, 3, 4].map((i) => (
+              <span key={i} className={styles.anillo} style={{ animationDelay: `${i * 0.48}s` }} />
+            ))}
+            <span className={styles.nucleo} />
+          </div>
+          <p className={styles.loadingText}>ABRIENDO EL PORTAL…</p>
           <p className={styles.loadingHint}>
-            Mientras tanto, ¡ya puedes hablar con {personajeNombre}! 👉
+            Viajando para crear tu escena. Mientras tanto, ¡ya puedes hablar con {personajeNombre}! 👉
           </p>
         </section>
       ) : error ? (

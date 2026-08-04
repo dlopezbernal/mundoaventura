@@ -31,53 +31,91 @@
   color: var(--holo);
   opacity: 0.9;
 }
-.loadingEmoji {
-  font-size: 56px;
-  display: block;
-  filter: drop-shadow(0 0 16px rgba(62, 242, 255, 0.6));
-  animation: pulso 1.6s ease-in-out infinite;
-}
-@keyframes pulso {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.12);
-  }
-}
 .loadingText {
   font-family: var(--font-disp);
   font-weight: 800;
   letter-spacing: 0.05em;
-  margin: 12px 0;
+  margin: 12px 0 0;
   color: #fff;
   text-shadow: 0 0 12px rgba(62, 242, 255, 0.6);
 }
-.bar {
-  height: 8px;
-  max-width: 420px;
-  margin: 0 auto;
-  border-radius: 99px;
-  border: 1px solid var(--edge);
-  background: #0a2333;
-  overflow: hidden;
+
+/* --- Portal / agujero de gusano (animación de "viaje" mientras se genera) --- */
+.portal {
+  position: relative;
+  width: 180px;
+  height: 180px;
+  display: grid;
+  place-items: center;
 }
-.bar::after {
-  content: "";
-  display: block;
-  height: 100%;
-  width: 40%;
-  background: linear-gradient(90deg, var(--holo), var(--lime));
-  box-shadow: 0 0 10px var(--holo);
-  animation: slide 1.2s ease-in-out infinite;
+.portal > * {
+  grid-area: 1 / 1; /* todos los elementos se apilan centrados */
 }
-@keyframes slide {
+/* Vórtice: remolino de color girando al fondo. */
+.vortice {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(94, 234, 212, 0.35) 60deg,
+    transparent 130deg,
+    rgba(244, 114, 182, 0.35) 210deg,
+    transparent 280deg,
+    rgba(56, 189, 248, 0.35) 340deg,
+    transparent 360deg
+  );
+  filter: blur(7px);
+  animation: girar 3.6s linear infinite;
+}
+/* Anillos del túnel: nacen en el centro y se lanzan hacia el niño (efecto warp). */
+.anillo {
+  width: 168px;
+  height: 168px;
+  border-radius: 50%;
+  border: 2px solid;
+  border-color: rgba(94, 234, 212, 0.85) rgba(56, 189, 248, 0.55) rgba(244, 114, 182, 0.8)
+    rgba(192, 132, 252, 0.55);
+  opacity: 0;
+  animation: tunel 2.4s ease-in infinite;
+}
+/* Núcleo brillante: la boca del agujero de gusano, latiendo. */
+.nucleo {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #eafff9 0%, #5eead4 42%, #38bdf8 72%, transparent 100%);
+  box-shadow: 0 0 30px 8px rgba(94, 234, 212, 0.7);
+  animation: latir 1.6s ease-in-out infinite;
+}
+@keyframes tunel {
   0% {
-    transform: translateX(-100%);
+    transform: scale(0.04) rotate(0deg);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
   }
   100% {
-    transform: translateX(320%);
+    transform: scale(1.75) rotate(95deg);
+    opacity: 0;
+  }
+}
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes latir {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 30px 8px rgba(94, 234, 212, 0.7);
+  }
+  50% {
+    transform: scale(1.25);
+    box-shadow: 0 0 44px 14px rgba(56, 189, 248, 0.85);
   }
 }
 
@@ -125,11 +163,14 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .bar::after {
+  /* Portal quieto: sin túnel ni giro, solo el núcleo y un anillo estáticos. */
+  .vortice,
+  .nucleo {
     animation: none;
-    width: 100%;
   }
-  .loadingEmoji {
+  .anillo {
     animation: none;
+    opacity: 0.4;
+    transform: scale(1);
   }
 }
