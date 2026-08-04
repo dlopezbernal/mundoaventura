@@ -1,0 +1,95 @@
+# =====================================================================
+#  Caddy — TLS automático, SPA estática y proxy inverso al backend
+# ---------------------------------------------------------------------
+#  Instalación en el servidor:
+#      cp deploy/Caddyfile /etc/caddy/Caddyfile
+#      caddy validate --config /etc/caddy/Caddyfile
+#      systemctl reload caddy
+#
+#  Caddy pide y renueva el certificado de Let's Encrypt solo. Requisitos: el
+#  registro A del dominio ya apunta a la IP del VPS y los puertos 80 y 443
+#  están abiertos (el reto HTTP-01 usa el 80).
+#
+#  Por qué HTTPS no es opcional aquí: el micrófono del navegador
+#  (getUserMedia) solo funciona en contexto seguro. Sin TLS válido, la mitad
+#  de la app (hablar con el personaje) deja de existir.
+# =====================================================================
+
+# Redirección de www → dominio raíz. Descomenta SOLO después de crear el registro
+# DNS de `www` (CNAME → chatmundoaventura.com): si el nombre no resuelve, Caddy
+# reintentará el certificado en bucle y llenará el log de errores.
+# www.chatmundoaventura.com {
+# 	redir https://chatmundoaventura.com{uri} permanent
+# }
+
+chatmundoaventura.com {
+
+	# --- Compresión --------------------------------------------------
+	# Se EXCLUYE el endpoint SSE: comprimir un stream lo bufferiza y el chat
+	# dejaría de pintarse token a token (se vería de golpe al final).
+	@comprimible not path /api/ask/stream
+	encode @comprimible zstd gzip
+
+	# --- Tope de subida ----------------------------------------------
+	# Colchón por encima del mayor límite de la app (documento, 20 MB). El 413
+	# amable lo sigue dando el backend; esto solo frena cuerpos absurdos antes
+	# de que lleguen a Python.
+	request_body {
+		max_size 25MB
+	}
+
+	# --- API + health → backend --------------------------------------
+	# Mismo origen que la SPA ⇒ NO hay CORS que configurar. Deja CORS_ORIGINS
+	# del .env acotado al dominio igualmente (defensa en profundidad).
+	@backend path /api/* /health
+	handle @backend {
+		reverse_proxy 127.0.0.1:8000 {
+			# flush_interval -1 = reenvía cada trozo en cuanto llega, sin
+			# bufferizar. Imprescindible para /api/ask/stream (SSE del Hito 8):
+			# con el buffering por defecto el streaming se pierde.
+			flush_interval -1
+			# El chat con voz puede tardar; el timeout corto por defecto de un
+			# proxy cortaría respuestas largas a mitad.
+			transport http {
+				response_header_timeout 180s
+				read_timeout 300s
+			}
+		}
+	}
+
+	# --- Documentación interactiva (OPCIONAL) ------------------------
+	# /docs y /openapi.json exponen TODA la superficie de la API a cualquiera
+	# que visite la URL. Están comentados a propósito: descoméntalo solo si lo
+	# necesitas para la defensa, y vuelve a comentarlo después.
+	# @apidocs path /docs /docs/* /redoc /openapi.json
+	# handle @apidocs {
+	# 	reverse_proxy 127.0.0.1:8000
+	# }
+
+	# --- SPA React (ficheros estáticos) ------------------------------
+	# try_files … /index.html = enrutado del lado del cliente: cualquier ruta
+	# desconocida devuelve el index y decide React, no un 404 de Caddy.
+	handle {
+		root * /opt/mundoaventura/frontend-react/dist
+		try_files {path} /index.html
+		file_server
+	}
+
+	# --- Cabeceras de seguridad --------------------------------------
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# La app no se debe poder embeber en un iframe ajeno.
+		X-Frame-Options "DENY"
+		# Caddy anuncia su versión por defecto; no hace falta.
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/mundoaventura.log {
+			roll_size 10MB
+			roll_keep 5
+		}
+	}
+}
