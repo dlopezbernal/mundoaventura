@@ -545,6 +545,58 @@
   line-height: 1;
   flex-shrink: 0;
 }
+/* Miniatura del avatar en la lista de personajes (mismo hueco que el emoji). */
+.pjMini {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 6px rgba(62, 242, 255, 0.4));
+}
+
+/* --- Sección "Imagen del carrusel" dentro de la ficha de personaje --- */
+.pjAvatar {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+  background: rgba(4, 8, 28, 0.35);
+}
+.pjAvatarPreview {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  /* Tablero de ajedrez tenue para que se note la transparencia del PNG. */
+  background-color: rgba(255, 255, 255, 0.04);
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%);
+  background-size: 14px 14px;
+  background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+}
+.pjAvatarPreview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.pjAvatarEmoji {
+  font-size: 2.4rem;
+  line-height: 1;
+  opacity: 0.7;
+}
+.pjAvatarCuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
 .pjInfo {
   display: flex;
   flex-direction: column;

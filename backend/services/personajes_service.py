@@ -19,6 +19,7 @@ Los valores por defecto (los personajes de siempre) se vuelcan a la BBDD en el
 import logging
 import re
 import shutil
+import time
 from typing import Any
 
 from sqlmodel import select
@@ -52,6 +53,11 @@ def _a_dict(fila: Personaje) -> dict[str, Any]:
         "voz_id": fila.voz_id,
         "activo": fila.activo,
         "prompt_sistema_override": fila.prompt_sistema_override,
+        # URL relativa del avatar del carrusel si existe (con token de versión para
+        # invalidar la caché del navegador al regenerar); None si aún no se ha generado.
+        "avatar_url": (
+            f"/api/personajes/{fila.id}/avatar?v={fila.avatar}" if fila.avatar else None
+        ),
     }
 
 
@@ -235,7 +241,63 @@ def eliminar(personaje_id: str) -> None:
             exc_info=True,
         )
 
+    # El avatar SÍ se borra (se regenera desde la ficha; no es conocimiento del adulto).
+    _ruta_avatar(personaje_id).unlink(missing_ok=True)
+
     _invalidar()
+
+
+# ---------------------------------------------------------------------------
+# Avatar del carrusel (Hito 10): PNG transparente en disco, generado bajo demanda.
+# ---------------------------------------------------------------------------
+def _ruta_avatar(personaje_id: str):
+    """Ruta del PNG del avatar de este personaje (exista o no)."""
+    return config.AVATARES_DIR / f"{personaje_id}.png"
+
+
+def ruta_avatar(personaje_id: str):
+    """Ruta del PNG del avatar si existe en disco (para servirlo), o None."""
+    ruta = _ruta_avatar(personaje_id)
+    return ruta if ruta.is_file() else None
+
+
+def guardar_avatar(personaje_id: str, png_bytes: bytes) -> dict[str, Any]:
+    """Guarda el PNG del avatar en disco y marca su versión en la fila.
+
+    El token de versión (epoch) hace que la URL cambie al regenerar, forzando al
+    navegador a recargar la imagen. Lanza ValueError (→ 400) si el personaje no existe.
+    """
+    if not existe(personaje_id):
+        raise ValueError(f"No existe el personaje '{personaje_id}'.")
+    config.AVATARES_DIR.mkdir(parents=True, exist_ok=True)
+    _ruta_avatar(personaje_id).write_bytes(png_bytes)
+
+    db.init_db()
+    with db.get_session() as sesion:
+        fila = sesion.get(Personaje, personaje_id)
+        fila.avatar = str(int(time.time()))
+        sesion.add(fila)
+        sesion.commit()
+
+    _invalidar()
+    return obtener(personaje_id)  # type: ignore[return-value]
+
+
+def borrar_avatar(personaje_id: str) -> dict[str, Any]:
+    """Elimina el avatar (fichero + marca), volviendo al emoji. 400 si no existe."""
+    if not existe(personaje_id):
+        raise ValueError(f"No existe el personaje '{personaje_id}'.")
+    _ruta_avatar(personaje_id).unlink(missing_ok=True)
+
+    db.init_db()
+    with db.get_session() as sesion:
+        fila = sesion.get(Personaje, personaje_id)
+        fila.avatar = None
+        sesion.add(fila)
+        sesion.commit()
+
+    _invalidar()
+    return obtener(personaje_id)  # type: ignore[return-value]
 
 
 def _validar_categoria(valor: Any) -> str | None:

@@ -32,6 +32,8 @@ class PersonajeDTO(BaseModel):
     voz_id: str | None = None
     activo: bool
     prompt_sistema_override: str | None = None
+    # URL relativa del avatar del carrusel (con ?v=<versión>), o None si no tiene.
+    avatar_url: str | None = None
 
 
 class UbicacionDTO(BaseModel):

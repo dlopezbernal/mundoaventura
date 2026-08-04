@@ -167,6 +167,10 @@ CONFIG_DB_PATH: Path = (
 #   backend/documentos/<personaje_id>/<archivo.pdf|.txt|.md>
 DOCUMENTOS_DIR: Path = (PROJECT_ROOT / os.getenv("DOCUMENTOS_DIR", "backend/documentos")).resolve()
 
+# Carpeta de los avatares del carrusel (Hito 10): un PNG transparente por personaje,
+#   backend/avatares/<personaje_id>.png. Gitignored (se regeneran desde la ficha).
+AVATARES_DIR: Path = (PROJECT_ROOT / os.getenv("AVATARES_DIR", "backend/avatares")).resolve()
+
 # Troceado (chunking) con solape, en caracteres:
 #   CHUNK_SIZE    → tamaño de cada fragmento.
 #   CHUNK_OVERLAP → cuántos caracteres se repiten entre un chunk y el siguiente,

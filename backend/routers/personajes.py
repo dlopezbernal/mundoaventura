@@ -20,6 +20,7 @@ configuración. El control de acceso admin a la edición llega en el Hito 7.
 import base64
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 
 from backend import config
 from backend.schemas.personajes import PersonajeCrear, PersonajeEditar, VozProbar
@@ -30,7 +31,12 @@ from backend.schemas.respuestas import (
     PersonajesInfo,
     VocesResponse,
 )
-from backend.services import admin_service, personajes_service, voice_service
+from backend.services import (
+    admin_service,
+    generation_service,
+    personajes_service,
+    voice_service,
+)
 
 router = APIRouter(prefix="/api", tags=["Configuración · Personajes"])
 
@@ -82,6 +88,44 @@ def borrar_personaje(personaje_id: str):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True}
+
+
+@router.post(
+    "/personajes/{personaje_id}/avatar", dependencies=_admin, response_model=PersonajeMutacion
+)
+def generar_avatar_personaje(personaje_id: str):
+    """Genera (bajo demanda, coste de Replicate) el avatar transparente del carrusel.
+
+    Dos llamadas a Replicate (retrato + recorte); es `def` → FastAPI lo ejecuta en su
+    threadpool sin bloquear el event loop. 400 si el personaje no existe o falta token.
+    """
+    try:
+        png = generation_service.generar_avatar(personaje_id)
+        personaje = personajes_service.guardar_avatar(personaje_id, png)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "personaje": personaje}
+
+
+@router.delete(
+    "/personajes/{personaje_id}/avatar", dependencies=_admin, response_model=PersonajeMutacion
+)
+def borrar_avatar_personaje(personaje_id: str):
+    """Quita el avatar (vuelve al emoji). 400 si el personaje no existe."""
+    try:
+        personaje = personajes_service.borrar_avatar(personaje_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "personaje": personaje}
+
+
+@router.get("/personajes/{personaje_id}/avatar")
+def obtener_avatar(personaje_id: str):
+    """Sirve el PNG transparente del avatar (público: lo usa el carrusel del niño)."""
+    ruta = personajes_service.ruta_avatar(personaje_id)
+    if ruta is None:
+        raise HTTPException(status_code=404, detail="Este personaje no tiene avatar.")
+    return FileResponse(ruta, media_type="image/png")
 
 
 @router.get("/voices", dependencies=_admin, response_model=VocesResponse)

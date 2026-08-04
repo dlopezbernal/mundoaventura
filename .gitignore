@@ -62,3 +62,6 @@ evals/resultados/*
 !evals/resultados/BASELINE.html
 # Test ciego (H6): papeletas/clave/votos son artefactos de corrida, no se versionan.
 evals/test_ciego/
+
+# Avatares del carrusel (Hito 10): se regeneran desde la ficha del personaje.
+backend/avatares/

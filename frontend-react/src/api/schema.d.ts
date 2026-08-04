@@ -451,6 +451,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/personajes/{personaje_id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener Avatar
+         * @description Sirve el PNG transparente del avatar (público: lo usa el carrusel del niño).
+         */
+        get: operations["obtener_avatar_api_personajes__personaje_id__avatar_get"];
+        put?: never;
+        /**
+         * Generar Avatar Personaje
+         * @description Genera (bajo demanda, coste de Replicate) el avatar transparente del carrusel.
+         *
+         *     Dos llamadas a Replicate (retrato + recorte); es `def` → FastAPI lo ejecuta en su
+         *     threadpool sin bloquear el event loop. 400 si el personaje no existe o falta token.
+         */
+        post: operations["generar_avatar_personaje_api_personajes__personaje_id__avatar_post"];
+        /**
+         * Borrar Avatar Personaje
+         * @description Quita el avatar (vuelve al emoji). 400 si el personaje no existe.
+         */
+        delete: operations["borrar_avatar_personaje_api_personajes__personaje_id__avatar_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/voices": {
         parameters: {
             query?: never;
@@ -1880,6 +1911,8 @@ export interface components {
             activo: boolean;
             /** Prompt Sistema Override */
             prompt_sistema_override?: string | null;
+            /** Avatar Url */
+            avatar_url?: string | null;
         };
         /**
          * PersonajeEditar
@@ -3033,6 +3066,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_avatar_api_personajes__personaje_id__avatar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                personaje_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generar_avatar_personaje_api_personajes__personaje_id__avatar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                personaje_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonajeMutacion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    borrar_avatar_personaje_api_personajes__personaje_id__avatar_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                personaje_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PersonajeMutacion"];
                 };
             };
             /** @description Validation Error */

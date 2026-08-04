@@ -16,9 +16,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  assetUrl,
   BackendError,
+  borrarAvatarPersonaje,
   createPersonaje,
   deletePersonaje,
+  generarAvatarPersonaje,
   getPersonajesInfo,
   getReindexEstado,
   getVoices,
@@ -271,9 +274,13 @@ export default function PersonajesTab() {
       <div className={styles.pjLista}>
         {personajes.map((p) => (
           <div key={p.id} className={styles.pjCard}>
-            <span className={styles.pjEmoji} aria-hidden="true">
-              {p.emoji ?? "🎭"}
-            </span>
+            {p.avatar_url ? (
+              <img className={styles.pjMini} src={assetUrl(p.avatar_url)} alt="" aria-hidden="true" />
+            ) : (
+              <span className={styles.pjEmoji} aria-hidden="true">
+                {p.emoji ?? "🎭"}
+              </span>
+            )}
             <div className={styles.pjInfo}>
               <span className={styles.pjNombre}>
                 {p.nombre}
@@ -306,10 +313,12 @@ export default function PersonajesTab() {
           <PersonajeForm
             inicial={editando === "__nuevo__" ? FORM_VACIO : aForm(personajeEnEdicion!)}
             esNuevo={editando === "__nuevo__"}
+            personaje={editando === "__nuevo__" ? null : (personajeEnEdicion ?? null)}
             voces={voces}
             vocesMsg={vocesMsg}
             onCancelar={cerrarModal}
             onGuardar={(f) => onSubmit(f, editando === "__nuevo__")}
+            onAvatarCambiado={() => void cargar()}
             onBloqueadoChange={setBloqueado}
           />
         </Modal>
@@ -337,26 +346,74 @@ function mensajeReindex(p: ReindexEstado): string {
 interface FormProps {
   inicial: FormState;
   esNuevo: boolean;
+  /** El personaje en edición (null al crear): aporta id + avatar_url para la imagen. */
+  personaje: PersonajeDTO | null;
   voces: VozDTO[];
   vocesMsg: string;
   onCancelar: () => void;
   onGuardar: (form: FormState) => void | Promise<void>;
+  /** Se llama tras generar/quitar el avatar, para refrescar el catálogo del carrusel. */
+  onAvatarCambiado: () => void;
   /** Notifica al Modal contenedor si hay algo en curso (guardando, o el panel
    * de documentos procesando algo) para que bloquee el cierre y los campos. */
   onBloqueadoChange: (bloqueado: boolean) => void;
 }
 
-function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuardar, onBloqueadoChange }: FormProps) {
+function PersonajeForm({
+  inicial,
+  esNuevo,
+  personaje,
+  voces,
+  vocesMsg,
+  onCancelar,
+  onGuardar,
+  onAvatarCambiado,
+  onBloqueadoChange,
+}: FormProps) {
   const [form, setForm] = useState<FormState>(inicial);
   const [guardando, setGuardando] = useState(false);
   const [probandoVoz, setProbandoVoz] = useState(false);
   const [errorVoz, setErrorVoz] = useState<string | null>(null);
   const [docsOcupado, setDocsOcupado] = useState(false);
+  // Avatar del carrusel: URL vigente y estado de generación/borrado.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(personaje?.avatar_url ?? null);
+  const [avatarOcupado, setAvatarOcupado] = useState(false);
+  const [errorAvatar, setErrorAvatar] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    onBloqueadoChange(guardando || docsOcupado);
-  }, [guardando, docsOcupado, onBloqueadoChange]);
+    onBloqueadoChange(guardando || docsOcupado || avatarOcupado);
+  }, [guardando, docsOcupado, avatarOcupado, onBloqueadoChange]);
+
+  async function onGenerarAvatar() {
+    if (!personaje) return;
+    setErrorAvatar(null);
+    setAvatarOcupado(true);
+    try {
+      const actualizado = await generarAvatarPersonaje(personaje.id);
+      setAvatarUrl(actualizado.avatar_url ?? null);
+      onAvatarCambiado();
+    } catch (exc) {
+      setErrorAvatar(exc instanceof BackendError ? exc.message : String(exc));
+    } finally {
+      setAvatarOcupado(false);
+    }
+  }
+
+  async function onQuitarAvatar() {
+    if (!personaje) return;
+    setErrorAvatar(null);
+    setAvatarOcupado(true);
+    try {
+      await borrarAvatarPersonaje(personaje.id);
+      setAvatarUrl(null);
+      onAvatarCambiado();
+    } catch (exc) {
+      setErrorAvatar(exc instanceof BackendError ? exc.message : String(exc));
+    } finally {
+      setAvatarOcupado(false);
+    }
+  }
 
   function set<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -457,6 +514,49 @@ function PersonajeForm({ inicial, esNuevo, voces, vocesMsg, onCancelar, onGuarda
           Sin datos personales; describe su aspecto para un render 3D estilo Pixar (colorido y amable).
         </span>
       </label>
+
+      {/* Avatar del carrusel: se genera desde la descripción de arriba (solo al editar,
+          no al crear: el personaje aún no existe). Mientras no haya avatar, el carrusel
+          usa el emoji. */}
+      {!esNuevo && personaje && (
+        <div className={styles.pjAvatar}>
+          <div className={styles.pjAvatarPreview}>
+            {avatarUrl ? (
+              <img src={assetUrl(avatarUrl)} alt={`Avatar de ${personaje.nombre}`} />
+            ) : (
+              <span className={styles.pjAvatarEmoji}>{form.emoji.trim() || "🎭"}</span>
+            )}
+          </div>
+          <div className={styles.pjAvatarCuerpo}>
+            <strong>Imagen del carrusel</strong>
+            <span className={styles.filaAyuda}>
+              Genera una imagen con fondo transparente a partir de la descripción de arriba
+              (cuesta una generación de Replicate). Mientras no la generes, se usa el emoji.
+            </span>
+            {errorAvatar && <p className={styles.testNo}>❌ {errorAvatar}</p>}
+            <div className={styles.pjBarra}>
+              <button
+                type="button"
+                className={styles.testBtn}
+                onClick={() => void onGenerarAvatar()}
+                disabled={avatarOcupado || !form.prompt_imagen.trim()}
+              >
+                {avatarOcupado ? "Generando…" : avatarUrl ? "🎨 Regenerar imagen" : "🎨 Generar imagen"}
+              </button>
+              {avatarUrl && (
+                <button
+                  type="button"
+                  className={styles.testBtn}
+                  onClick={() => void onQuitarAvatar()}
+                  disabled={avatarOcupado}
+                >
+                  🗑 Quitar imagen
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <label className={styles.pjLabel}>
         Voz (ElevenLabs)

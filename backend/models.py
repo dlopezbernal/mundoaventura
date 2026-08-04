@@ -49,6 +49,10 @@ class Personaje(SQLModel, table=True):
     voz_id: str | None = None  # voz de ElevenLabs; None = solo texto
     activo: bool = True
     prompt_sistema_override: str | None = None
+    # Avatar del carrusel (Hito 10): token de versión (None = sin avatar). El PNG
+    # transparente vive en disco en backend/avatares/<id>.png; el token cambia al
+    # regenerar para invalidar la caché del navegador (?v=<token> en la URL).
+    avatar: str | None = None
     creado_en: datetime = Field(default_factory=_ahora_utc)
 
 

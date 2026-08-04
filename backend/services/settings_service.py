@@ -53,6 +53,7 @@ GRUPO_PROMPTS = "✍️ Prompts y presentación"
 # Pestaña "Imagen".
 GRUPO_IMG_MODELOS = "🎨 Modelos de generación"
 GRUPO_IMG_SALIDA = "🖼️ Salida de imagen"
+GRUPO_IMG_AVATAR = "🪄 Avatar del carrusel"
 GRUPO_IMG_ESTILO = "🎭 Estilo visual común"
 # Pestaña "Voz".
 GRUPO_STT = "🎙️ Transcripción (voz→texto, STT)"
@@ -185,7 +186,42 @@ _SPEC: dict[str, dict[str, Any]] = {
         "ayuda": "Límite de tokens del codificador CLIP de FLUX (~77). Si el prompt lo "
         "supera solo se AVISA en el log (T5 lee el resto), no falla. Rara vez se toca.",
     },
-    # --- Grupo 3: Estilo visual común a TODOS los personajes y ubicaciones, para
+    # --- Grupo 3: Avatar del carrusel (Hito 10). Se genera bajo demanda desde la
+    # ficha del personaje: FLUX dibuja un retrato sobre fondo plano y un modelo de
+    # recorte lo deja en PNG transparente para que "flote" sobre el fondo del carrusel. ---
+    "AVATAR_PROMPT": {
+        "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_AVATAR,
+        "tipo": "str",
+        "multilinea": True,
+        "default": (
+            "full-body character portrait, centered, facing forward, standing, "
+            "plain solid pale gray background, no scenery, no props, studio lighting"
+        ),
+        "ayuda": "Instrucción de encuadre del AVATAR (se antepone a la descripción del "
+        "personaje y al estilo común). Debe pedir fondo LISO y uniforme: cuanto más "
+        "limpio, mejor recorta el modelo de fondo. Va en inglés (como STYLE_SUFFIX/FRAMING).",
+    },
+    "AVATAR_ASPECT_RATIO": {
+        "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_AVATAR,
+        "tipo": "str",
+        "default": "1:1",
+        "opciones": ["1:1", "3:4", "4:3", "9:16", "16:9"],
+        "ayuda": "Proporción del avatar. 1:1 o 3:4 (retrato) suelen encajar mejor en la carta.",
+    },
+    "AVATAR_REMOVE_BG_MODEL": {
+        "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_AVATAR,
+        "tipo": "str",
+        "default": "cjwbw/rembg:fb8af171cfa1616ddcf1242c093f9c46bcada5ad4cf6f2fbe8b81b330ec5c003",
+        "ayuda": "Modelo de Replicate que quita el fondo del retrato (2º paso, deja PNG "
+        "transparente). Debe aceptar la imagen en el campo 'image' y devolver una imagen. "
+        "IMPORTANTE: si es un modelo de la COMUNIDAD (no oficial) hay que indicar la "
+        "VERSIÓN: 'owner/model:hash' (si no, Replicate responde 404). Alternativas: "
+        "men1scus/birefnet:<hash>, 851-labs/background-remover:<hash>.",
+    },
+    # --- Grupo 4: Estilo visual común a TODOS los personajes y ubicaciones, para
     # que la escena final se vea coherente sea cual sea la combinación. ---
     "STYLE_SUFFIX": {
         "categoria": CAT_ESTILO_IMAGEN,

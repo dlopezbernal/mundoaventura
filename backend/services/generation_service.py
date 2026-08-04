@@ -37,6 +37,8 @@ import base64
 import logging
 import re
 
+from replicate.exceptions import ReplicateError
+
 from backend import config, debug_log
 from backend.services import (
     personajes_service,
@@ -48,10 +50,14 @@ from backend.services import (
 logger = logging.getLogger(__name__)
 
 
+def _primer_fichero(output):
+    """FLUX schnell devuelve una LISTA de FileOutput; Kontext/recorte, uno único."""
+    return output[0] if isinstance(output, (list, tuple)) else output
+
+
 def _salida_a_base64(output) -> str:
     """Lee la imagen devuelta por Replicate (lista o único FileOutput) a base64."""
-    primera = output[0] if isinstance(output, (list, tuple)) else output
-    return base64.b64encode(primera.read()).decode("utf-8")
+    return base64.b64encode(_primer_fichero(output).read()).decode("utf-8")
 
 
 def _estimar_tokens(texto: str) -> int:
@@ -138,6 +144,68 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
         "ubicacion_id": ubicacion_id,
         "result_png_base64": _salida_a_base64(output),
     }
+
+
+def generar_avatar(personaje_id: str) -> bytes:
+    """Genera el AVATAR del carrusel de `personaje_id`: un PNG TRANSPARENTE.
+
+    Enfoque A1 (dos pasos en Replicate, todo en la nube):
+      1) FLUX (REPLICATE_MODEL) dibuja un retrato del personaje sobre fondo LISO,
+         a partir de su `prompt_imagen` envuelto en AVATAR_PROMPT + STYLE_SUFFIX.
+      2) Un modelo de recorte (AVATAR_REMOVE_BG_MODEL) quita ese fondo y devuelve
+         un PNG con canal alfa, para que el personaje "flote" en la carta.
+
+    Devuelve los bytes del PNG transparente. Lanza ValueError (→ 400) si el
+    personaje no existe o falta el token de Replicate.
+    """
+    ficha = personajes_service.obtener(personaje_id)
+    if ficha is None:
+        raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
+    _exigir_token()
+
+    # Paso 1: retrato sobre fondo plano. Forzamos PNG (calidad sin pérdidas antes
+    # de recortar) y la proporción propia del avatar.
+    personaje = ficha["prompt_imagen"]
+    prompt = (
+        f"{personaje}, {settings_service.get('AVATAR_PROMPT')}, "
+        f"{settings_service.get('STYLE_SUFFIX')}"
+    )
+    _avisar_si_prompt_largo(prompt)
+    modelo = settings_service.get("REPLICATE_MODEL")
+    debug_log.trazar_prompt(f"Replicate · avatar retrato ({modelo})", prompt=prompt)
+    salida = replicate_client.run(
+        modelo,
+        input={
+            "prompt": prompt,
+            "aspect_ratio": settings_service.get("AVATAR_ASPECT_RATIO"),
+            "output_format": "png",
+            "num_outputs": 1,
+            "num_inference_steps": settings_service.get("IMG_NUM_STEPS"),
+        },
+        etiqueta="Replicate · avatar retrato",
+    )
+    retrato_bytes = _primer_fichero(salida).read()
+
+    # Paso 2: quitar el fondo → PNG transparente. La imagen se pasa como data URI
+    # (forma fiable de mandar bytes a Replicate), en el campo 'image'.
+    modelo_bg = settings_service.get("AVATAR_REMOVE_BG_MODEL")
+    data_uri = f"data:image/png;base64,{base64.b64encode(retrato_bytes).decode('utf-8')}"
+    try:
+        salida_bg = replicate_client.run(
+            modelo_bg,
+            input={"image": data_uri},
+            etiqueta="Replicate · avatar recorte",
+        )
+    except ReplicateError as exc:
+        # Causa típica: un modelo de la comunidad indicado SIN versión → Replicate
+        # usa el endpoint de modelos oficiales y responde 404. Mensaje accionable
+        # (→ 400 en el router) en vez del 500 genérico.
+        raise ValueError(
+            f"El modelo de recorte de fondo '{modelo_bg}' falló ({exc}). Si es un modelo "
+            "de la comunidad, indícalo CON versión ('owner/model:hash'). Se ajusta en "
+            "Admin → Imagen → AVATAR_REMOVE_BG_MODEL."
+        ) from exc
+    return _primer_fichero(salida_bg).read()
 
 
 def generar_en_foto(

@@ -15,6 +15,7 @@ import { useMemo } from "react";
 import Console from "../components/Console/Console";
 import Coverflow from "../components/Coverflow/Coverflow";
 import Roster from "../components/Roster/Roster";
+import { assetUrl } from "../api/client";
 import type { PersonajeDTO } from "../api/types";
 import { holoCard, type HoloCardData } from "../data/holo";
 import { GRUPOS } from "../data/personajes";
@@ -44,10 +45,12 @@ export default function CharacterSelect({ personajes, index, onMove, onNext }: P
     () =>
       personajes.map((p) => {
         const categoria = p.categoria ?? "";
+        // Avatar generado (imagen) si lo hay; si no, el emoji de siempre.
+        const art = p.avatar_url ? assetUrl(p.avatar_url) : (p.emoji ?? "🎭");
         return holoCard(
           {
             id: p.id,
-            art: p.emoji ?? "🎭",
+            art,
             name: p.nombre.toUpperCase(),
             tag: (CATEGORIA_LABEL[categoria] ?? categoria).toUpperCase(),
           },

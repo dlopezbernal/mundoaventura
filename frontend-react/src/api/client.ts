@@ -570,6 +570,37 @@ export async function deletePersonaje(id: string): Promise<void> {
   await fetchBackend(`/api/personajes/${id}`, { method: "DELETE" }, TIMEOUT_CONFIG);
 }
 
+/**
+ * Resuelve una URL relativa del backend (p. ej. `avatar_url`) a una absoluta que
+ * se pueda poner en `<img src>`. En desarrollo BACKEND_URL es "" (proxy de Vite),
+ * así que la ruta relativa ya funciona; en producción antepone el origen del backend.
+ */
+export function assetUrl(path: string): string {
+  return `${BACKEND_URL}${path}`;
+}
+
+/** Genera el avatar del carrusel (bajo demanda, coste Replicate). POST .../avatar. */
+export async function generarAvatarPersonaje(id: string): Promise<PersonajeDTO> {
+  const response = await fetchBackend(
+    `/api/personajes/${id}/avatar`,
+    { method: "POST" },
+    TIMEOUT_GENERATE_ON_PHOTO, // dos llamadas a Replicate (retrato + recorte): puede tardar
+  );
+  const body = (await response.json()) as { personaje: PersonajeDTO };
+  return body.personaje;
+}
+
+/** Quita el avatar (vuelve al emoji). DELETE .../avatar. */
+export async function borrarAvatarPersonaje(id: string): Promise<PersonajeDTO> {
+  const response = await fetchBackend(
+    `/api/personajes/${id}/avatar`,
+    { method: "DELETE" },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { personaje: PersonajeDTO };
+  return body.personaje;
+}
+
 /** Voces disponibles en ElevenLabs para el desplegable. GET /api/voices. */
 export async function getVoices(): Promise<VocesResponse> {
   const response = await fetchBackend("/api/voices", { method: "GET" }, TIMEOUT_CONFIG);
