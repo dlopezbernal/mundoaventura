@@ -554,6 +554,46 @@
   color: #fff;
 }
 
+/* Acceso al manual de usuario desde el login. Va ENTRE la marca y el formulario,
+   con cuerpo de tarjeta y no de enlace: el adulto tiene que poder enterarse de qué
+   es la app ANTES de dejar su correo, así que este acceso no puede pasar inadvertido. */
+.manualAcceso {
+  width: 100%;
+  max-width: 380px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  margin-bottom: 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(62, 242, 255, 0.1), rgba(6, 12, 34, 0.6));
+  box-shadow: inset 0 0 26px rgba(62, 242, 255, 0.06);
+}
+.manualAcceso:hover {
+  background: linear-gradient(180deg, rgba(62, 242, 255, 0.18), rgba(6, 12, 34, 0.6));
+  box-shadow: 0 0 14px rgba(62, 242, 255, 0.3);
+}
+.manualIcono {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+.manualTitulo {
+  display: block;
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  color: var(--holo);
+}
+.manualTexto {
+  display: block;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
 /* ===========================================================================
  * Pestaña "Personajes" — lista + tarjetas + formulario de alta/edición
  * ======================================================================== */

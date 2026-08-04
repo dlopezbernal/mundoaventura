@@ -125,6 +125,10 @@ la sesión es persistente). Al entrar:
    aparece la imagen y, a su lado, un **chat**: escríbele o **díctale** una pregunta al
    personaje y te responderá en primera persona, con su propia voz, palabra a palabra.
 
+El botón **📖 Manual de usuario** (en el menú ☰ del HUD) abre la **guía en pantalla**, con una sección para el
+niño (los 3 pasos y el chat) y otra para el adulto (cuenta de familia y ⚙️ Configuración). También
+se llega a ella desde la pantalla de acceso, para poder leerla **antes** de crear la cuenta.
+
 Dos zonas de adulto, cada una con su botón en el HUD:
 
 - **⚙️ Configuración** — autoservicio de la familia: perfiles de niños, PIN de familia (protege

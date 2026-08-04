@@ -12,8 +12,10 @@
  * en `aria-label` (accesibilidad) y en `data-tip`, que la hoja de estilos muestra
  * como tooltip al pasar por encima o al enfocar con teclado.
  *
- * Los accesos de adulto (⚙️🛡️🚪) van PLEGADOS por defecto: un botón ☰ los muestra/
- * oculta, para que el niño no los vea salvo que un adulto los despliegue.
+ * Los accesos (📖⚙️🛡️🚪) van PLEGADOS por defecto: un botón ☰ los muestra/oculta,
+ * para que el niño no los vea salvo que un adulto los despliegue. El manual va en
+ * el mismo grupo: la barra se mantiene con un único punto de entrada (☰) y el niño
+ * ve una pantalla limpia.
  */
 
 import { useState } from "react";
@@ -27,6 +29,8 @@ interface Props {
   ninoActivo?: string | null;
   /** Reabre "¿quién juega?" para cambiar de niño (solo si hay varios). */
   onCambiarNino?: () => void;
+  /** Abre el manual de usuario (guía de la app, para niño y adulto). */
+  onAbrirManual: () => void;
   /** Abre la pantalla de Configuración del adulto (cambiar PIN). */
   onAbrirConfig: () => void;
   /** Abre la pantalla de Administración (config global y compartida). */
@@ -39,6 +43,7 @@ export default function Hud({
   nombreFamilia,
   ninoActivo,
   onCambiarNino,
+  onAbrirManual,
   onAbrirConfig,
   onAbrirAdmin,
   onSalir,
@@ -67,6 +72,15 @@ export default function Hud({
         </span>
         {abierto && (
           <>
+            <button
+              type="button"
+              className={styles.iconBtn}
+              data-tip="Manual de usuario"
+              aria-label="Manual de usuario"
+              onClick={onAbrirManual}
+            >
+              📖
+            </button>
             <button
               type="button"
               className={styles.iconBtn}

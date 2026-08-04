@@ -32,11 +32,13 @@ import styles from "./Settings.module.css";
 interface Props {
   /** Se llama con la familia una vez autenticada (alta, login o verificación correctos). */
   onListo: (familia: FamiliaDTO) => void;
+  /** Abre el manual de usuario SIN salir de la puerta de entrada (aún no hay sesión). */
+  onAbrirManual: () => void;
 }
 
 type Modo = "cargando" | "login" | "signup" | "verificar";
 
-export default function LoginFamilia({ onListo }: Props) {
+export default function LoginFamilia({ onListo, onAbrirManual }: Props) {
   const [modo, setModo] = useState<Modo>("cargando");
   const [nombreFamilia, setNombreFamilia] = useState("");
   const [email, setEmail] = useState("");
@@ -217,6 +219,21 @@ export default function LoginFamilia({ onListo }: Props) {
         <h1 className={styles.marcaTitulo}>MundoAventura</h1>
         <p className={styles.marcaEslogan}>¡Descubre tu próxima aventura!</p>
       </div>
+
+      {/* El manual, ANTES del formulario: para decidir si registras tu correo, primero
+          hay que poder ver qué hace la app y cómo trata los datos. */}
+      <button type="button" className={styles.manualAcceso} onClick={onAbrirManual}>
+        <span className={styles.manualIcono} aria-hidden="true">
+          📖
+        </span>
+        <span>
+          <span className={styles.manualTitulo}>Manual de usuario</span>
+          <span className={styles.manualTexto}>
+            Cómo funciona la app, para el niño y para el adulto.
+          </span>
+        </span>
+      </button>
+
       <div className={styles.gateCard}>
         <span className={styles.gateIcono} aria-hidden="true">
           {esSignup ? "👨‍👩‍👧‍👦" : "👋"}
