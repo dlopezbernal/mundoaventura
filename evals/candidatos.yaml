@@ -1,0 +1,102 @@
+# evals/candidatos.yaml — Los 5 candidatos del estudio de LLMs (Hito 6)
+# =====================================================================
+#
+# Fuente de verdad de QUÉ modelos se comparan y CÓMO se configura cada uno.
+# `evals/comparar.py` lee este fichero para saber el orden, las etiquetas y los
+# metadatos (coste, RGPD) con los que arma la tabla 5×N.
+#
+# CÓMO SE EJECUTA CADA CANDIDATO (en la máquina del usuario, no en el sandbox):
+#   1. Poner en el .env / la pantalla de APIs la clave de ESE proveedor:
+#        LLM_API_KEY=<clave del proveedor>       (secreto; Replicate usa REPLICATE_API_TOKEN)
+#   2. Fijar en settings (pantalla de config o .env) los ajustes del candidato:
+#        LLM_PROVIDER, LLM_MODEL, LLM_BASE_URL   (los valores de abajo)
+#   3. Lanzar el runner en modo retrieval-congelado con la etiqueta del candidato:
+#        uv run python -m evals.runner --modo retrieval-congelado \
+#            --fixture evals/fixtures/retrieval_2026-08-01.json \
+#            --etiqueta h6-<id> --repeticiones 3
+#   4. Cuando estén las 5 corridas, agregar y decidir:
+#        uv run python -m evals.comparar
+#
+# El retrieval va CONGELADO (mismo fixture para los cinco): la única variable que
+# cambia entre corridas es el LLM. Es el control experimental de §1 del doc de H6.
+#
+# max_tokens: el MISMO para todos (ajuste LLM_MAX_TOKENS, no se toca entre corridas).
+# temperatura: el runner genera a temperature=0; la σ mide el ruido residual del modelo.
+
+candidatos:
+  - id: llama3-replicate
+    etiqueta: h6-llama3-replicate
+    papel: "Línea base. Imprescindible: sin ella no se demuestra mejora."
+    provider: replicate
+    model: meta/meta-llama-3-8b-instruct   # = config.REPLICATE_LLM_MODEL (default del proyecto)
+    base_url: ""                            # Replicate no usa base_url openai-compatible
+    clave_env: REPLICATE_API_TOKEN
+    # Coste orientativo USD / millón de tokens (entrada / salida). Ajustar al facturar.
+    precio_entrada_usd_m: 0.05
+    precio_salida_usd_m: 0.25
+    rgpd: "Datos procesados en Replicate (EEUU). Sin garantía de no-entrenamiento en free tier."
+
+  - id: gemini-flash
+    etiqueta: h6-gemini-flash
+    papel: "Favorito calidad/precio; salida estructurada que limpiaría el Evaluator."
+    provider: openai
+    # EJECUTADO: gemini-2.0-flash tiene cuota free-tier 0 (inservible) → se usó gemini-2.5-flash.
+    # Es un modelo *thinking*: se corrió con reasoning_effort='none' (si no, trunca a ~12 palabras
+    # a max_tokens=300). Ver ADR-007 (ajustes obligados durante la ejecución).
+    model: gemini-2.5-flash
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai/
+    clave_env: LLM_API_KEY   # clave de Google AI Studio
+    precio_entrada_usd_m: 0.30
+    precio_salida_usd_m: 2.50
+    rgpd: "OJO: en el tramo GRATUITO Google puede usar las entradas para entrenar. En una app infantil se decide conscientemente y se escribe en la memoria (doc H6 §2)."
+
+  - id: mistral-small
+    etiqueta: h6-mistral-small
+    papel: "Candidato europeo; argumento RGPD para app infantil española."
+    provider: openai
+    model: mistral-small-latest
+    base_url: https://api.mistral.ai/v1
+    clave_env: LLM_API_KEY   # clave de Mistral La Plateforme
+    precio_entrada_usd_m: 0.20
+    precio_salida_usd_m: 0.60
+    rgpd: "Proveedor europeo (Francia), sujeto a RGPD. Argumento de soberanía del dato."
+
+  - id: groq-llama70b
+    etiqueta: h6-groq-llama70b
+    papel: "Candidato de latencia pura (inferencia LPU)."
+    provider: openai
+    model: llama-3.3-70b-versatile
+    base_url: https://api.groq.com/openai/v1
+    clave_env: LLM_API_KEY   # clave de GroqCloud
+    precio_entrada_usd_m: 0.59
+    precio_salida_usd_m: 0.79
+    rgpd: "Datos procesados en Groq (EEUU)."
+
+  - id: ollama-local
+    etiqueta: h6-ollama-local
+    papel: "Fila 100% local: ¿cuánto se pierde por no depender de nadie? El que hace la tabla interesante."
+    provider: openai
+    # EJECUTADO: gemma3:4b (qwen3:4b es *thinking* → trunca a 300 tok). gemma3:4b no es
+    # thinking, buen español y cabe en 6 GB. Ver ADR-007.
+    model: gemma3:4b
+    base_url: http://localhost:11434/v1
+    clave_env: ""              # Ollama no exige clave (el SDK usa un marcador "sk-no-key")
+    precio_entrada_usd_m: 0.0  # coste marginal cero (electricidad aparte)
+    precio_salida_usd_m: 0.0
+    rgpd: "100% local: ni la pregunta ni la respuesta salen del PC. El mejor argumento de privacidad."
+
+# El JUEZ del Nivel 2 (fidelidad al contexto). Dos reglas del doc H6 §4:
+#   1) Debe ser un modelo DISTINTO y MÁS POTENTE que los candidatos (no autoevaluación).
+#   2) Se VALIDA antes de usarlo: 20 respuestas puntuadas a mano; acuerdo ≥85% ⇒ se usa.
+# Se configura igual que un candidato openai-compatible, con SU propia clave.
+juez:
+  id: juez-gpt4o
+  provider: openai
+  # EJECUTADO: gemini-2.5-pro está RETIRADO ("no longer available to new users"). Se probaron
+  # 3 jueces (gpt-4o, claude-sonnet-4-5, gemini-pro-latest). Ninguno validó ≥85% contra 20
+  # muestras a mano (mejor: gpt-4o 75% con prompt corregido que acepta el roleplay 1ª persona).
+  # gpt-4o se usa como señal INDICATIVA de calidad (no validada). Ver ADR-007 + resultados_h6.yaml.
+  model: gpt-4o
+  base_url: ""                     # endpoint OpenAI por defecto
+  clave_env: LLM_API_KEY
+  notas: "Juez no validado (75%<85%): indicativo. gemini-pro-latest inservible (thinking trunca a 300 tok)."

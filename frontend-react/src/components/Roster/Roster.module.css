@@ -1,0 +1,42 @@
+/**
+ * Roster — Fila inferior con TODOS los elementos + huecos bloqueados "?".
+ * El seleccionado se resalta en holo; los huecos "próximamente" van apagados.
+ */
+
+.roster {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+.slot {
+  width: 46px;
+  height: 46px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #0a1030;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  padding: 0;
+}
+.on {
+  border-color: var(--holo);
+  box-shadow: 0 0 12px rgba(62, 242, 255, 0.5);
+}
+.locked {
+  opacity: 0.4;
+  cursor: default;
+}
+.locked::after {
+  content: "?";
+  font-family: var(--font-pixel);
+  font-size: 11px;
+  color: #4a5590;
+}
+.slotImg {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}

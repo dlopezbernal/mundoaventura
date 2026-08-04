@@ -19,6 +19,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from backend.enums import ModoEvaluator
+
 # ---------------------------------------------------------------------------
 # 1) Localizar la raíz del proyecto y cargar el .env
 # ---------------------------------------------------------------------------
@@ -43,9 +45,7 @@ REPLICATE_API_TOKEN: str = os.getenv("REPLICATE_API_TOKEN", "").strip()
 
 # Modelo de texto-a-imagen que genera la escena (personaje + ubicación).
 # Por defecto FLUX schnell: muy rápido y barato, calidad excelente.
-REPLICATE_MODEL: str = os.getenv(
-    "REPLICATE_MODEL", "black-forest-labs/flux-schnell"
-).strip()
+REPLICATE_MODEL: str = os.getenv("REPLICATE_MODEL", "black-forest-labs/flux-schnell").strip()
 
 # Modelo de EDICIÓN de imagen para el modo "Usar mi foto": en una sola llamada
 # estiliza la foto del niño a Pixar 3D y añade el personaje de forma coherente.
@@ -57,13 +57,350 @@ REPLICATE_EDIT_MODEL: str = os.getenv(
 # Proporción de la imagen generada ("1:1", "16:9", "9:16", "4:3"...).
 IMG_ASPECT_RATIO: str = os.getenv("IMG_ASPECT_RATIO", "16:9").strip()
 
-# Formato del archivo de salida ("png", "jpg", "webp").
-IMG_OUTPUT_FORMAT: str = os.getenv("IMG_OUTPUT_FORMAT", "png").strip()
+# Formato del archivo de salida ("png", "jpg", "webp"). Por defecto WEBP (Hito 8):
+# una escena 16:9 en PNG pesa varios MB y, al ir en base64 dentro del JSON, crece otro
+# +33%; en webp pesa una fracción, con calidad de sobra para la demo. El frontend deduce
+# el tipo de imagen de los propios bytes (SceneView), así que el formato es intercambiable.
+IMG_OUTPUT_FORMAT: str = os.getenv("IMG_OUTPUT_FORMAT", "webp").strip()
 
 # Nº de pasos de difusión. FLUX schnell ("schnell" = rápido en alemán) está
 # DESTILADO para dar su mejor resultado en SOLO 4 pasos (su máximo): más pasos no
 # mejoran y solo restan velocidad. Lo dejamos configurable pero con 4 por defecto.
 IMG_NUM_STEPS: int = int(os.getenv("IMG_NUM_STEPS", "4"))
+
+# Límite de tokens del codificador de texto CLIP de FLUX. FLUX usa DOS codificadores
+# en paralelo: CLIP (corto, trunca a ~77 tokens) y T5 (largo, admite cientos). Si el
+# prompt supera este límite, CLIP descarta el final del texto, pero T5 lo sigue
+# leyendo. Por eso colocamos lo más importante AL PRINCIPIO (entra en CLIP) y el
+# estilo/encuadre AL FINAL (puede caer fuera de CLIP, pero T5 lo tiene en cuenta) y,
+# si nos pasamos, avisamos con un warning (no es un error: la imagen se genera igual).
+CLIP_TOKEN_LIMIT: int = int(os.getenv("CLIP_TOKEN_LIMIT", "77"))
+
+
+# ---------------------------------------------------------------------------
+# 3) Conversación (RAG): LLM en Replicate + base vectorial ChromaDB
+# ---------------------------------------------------------------------------
+# Modelo de lenguaje que responde como el personaje. Por defecto Llama 3 (8B):
+# rápido, barato y suficientemente bueno para respuestas cortas para niños.
+REPLICATE_LLM_MODEL: str = os.getenv("REPLICATE_LLM_MODEL", "meta/meta-llama-3-8b-instruct").strip()
+
+# --- Capa de proveedor de LLM (Hito 5) ---
+# Todas las llamadas al LLM pasan por services/llm_service.py, que despacha por
+# LLM_PROVIDER. Así se compara de proveedor cambiando config, no código (habilita H6).
+#   "replicate" (por defecto): camino de la línea base (dialecto Replicate).
+#   "openai": SDK openai con LLM_BASE_URL configurable → Groq, Mistral, Gemini-compat,
+#             OpenRouter, Together, Cerebras, Ollama local… un camino, N proveedores.
+LLM_PROVIDER: str = os.getenv("LLM_PROVIDER", "replicate").strip().lower()
+
+# Modelo vigente (id del proveedor activo). Por defecto = REPLICATE_LLM_MODEL para
+# reproducir la línea base sin cambios. Con provider=openai, p. ej. "llama3" (Ollama)
+# o "llama-3.1-8b-instant" (Groq).
+LLM_MODEL: str = os.getenv("LLM_MODEL", REPLICATE_LLM_MODEL).strip()
+
+# Endpoint del proveedor openai-compatible (solo si LLM_PROVIDER="openai"). Ejemplos:
+# Ollama local "http://localhost:11434/v1", Groq "https://api.groq.com/openai/v1".
+LLM_BASE_URL: str = os.getenv("LLM_BASE_URL", "").strip()
+
+# Clave del endpoint openai-compatible (SECRETO, .env). Ollama local no la necesita.
+LLM_API_KEY: str = os.getenv("LLM_API_KEY", "").strip()
+
+# Timeout (segundos) de las llamadas al endpoint openai-compatible.
+LLM_TIMEOUT: float = float(os.getenv("LLM_TIMEOUT", "60"))
+
+# Tope de longitud de la respuesta del LLM (en "tokens" ≈ trozos de palabra).
+LLM_MAX_TOKENS: int = int(os.getenv("LLM_MAX_TOKENS", "300"))
+
+# Cuántas fichas recupera ChromaDB por pregunta para dárselas al LLM como contexto.
+RAG_TOP_K: int = int(os.getenv("RAG_TOP_K", "3"))
+
+# --- Evaluator: cómo se decide si una pregunta se responde con el RAG o no ---
+# Modos (ver rag_service.py):
+#   "umbral"  → SOLO la distancia de ChromaDB decide (gratis, sin LLM).
+#   "llm"     → SOLO el LLM-juez decide (más listo, pero cuesta una llamada extra).
+#   "hibrido" → el umbral resuelve los casos claros (gratis) y el LLM solo desempata
+#               los dudosos. Mejor relación calidad/coste. (Recomendado)
+EVALUATOR_MODE: str = os.getenv("EVALUATOR_MODE", ModoEvaluator.HIBRIDO).strip().lower()
+if EVALUATOR_MODE not in set(ModoEvaluator):
+    EVALUATOR_MODE = ModoEvaluator.HIBRIDO  # valor seguro si el .env trae algo raro
+
+# Umbrales de DISTANCIA de ChromaDB (métrica coseno: 0 = idéntico, 2 = opuesto).
+#   distancia <= BAJO  → claramente relevante  (RAG)
+#   distancia >= ALTO  → claramente irrelevante (GENERAL)
+#   entre ambos        → "dudoso" (en modo híbrido, lo desempata el LLM)
+# Son ORIENTATIVOS: actívate DEBUG (muestra "d=...") y ajústalos a tus preguntas.
+# Valores calibrados CON traducción activa (pregunta y fichas en inglés):
+# los aciertos caen ~0.68 (< BAJO → RAG gratis) y lo irrelevante ~0.95+ (≥ ALTO).
+EVALUATOR_UMBRAL_BAJO: float = float(os.getenv("EVALUATOR_UMBRAL_BAJO", "0.75"))
+EVALUATOR_UMBRAL_ALTO: float = float(os.getenv("EVALUATOR_UMBRAL_ALTO", "0.95"))
+
+# Si el Evaluator decide GENERAL (las fichas no sirven), ¿el personaje responde con
+# su conocimiento propio (una llamada MÁS al LLM, la que genera la respuesta) o con
+# un mensaje FIJO de "no lo sé" sin llamar a ningún modelo? True = comportamiento de
+# siempre (fallback a conocimiento general). False = chat estrictamente anclado a
+# los documentos: fuera de ellos, respuesta fija y sin coste de LLM.
+PERMITIR_CONOCIMIENTO_GENERAL: bool = os.getenv(
+    "PERMITIR_CONOCIMIENTO_GENERAL", "true"
+).strip().lower() in ("1", "true", "yes", "on")
+
+# --- Traducción (DeepL) ---
+# Los documentos están en INGLÉS (mejora la calidad de los embeddings). Para
+# buscar bien, traducimos la pregunta del niño ES→EN con DeepL antes del retrieval.
+# Sin clave, el sistema sigue funcionando (busca con la pregunta en español, peor).
+# Consigue una clave gratis (500.000 caracteres/mes) en https://www.deepl.com/pro-api
+DEEPL_API_KEY: str = os.getenv("DEEPL_API_KEY", "").strip()
+
+# Carpeta donde ChromaDB guarda su índice vectorial (persistente entre reinicios).
+CHROMA_DIR: Path = (PROJECT_ROOT / os.getenv("CHROMA_DIR", "backend/chroma_db")).resolve()
+
+# --- Base de datos de configuración (SQLite) ---
+# Fichero SQLite donde viven los AJUSTES editables en caliente y el catálogo
+# (personajes, ubicaciones, documentos). NO guarda secretos (las claves API
+# siguen en el .env). Es "bootstrap": la RUTA de la BBDD sí se lee del .env, pero
+# su CONTENIDO (los ajustes) se edita desde la UI, no desde aquí. Ver
+# services/settings_service.py. No se versiona (está en .gitignore).
+CONFIG_DB_PATH: Path = (
+    PROJECT_ROOT / os.getenv("CONFIG_DB_PATH", "backend/config_db.sqlite3")
+).resolve()
+
+# --- Ingesta de documentos (chunking) ---
+# Carpeta raíz de los documentos, organizada por personaje:
+#   backend/documentos/<personaje_id>/<archivo.pdf|.txt|.md>
+DOCUMENTOS_DIR: Path = (PROJECT_ROOT / os.getenv("DOCUMENTOS_DIR", "backend/documentos")).resolve()
+
+# Carpeta de los avatares del carrusel (Hito 10): un PNG transparente por personaje,
+#   backend/avatares/<personaje_id>.png. Gitignored (se regeneran desde la ficha).
+AVATARES_DIR: Path = (PROJECT_ROOT / os.getenv("AVATARES_DIR", "backend/avatares")).resolve()
+
+# Troceado (chunking) con solape, en caracteres:
+#   CHUNK_SIZE    → tamaño de cada fragmento.
+#   CHUNK_OVERLAP → cuántos caracteres se repiten entre un chunk y el siguiente,
+#                   para no perder ideas que queden partidas en la frontera.
+CHUNK_SIZE: int = int(os.getenv("CHUNK_SIZE", "800"))
+CHUNK_OVERLAP: int = int(os.getenv("CHUNK_OVERLAP", "120"))
+
+# Nombre de la colección de ChromaDB donde viven los chunks de los documentos.
+CHROMA_COLLECTION: str = os.getenv("CHROMA_COLLECTION", "documentos_en")
+
+# Backend de embeddings (Hito 4). "minilm-en" = original (all-MiniLM-L6-v2 monolingüe
+# inglés, colección documentos_en, requiere traducir la pregunta); "multi-minilm" y
+# "e5-large" = multilingües locales (fastembed/ONNX) que embeben el español directo.
+# Ver services/embeddings.py. Cambiarlo exige reindexar (colección versionada propia).
+EMBEDDING_BACKEND: str = os.getenv("EMBEDDING_BACKEND", "minilm-en").strip()
+
+# Estrategia de troceado (Hito 4.2). "recursivo" = original (RecursiveCharacterText
+# Splitter, tira los encabezados). "estructura" = trocea los .md por secciones
+# (MarkdownHeaderTextSplitter) y prefija cada chunk con su ruta de encabezados
+# ("Tyrannosaurus > Description > Skull: ..."), que gana contexto para el embedding y
+# da procedencia real en el desplegable "¿de dónde lo saqué?". Cambiarlo exige reindexar.
+CHUNKING: str = os.getenv("CHUNKING", "recursivo").strip()
+
+# Mostrar las FUENTES (fragmentos usados) al niño en el chat (Hito 4.2). Antes iba
+# atado a DEBUG; ahora es un flag propio: enseñar la procedencia es pedagogía, no
+# depuración. False = chat limpio (por defecto). (_leer_bool se define más abajo.)
+MOSTRAR_FUENTES: bool = os.getenv("MOSTRAR_FUENTES", "false").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+    "on",
+)
+
+# --- Reranker: reordenado de candidatos con cross-encoder (Hito 4.3) ---
+# El retrieval trae RERANK_CANDIDATOS candidatos baratos (bi-encoder) y, si RERANKER
+# no es "off", un cross-encoder los reordena por relevancia y nos quedamos con el
+# top-K (RAG_TOP_K). Es en CONSULTA, no toca el índice: NO exige reindexar (se activa
+# en caliente). Ver services/reranker.py. "off" = camino de siempre (solo coseno).
+RERANKER: str = os.getenv("RERANKER", "off").strip()
+
+# Cuántos candidatos recupera ChromaDB ANTES de reordenar (el "ancho" del embudo).
+# Solo se usa si RERANKER != off; si no, se recupera directamente RAG_TOP_K. Calibrado
+# en 5 (ADR-006): con 5 el recall casi iguala a 10 (90,9 vs 92,7 %) a MITAD de latencia.
+RERANK_CANDIDATOS: int = int(os.getenv("RERANK_CANDIDATOS", "5"))
+
+# Umbral de PUNTUACIÓN del reranker (logit: más alto = más relevante; puede ser
+# negativo). Con reranker activo, el Evaluator decide por aquí en vez de por la
+# distancia coseno: score >= UMBRAL ⇒ RAG. Calibrado en -2,75 (ADR-006): equilibra
+# fundamentar (literal/inferencial) y rechazar fuera-de-dominio. Solo aplica si el
+# reranker está activo; el default de RERANKER sigue off (baseline reproducible).
+RERANK_UMBRAL: float = float(os.getenv("RERANK_UMBRAL", "-2.75"))
+
+
+# ---------------------------------------------------------------------------
+# 3b) Voz (ElevenLabs): transcripción (Scribe/STT) + síntesis (Flash/TTS)
+# ---------------------------------------------------------------------------
+# ElevenLabs es el TERCER proveedor (junto a Replicate y DeepL). Una sola clave
+# cubre las dos mitades: transcribir la pregunta hablada del niño (Scribe) y dar
+# voz a la respuesta del personaje (Flash). Modalidad pago por uso.
+# Sin esta clave, la voz queda desactivada pero el chat de TEXTO sigue funcionando.
+ELEVENLABS_API_KEY: str = os.getenv("ELEVENLABS_API_KEY", "").strip()
+
+# Modelo de transcripción (voz → texto). Scribe entiende bien el español.
+ELEVENLABS_STT_MODEL: str = os.getenv("ELEVENLABS_STT_MODEL", "scribe_v1").strip()
+
+# Modelo de síntesis (texto → voz). Multilingual v2: la voz más nítida y natural en
+# español (turbo/flash suenan "embarrados" — verificado en A/B). La latencia extra
+# es despreciable para respuestas cortas de chat, y la claridad importa más con niños.
+# Alternativas (menos claras): eleven_turbo_v2_5 o eleven_flash_v2_5 (más rápidas/baratas).
+ELEVENLABS_TTS_MODEL: str = os.getenv("ELEVENLABS_TTS_MODEL", "eleven_multilingual_v2").strip()
+
+# Formato del audio devuelto por el TTS (mp3; el frontend React lo reproduce
+# como base64 con el Audio() del navegador: "data:audio/mpeg;base64,...").
+TTS_OUTPUT_FORMAT: str = os.getenv("TTS_OUTPUT_FORMAT", "mp3_44100_128").strip()
+
+# Idioma de la transcripción (la pregunta del niño se dice en español).
+STT_LANG: str = os.getenv("STT_LANG", "es").strip()
+
+# --- STT: proveedor de transcripción seleccionable (Hito 7) ---
+# Mismo patrón que LLM_PROVIDER (H5): la transcripción pasa por stt_service, que elige
+# implementación según STT_PROVIDER, para poder mover la voz del niño a LOCAL sin
+# reescribir el pipeline. La motivación es de PRIVACIDAD, no de coste: con STT local, la
+# voz del niño NUNCA sale del PC (eje del capítulo de RGPD).
+#   "elevenlabs": Scribe en la nube (línea base; usa ELEVENLABS_API_KEY).
+#   "local":      faster-whisper (CTranslate2, GPU/CPU). Dependencia OPCIONAL (extra
+#                 "stt-local"); si no está instalada o no carga (DLLs de cuBLAS/cuDNN),
+#                 stt_service AVISA y cae a la nube — la app nunca se queda muda.
+#   "groq":       Whisper en Groq (nube, endpoint openai-compatible) — usa GROQ_API_KEY.
+# Default = "elevenlabs": un clon limpio arranca SIN CUDA (local es opt-in, se activa
+# desde el menú de config o el .env, y lo documenta el ADR-008). Mismo criterio que
+# RERANKER=off (H4) y LLM_PROVIDER=replicate (H5): el default reproduce la línea base.
+STT_PROVIDER: str = os.getenv("STT_PROVIDER", "elevenlabs").strip().lower()
+
+# Modelo de faster-whisper (STT local). large-v3-turbo en int8 ocupa ~1–1,5 GB de VRAM
+# (con 6 GB sobran); medium/small son más ligeros y algo menos precisos.
+STT_LOCAL_MODEL: str = os.getenv("STT_LOCAL_MODEL", "large-v3-turbo").strip()
+
+# Dispositivo y precisión de faster-whisper. "cuda"+"int8" es lo recomendado (GPU 6 GB).
+# Plan B ante problemas de DLL en Windows: "cpu"+"int8" (más lento pero funciona).
+STT_LOCAL_DEVICE: str = os.getenv("STT_LOCAL_DEVICE", "cuda").strip()
+STT_LOCAL_COMPUTE: str = os.getenv("STT_LOCAL_COMPUTE", "int8").strip()
+
+# Groq como proveedor de STT (Whisper en la nube, endpoint openai-compatible). Clave y
+# modelo propios; el candidato de LATENCIA para la comparativa WER del ADR-008.
+GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "").strip()
+GROQ_STT_MODEL: str = os.getenv("GROQ_STT_MODEL", "whisper-large-v3").strip()
+GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1").strip()
+
+
+# ---------------------------------------------------------------------------
+# 3c) Personajes: límite del catálogo
+# ---------------------------------------------------------------------------
+# Tope fijo de personajes (activos + inactivos). A diferencia de los ajustes de
+# settings_service, esto NO es editable desde el menú de configuración: es una
+# decisión de despliegue (control de costes/alcance), fijada por quien instala
+# la app, no por el adulto que la usa día a día.
+MAX_PERSONAJES: int = int(os.getenv("MAX_PERSONAJES", "10"))
+
+
+# ---------------------------------------------------------------------------
+# 3d) Resiliencia de red: timeouts y reintentos (Hito 2)
+# ---------------------------------------------------------------------------
+# Sin timeout, una llamada colgada a un proveedor deja la petición esperando para
+# siempre (y ocupa un hilo del threadpool). Sin reintentos, un 429/5xx puntual del
+# free tier tumba la petición. Todos los valores se pueden ajustar desde el .env.
+#
+# Timeout (segundos) de cada cliente de proveedor:
+#   - Replicate genera imágenes/LLM: puede tardar bastante → margen amplio.
+#   - ElevenLabs (STT/TTS) es más rápido.
+#   - DeepL gestiona su PROPIO timeout + backoff internamente (deepl.http_client);
+#     aquí solo fijamos su timeout de conexión de forma explícita (ver translation_service).
+REPLICATE_TIMEOUT: float = float(os.getenv("REPLICATE_TIMEOUT", "120"))
+ELEVENLABS_TIMEOUT: float = float(os.getenv("ELEVENLABS_TIMEOUT", "60"))
+DEEPL_TIMEOUT: float = float(os.getenv("DEEPL_TIMEOUT", "10"))
+
+# Reintentos con backoff exponencial + jitter ante errores TRANSITORIOS (429 y 5xx,
+# más timeouts/errores de conexión). HTTP_MAX_INTENTOS es el nº TOTAL de intentos
+# (p. ej. 3 = 1 original + 2 reintentos). La espera del intento n es
+# BACKOFF_BASE * 2^(n-1) segundos (± jitter), tope HTTP_BACKOFF_MAX. Solo aplica a
+# Replicate y ElevenLabs: DeepL ya reintenta por su cuenta (no lo duplicamos).
+HTTP_MAX_INTENTOS: int = int(os.getenv("HTTP_MAX_INTENTOS", "3"))
+HTTP_BACKOFF_BASE: float = float(os.getenv("HTTP_BACKOFF_BASE", "0.5"))
+HTTP_BACKOFF_MAX: float = float(os.getenv("HTTP_BACKOFF_MAX", "8"))
+
+
+# ---------------------------------------------------------------------------
+# 3e) Límites de tamaño de las subidas (Hito 2)
+# ---------------------------------------------------------------------------
+# Los endpoints multipart (foto, audio, documentos) cargaban el fichero entero en
+# memoria sin comprobar nada: una URL pública podía subir un fichero gigante y
+# tumbar el proceso. Se leen por trozos con un tope; por encima → HTTP 413. En MB,
+# configurables desde el .env.
+MAX_IMAGEN_MB: float = float(os.getenv("MAX_IMAGEN_MB", "10"))
+MAX_AUDIO_MB: float = float(os.getenv("MAX_AUDIO_MB", "5"))
+MAX_DOCUMENTO_MB: float = float(os.getenv("MAX_DOCUMENTO_MB", "20"))
+
+
+# ---------------------------------------------------------------------------
+# 3f) Candado del túnel (Hito 2)
+# ---------------------------------------------------------------------------
+# Los endpoints del niño (chat, generación, voz) son públicos POR DISEÑO (no puede
+# haber un PIN delante de un niño de 9 años). Pero el despliegue es un túnel público
+# (ngrok/Colab) que se escanea solo en horas: sin protección, /api/generate-on-photo
+# es una tarjeta de crédito abierta a internet. La defensa NO es autenticación
+# fuerte; es un CANDADO contra escaneo:
+#   - ACCESS_CODE: un código compartido que el frontend manda en la cabecera
+#     X-Access-Code (comparado con hmac.compare_digest). VACÍO = candado
+#     DESACTIVADO (cómodo en local, igual criterio que CORS_ORIGINS="*").
+ACCESS_CODE: str = os.getenv("ACCESS_CODE", "").strip()
+
+# Rate limit por IP (slowapi). Formato "N/unidad" (ej. "30/minute"). Generoso para
+# el chat, restrictivo para la generación de imagen (lo caro). Al superarlo, el
+# personaje responde "en personaje" (chat) o se devuelve un aviso amable (imagen),
+# nunca un 429 crudo en la cara del niño.
+RATE_LIMIT_ASK: str = os.getenv("RATE_LIMIT_ASK", "30/minute").strip()
+RATE_LIMIT_GENERATE: str = os.getenv("RATE_LIMIT_GENERATE", "10/minute").strip()
+RATE_LIMIT_TRANSCRIBE: str = os.getenv("RATE_LIMIT_TRANSCRIBE", "20/minute").strip()
+
+# Tope DIARIO de generaciones de imagen (por día natural, contado en SQLite). Es un
+# techo duro de coste, complementario al rate limit por minuto. <= 0 = sin tope.
+MAX_IMAGENES_DIA: int = int(os.getenv("MAX_IMAGENES_DIA", "50"))
+
+# Mensaje amable (en personaje) cuando se agota el cupo o el rate limit. Un 429 crudo
+# delante de un niño de 9 años es un fallo de producto.
+MENSAJE_LIMITE: str = os.getenv(
+    "MENSAJE_LIMITE",
+    "¡Uf! Necesito descansar un ratito antes de la próxima aventura. "
+    "Vuelve a intentarlo dentro de un momento, ¿vale?",
+).strip()
+
+
+def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
+    """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""
+    return os.getenv(nombre, por_defecto).strip().lower() in ("1", "true", "yes", "on")
+
+
+# ---------------------------------------------------------------------------
+# 4) Modo desarrollo
+# ---------------------------------------------------------------------------
+# Cuando DEBUG está activo, el BACKEND imprime en SU consola (uvicorn) el origen
+# de cada respuesta del chat (🟢 RAG / 🟡 GENERAL) y la traza de los prompts que
+# envía a los servicios externos. NO se muestra en el frontend: la interfaz que ve
+# el niño queda siempre limpia. En la versión final se deja en false.
+# (El botón "Probar conexión" del frontend se controla aparte con VITE_DEBUG en
+# frontend-react/.env, no con esta variable.)
+DEBUG: bool = _leer_bool("DEBUG", "false")
+
+
+# ---------------------------------------------------------------------------
+# 5) Verificación del correo de la cuenta de familia (Hito 9.2)
+# ---------------------------------------------------------------------------
+# Al dar de alta una familia se puede exigir VERIFICAR el correo del adulto con un
+# código de un solo uso (OTP) que se le envía por email. Es el patrón habitual en
+# apps de internet y refuerza el consentimiento parental (confirma que un adulto
+# controla ese buzón). Es un TOGGLE de despliegue (como ACCESS_CODE):
+#   - EMAIL_VERIFICACION=false (por defecto): el alta es inmediata, sin correo —
+#     cómodo en local y para el tribunal (no hace falta montar un servidor SMTP).
+#   - EMAIL_VERIFICACION=true: el alta queda "pendiente" hasta teclear el código.
+EMAIL_VERIFICACION: bool = _leer_bool("EMAIL_VERIFICACION", "false")
+
+# Envío de correo (SMTP). Si SMTP_HOST está vacío —o con DEBUG activo— el código NO
+# se envía: se ESCRIBE EN EL LOG del backend (fallback de consola), para poder probar
+# el flujo completo sin un servidor de correo real. Con SMTP configurado, se envía de
+# verdad. Credenciales de despliegue (van en el .env, nunca en la BBDD ni en export).
+SMTP_HOST: str = os.getenv("SMTP_HOST", "").strip()
+SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER: str = os.getenv("SMTP_USER", "").strip()
+SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")  # sin strip: puede acabar en espacio
+SMTP_FROM: str = os.getenv("SMTP_FROM", "").strip()  # remitente; si vacío, se usa SMTP_USER
+SMTP_STARTTLS: bool = _leer_bool("SMTP_STARTTLS", "true")
 
 
 def describe() -> dict:
@@ -75,7 +412,18 @@ def describe() -> dict:
     return {
         "replicate_model": REPLICATE_MODEL,
         "replicate_edit_model": REPLICATE_EDIT_MODEL,
+        "llm_provider": LLM_PROVIDER,
+        "llm_model": LLM_MODEL,
+        "stt_provider": STT_PROVIDER,
         "aspect_ratio": IMG_ASPECT_RATIO,
         "output_format": IMG_OUTPUT_FORMAT,
+        "clip_token_limit": CLIP_TOKEN_LIMIT,
         "token_configurado": bool(REPLICATE_API_TOKEN),
+        "evaluator_mode": EVALUATOR_MODE,
+        "evaluator_umbral_bajo": EVALUATOR_UMBRAL_BAJO,
+        "evaluator_umbral_alto": EVALUATOR_UMBRAL_ALTO,
+        "deepl_configurado": bool(DEEPL_API_KEY),
+        "email_verificacion": EMAIL_VERIFICACION,
+        "smtp_configurado": bool(SMTP_HOST),
+        "debug": DEBUG,
     }

@@ -1,16 +1,38 @@
 # =====================================================================
 #  DEPENDENCIAS DEL BACKEND (servidor de IA)
 # ---------------------------------------------------------------------
-#  Instálalas dentro de tu entorno virtual con:
-#       pip install -r requirements-backend.txt
+#  ⚠️  FALLBACK, NO la fuente reproducible. Desde H1 el proyecto usa `uv`:
+#      la lista de dependencias vive en pyproject.toml y el pin EXACTO de
+#      todas las transitivas (con hashes) en uv.lock. La instalación
+#      reproducible "clona y arranca" es:
+#           uv sync
+#      Este fichero se conserva como alternativa sin pin para quien no use
+#      uv (mismo conjunto de paquetes, sin versiones clavadas):
+#           pip install -r requirements-backend.txt
 #
 #  Ya NO se genera en local: la generación de imágenes se delega a
 #  Replicate.com (su GPU). Por eso este backend es MUY ligero: no
 #  necesita torch, diffusers, transformers ni rembg.
 # =====================================================================
 
-# --- Generación de imágenes (en la nube) ---
-replicate                 # Cliente de la API de Replicate.com (envía el prompt, recibe la imagen)
+# --- Generación de imágenes y conversación (en la nube) ---
+replicate                 # Cliente de Replicate.com: genera imágenes y consulta el LLM (chat)
+
+# --- Configuración editable en caliente (menú de ajustes) ---
+sqlmodel                  # ORM ligero (Pydantic + SQLAlchemy) sobre SQLite: ajustes y catálogo.
+                          # SQLite ya viene en Python; no añade servidor de BBDD.
+
+# --- Conversación / RAG ---
+chromadb                  # Base de datos vectorial local (CPU). Guarda e indexa los chunks.
+                          # Trae su propio modelo de embeddings (onnx, CPU): no necesita torch ni claves.
+deepl                     # Cliente de la API de DeepL: traduce la pregunta ES→EN para mejorar la
+                          # recuperación (los embeddings funcionan mejor sobre texto en inglés).
+elevenlabs>=2.0,<3.0      # Cliente de ElevenLabs: transcripción (Scribe/STT) y síntesis de voz (Flash/TTS)
+
+# --- Ingesta de documentos ---
+langchain-text-splitters  # Troceado (chunking) con solape: RecursiveCharacterTextSplitter.
+pypdf                     # Lectura del texto de archivos PDF.
+wikipedia-api             # Descarga artículos de Wikipedia como texto limpio (fetch_wikipedia.py).
 
 # --- Servidor web / API ---
 fastapi                   # Framework de la API REST

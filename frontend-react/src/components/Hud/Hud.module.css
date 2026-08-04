@@ -1,0 +1,170 @@
+/**
+ * Hud — Barra superior de recreativa: marca (MundoAventura) + botón de
+ * configuración (y, en DEBUG, el botón de diagnóstico de conexión).
+ */
+
+.hud {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--edge);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.82), rgba(6, 12, 34, 0.82));
+  backdrop-filter: blur(6px);
+  padding: 10px 16px;
+  position: relative;
+  /* Sin overflow:hidden: los tooltips de los iconos cuelgan por debajo de la
+     barra y no deben recortarse. */
+}
+.hud::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-top-left-radius: 14px;
+  border-bottom-left-radius: 14px;
+  background: var(--holo);
+  box-shadow: 0 0 16px var(--holo);
+}
+
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.logoMark {
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(94, 234, 212, 0.6));
+}
+.logoTexto {
+  font-family: var(--font-disp);
+  font-weight: 900;
+  font-size: clamp(15px, 2.7vw, 21px);
+  letter-spacing: 0.02em;
+  background: linear-gradient(90deg, #5eead4, #c084fc 55%, #f472b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.readout {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+/* Saludo a la familia/niño con sesión iniciada (Hito 9.2). Se separa del bloque
+   de accesos de adulto con un divisor, para que "Hola X · cambiar de niño" se lea
+   como un grupo aparte de Configuración/Admin/Salir. */
+.saludo {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  color: #8fa3e0;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 16px;
+  margin-right: 6px;
+  border-right: 1px solid var(--edge);
+}
+/* Botón de acción del HUD: SOLO ICONO + tooltip. Ghost/minimalista por defecto,
+   se ilumina al pasar por encima. El texto va en aria-label + data-tip. */
+.iconBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  line-height: 1;
+  color: #cfe6ff;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: rgba(4, 8, 28, 0.5);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.iconBtn:hover {
+  background: rgba(62, 242, 255, 0.14);
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(62, 242, 255, 0.35);
+}
+.iconBtn:focus-visible {
+  outline: 2px solid var(--holo);
+  outline-offset: 2px;
+}
+
+/* Variante pequeña: el "cambiar de niño" junto al saludo. */
+.mini {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+/* El icono de "Salir" tira a rojo suave para diferenciar la acción destructiva. */
+.salir:hover {
+  background: rgba(255, 92, 122, 0.18);
+  box-shadow: 0 0 12px rgba(255, 92, 122, 0.4);
+}
+
+/* --- Tooltip (el texto que antes iba en el botón) --- */
+.iconBtn::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: rgba(6, 12, 34, 0.96);
+  border: 1px solid var(--edge);
+  color: #cfe6ff;
+  font-family: var(--font-body);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 20;
+}
+.iconBtn:hover::after,
+.iconBtn:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+/* El último botón (Salir) queda pegado al borde derecho: alineamos su tooltip
+   a la derecha para que no se salga del viewport. */
+.salir::after {
+  left: auto;
+  right: 0;
+  transform: translateY(-4px);
+}
+.salir:hover::after,
+.salir:focus-visible::after {
+  transform: translateY(0);
+}
+
+@media (max-width: 640px) {
+  /* En móvil ocultamos el saludo para que la barra no se rompa. */
+  .saludo {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .iconBtn,
+  .iconBtn::after {
+    transition: none;
+  }
+  .iconBtn:hover {
+    transform: none;
+  }
+}

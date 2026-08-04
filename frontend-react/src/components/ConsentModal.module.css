@@ -1,0 +1,71 @@
+/* ConsentModal — aviso de consentimiento de adulto antes de subir la foto (H9). */
+
+.contenido {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 34rem;
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.lista {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.enlacePrivacidad {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.enlacePrivacidad a {
+  color: #8fa3e0;
+}
+
+.cargando {
+  color: #8fa3e0;
+  font-style: italic;
+}
+
+.ok {
+  color: var(--lime);
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  padding: 10px 12px;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: rgba(4, 8, 28, 0.6);
+  color: var(--txt);
+  font-size: 1.1rem;
+  letter-spacing: 0.3em;
+}
+
+.casilla {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+
+.error {
+  color: #ffb3b3;
+  margin: 0;
+}
+
+.botones {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 6px;
+}

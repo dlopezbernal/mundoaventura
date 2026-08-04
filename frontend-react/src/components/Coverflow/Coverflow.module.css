@@ -1,0 +1,192 @@
+/**
+ * Coverflow — Carrusel 3D de cartas-holograma dentro del marco arcade.
+ * Transforms EXACTOS de la referencia (escritorio); en móvil se reducen a 3
+ * cartas visibles y distancias más cortas. Cada carta transita suavemente al
+ * girar. Respeta prefers-reduced-motion (sin autoplay ni transición).
+ */
+
+.select {
+  text-align: center;
+  margin: 10px 0 0;
+}
+.kicker {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  color: var(--pink);
+  letter-spacing: 0.08em;
+}
+.title {
+  font-family: var(--font-disp);
+  font-weight: 900;
+  font-size: clamp(20px, 4vw, 30px);
+  letter-spacing: 0.05em;
+  color: #fff;
+  text-shadow:
+    0 0 12px rgba(62, 242, 255, 0.6),
+    3px 3px 0 rgba(255, 46, 151, 0.7);
+}
+.subtitle {
+  color: #8fa3e0;
+  font-weight: 600;
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.stage {
+  position: relative;
+  height: 352px;
+  perspective: 1500px;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.flow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--card-w);
+  height: var(--card-h);
+  margin: -142px 0 0 -106px;
+  transform-style: preserve-3d;
+  transition:
+    transform 0.5s cubic-bezier(0.22, 0.61, 0.36, 1),
+    opacity 0.5s ease;
+  cursor: pointer;
+}
+
+/* Posiciones (idénticas al mockup). */
+.c0 {
+  transform: translateZ(0);
+  z-index: 50;
+}
+.cl1 {
+  transform: translateX(-168px) translateZ(-188px) rotateY(40deg) scale(0.85);
+  z-index: 40;
+  opacity: 0.88;
+}
+.cr1 {
+  transform: translateX(168px) translateZ(-188px) rotateY(-40deg) scale(0.85);
+  z-index: 40;
+  opacity: 0.88;
+}
+.cl2 {
+  transform: translateX(-294px) translateZ(-356px) rotateY(48deg) scale(0.7);
+  z-index: 30;
+  opacity: 0.5;
+}
+.cr2 {
+  transform: translateX(294px) translateZ(-356px) rotateY(-48deg) scale(0.7);
+  z-index: 30;
+  opacity: 0.5;
+}
+/* Fuera de escena: esperan en los extremos, invisibles y sin capturar clics. */
+.hiddenL {
+  transform: translateX(-380px) translateZ(-520px) rotateY(52deg) scale(0.6);
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+}
+.hiddenR {
+  transform: translateX(380px) translateZ(-520px) rotateY(-52deg) scale(0.6);
+  z-index: 10;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Haz de luz bajo la carta central. */
+.beam {
+  position: absolute;
+  left: 50%;
+  bottom: -10px;
+  transform: translateX(-50%);
+  width: 180px;
+  height: 28px;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(62, 242, 255, 0.55), transparent);
+  filter: blur(2px);
+}
+
+/* Flechas ◀ ▶ */
+.arw {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 60;
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  border: 1px solid var(--holo);
+  color: var(--holo);
+  background: rgba(4, 8, 28, 0.6);
+  font-size: 22px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 16px rgba(62, 242, 255, 0.3);
+}
+.arw.l {
+  left: 4px;
+}
+.arw.r {
+  right: 4px;
+}
+
+/* Puntos de posición + botón de autoplay */
+.dots {
+  display: flex;
+  gap: 7px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 8px;
+}
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--edge);
+  background: transparent;
+  padding: 0;
+}
+.dotOn {
+  background: var(--holo);
+  box-shadow: 0 0 8px var(--holo);
+  border-color: var(--holo);
+}
+.play {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--holo);
+  border: 1px solid var(--edge);
+  border-radius: 6px;
+  background: rgba(4, 8, 28, 0.6);
+  padding: 2px 8px;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .stage {
+    height: 296px;
+  }
+  .flow {
+    width: 152px;
+    height: 204px;
+    margin: -102px 0 0 -76px;
+  }
+  .cl1 {
+    transform: translateX(-116px) translateZ(-152px) rotateY(38deg) scale(0.8);
+  }
+  .cr1 {
+    transform: translateX(116px) translateZ(-152px) rotateY(-38deg) scale(0.8);
+  }
+  /* En móvil sólo 3 cartas: se ocultan las de segundo nivel. */
+  .cl2,
+  .cr2 {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow {
+    transition: none;
+  }
+}

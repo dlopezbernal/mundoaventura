@@ -1,0 +1,125 @@
+/**
+ * global.css — Base global del tema Arcade Holo
+ * ==============================================
+ *
+ * Reset mínimo, fondo de la escena (degradado holográfico) y foco accesible.
+ * El resto del estilado vive en los CSS Modules de cada componente.
+ * Importa tokens.css antes que este archivo (ver main.tsx).
+ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--txt);
+  overflow-x: hidden;
+  background:
+    radial-gradient(680px 380px at 50% 0, rgba(169, 77, 255, 0.28), transparent 60%),
+    linear-gradient(180deg, var(--void2), var(--void) 64%);
+  background-attachment: fixed;
+}
+
+/* Foco de teclado visible en TODA la app (criterio de accesibilidad). */
+:focus-visible {
+  outline: 2px solid var(--holo);
+  outline-offset: 2px;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  color: inherit;
+}
+
+/* El contenedor central de cada pantalla, sobre el fondo animado. */
+.holo-wrap {
+  position: relative;
+  z-index: 2;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 14px 14px 40px;
+}
+
+/* Scanlines CRT (efecto "TV antigua"). Fijo a pantalla completa y decorativo,
+   pero renderizado DENTRO de .holo-wrap para compartir su contexto de apilado:
+   así cubre fondo, botones y cartas (z-index menor), mientras que la imagen
+   generada (.marco, z-index 70) queda por encima y se ve nítida, sin líneas. */
+.crt-scan {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  opacity: 0.3;
+  background: repeating-linear-gradient(transparent 0 2px, rgba(0, 0, 0, 0.4) 2px 3px);
+}
+
+/* Estado de carga/error del catálogo de personajes (App, Hito 4): mientras se
+   trae por API o si falla. Centrado y sobrio, en clave holo. */
+.holo-cargando {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  min-height: 40vh;
+  margin-top: 24px;
+  font-family: var(--font-disp);
+  font-weight: 700;
+  color: var(--txt);
+}
+.holo-cargando-emoji {
+  font-size: 2.4rem;
+  animation: holo-latido 1.4s ease-in-out infinite;
+}
+.holo-cargando-detalle {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: #8fa3e0;
+  max-width: 42ch;
+}
+@keyframes holo-latido {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .holo-cargando-emoji {
+    animation: none;
+  }
+}
+
+/* Botones grandes reutilizables (los usan SceneView y otros), en clave holo.
+   El estilado fino del paso 3 se completa en la segunda tanda. */
+.btn {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: 0.03em;
+  padding: 12px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--edge);
+}
+.btn-primario {
+  color: #04121f;
+  background: linear-gradient(90deg, var(--holo), var(--lime));
+  border: none;
+  box-shadow: 0 0 18px rgba(62, 242, 255, 0.35);
+}
+.btn-secundario {
+  color: var(--holo);
+  background: rgba(4, 8, 28, 0.6);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}

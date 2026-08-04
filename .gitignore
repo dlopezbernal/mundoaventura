@@ -9,6 +9,12 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+.ruff_cache/
+
+# ─── Cobertura de tests (pytest-cov) ────────────────────────────
+.coverage
+coverage.xml
+htmlcov/
 
 # ─── Variables de entorno ───────────────────────────────────────
 # .env contiene configuración local (URLs, rutas). Solo se versiona .env.example.
@@ -21,6 +27,21 @@ backend/models/*.pth
 backend/models/*.pt
 backend/models/*.safetensors
 
+# ─── Base vectorial de ChromaDB (se regenera con: python -m backend.ingest) ─
+backend/chroma_db/
+
+# ─── Caché de audio TTS (Hito 8): mp3 ya sintetizados, se regeneran solos ────
+backend/.cache/
+
+# ─── BBDD de configuración (SQLite) — se recrea y se siembra al arrancar ─────
+# Contiene ajustes/catálogo locales de cada instalación; no se versiona.
+backend/config_db.sqlite3
+backend/*.sqlite3
+# Copias de seguridad automáticas (SQLite antes de importar; .env al guardar claves).
+backend/*.sqlite3.*.bak
+.env.bak
+.env.*.bak
+
 # ─── Salidas / archivos generados durante pruebas ───────────────
 *.log
 outputs/
@@ -30,3 +51,17 @@ outputs/
 Thumbs.db
 .idea/
 .vscode/
+
+# ─── Claude Code / Playwright MCP ────────────────────────────────
+# Snapshots y logs de consola que deja cada navegación del MCP de Playwright.
+.playwright-mcp/
+
+# Evals: los resultados de cada corrida no se versionan (salvo la línea base).
+evals/resultados/*
+!evals/resultados/BASELINE.csv
+!evals/resultados/BASELINE.html
+# Test ciego (H6): papeletas/clave/votos son artefactos de corrida, no se versionan.
+evals/test_ciego/
+
+# Avatares del carrusel (Hito 10): se regeneran desde la ficha del personaje.
+backend/avatares/

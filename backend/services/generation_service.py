@@ -16,26 +16,77 @@ Dos modos, ambos delegan la GPU a Replicate.com (no se genera nada en local):
      foto real) y el modelo "intuye" dónde colocarlo.
 
 Nota FLUX schnell: NO admite "negative prompt" ni "guidance"; la seguridad y el
-estilo van en el prompt POSITIVO (ver STYLE_SUFFIX/FRAMING en personajes.py) y se
-deja activo el safety checker de Replicate.
+estilo van en el prompt POSITIVO (ver STYLE_SUFFIX/FRAMING, ajustes editables desde
+la pestaña "General" de configuración) y se deja activo el safety checker de Replicate.
 
 Salida de replicate.run: FLUX schnell devuelve una LISTA de FileOutput; Kontext
 devuelve un único FileOutput. _salida_a_base64 maneja ambos casos.
+
+Orden del prompt (CLIP vs T5)
+-----------------------------
+FLUX codifica el prompt con DOS codificadores a la vez: CLIP (corto, trunca a ~77
+tokens) y T5 (largo). Para que nada importante se pierda si CLIP recorta, montamos
+el prompt de MÁS a MENOS importante: primero el SUJETO (personaje + ubicación), que
+es lo que no puede faltar y entra dentro de CLIP, y al final el ENCUADRE y el ESTILO,
+que si caen fuera de CLIP los sigue leyendo T5 y apenas afectan al resultado. Si el
+prompt supera el límite de CLIP, _avisar_si_prompt_largo emite un warning (no es un
+error: la imagen se genera igual).
 """
 
 import base64
+import logging
+import re
 
-import replicate
+from replicate.exceptions import ReplicateError
 
-from backend import config
-from backend import personajes as personajes_cfg
-from backend import ubicaciones as ubicaciones_cfg
+from backend import config, debug_log
+from backend.services import (
+    personajes_service,
+    replicate_client,
+    settings_service,
+    ubicaciones_service,
+)
+
+logger = logging.getLogger(__name__)
+
+
+def _primer_fichero(output):
+    """FLUX schnell devuelve una LISTA de FileOutput; Kontext/recorte, uno único."""
+    return output[0] if isinstance(output, (list, tuple)) else output
 
 
 def _salida_a_base64(output) -> str:
     """Lee la imagen devuelta por Replicate (lista o único FileOutput) a base64."""
-    primera = output[0] if isinstance(output, (list, tuple)) else output
-    return base64.b64encode(primera.read()).decode("utf-8")
+    return base64.b64encode(_primer_fichero(output).read()).decode("utf-8")
+
+
+def _estimar_tokens(texto: str) -> int:
+    """Estima (al alza) cuántos tokens ocupa el prompt.
+
+    No tenemos el tokenizador exacto de CLIP a mano, así que aproximamos contando
+    palabras y signos de puntuación (cada signo suele ser un token aparte). Es una
+    estimación conservadora, suficiente para decidir si avisar de que CLIP truncará.
+    """
+    return len(re.findall(r"\w+|[^\w\s]", texto))
+
+
+def _avisar_si_prompt_largo(prompt: str) -> None:
+    """Avisa (warning, no error) si el prompt supera el límite de tokens de CLIP.
+
+    FLUX seguirá generando la imagen: T5 lee el prompt completo. El aviso solo
+    recuerda que el final del prompt (encuadre/estilo) puede quedar fuera de CLIP,
+    razón por la que colocamos ahí lo MENOS crítico (ver docstring del módulo).
+    """
+    tokens = _estimar_tokens(prompt)
+    limite = settings_service.get("CLIP_TOKEN_LIMIT")
+    if tokens > limite:
+        logger.warning(
+            "El prompt (~%s tokens) supera el límite de CLIP (%s). CLIP truncará el "
+            "final, pero T5 lo leerá completo. Lo importante va al principio, así que "
+            "la imagen no debería verse afectada.",
+            tokens,
+            limite,
+        )
 
 
 def _exigir_token() -> None:
@@ -52,30 +103,39 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     Lanza ValueError (→ 400 en el router) si el personaje/ubicación no existen o
     si falta el token de Replicate.
     """
-    if personaje_id not in personajes_cfg.PROMPTS:
+    ficha_personaje = personajes_service.obtener(personaje_id)
+    if ficha_personaje is None:
         raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
-    if ubicacion_id not in ubicaciones_cfg.UBICACIONES:
+    ficha_ubicacion = ubicaciones_service.obtener(ubicacion_id)
+    if ficha_ubicacion is None:
         raise ValueError(f"Ubicación desconocida: '{ubicacion_id}'.")
     _exigir_token()
 
-    # Prompt final = personaje + ubicación + encuadre + estilo común.
-    personaje = personajes_cfg.PROMPTS[personaje_id]["prompt"]
-    ubicacion = ubicaciones_cfg.UBICACIONES[ubicacion_id]["prompt"]
+    # Prompt final, de MÁS a MENOS importante (ver docstring del módulo: CLIP vs T5):
+    #   1) SUJETO     → personaje + ubicación (lo esencial, entra en CLIP).
+    #   2) ENCUADRE   → FRAMING (cómo de lejos/grande sale el personaje).
+    #   3) ESTILO     → STYLE_SUFFIX (look común; si CLIP lo recorta, T5 lo lee).
+    personaje = ficha_personaje["prompt_imagen"]
+    ubicacion = ficha_ubicacion["prompt_imagen"]
     prompt = (
         f"{personaje}, {ubicacion}, "
-        f"{personajes_cfg.FRAMING}, {personajes_cfg.STYLE_SUFFIX}"
+        f"{settings_service.get('FRAMING')}, {settings_service.get('STYLE_SUFFIX')}"
     )
+    _avisar_si_prompt_largo(prompt)
+    modelo = settings_service.get("REPLICATE_MODEL")
+    debug_log.trazar_prompt(f"Replicate · escena ({modelo})", prompt=prompt)
 
-    output = replicate.run(
-        config.REPLICATE_MODEL,
+    output = replicate_client.run(
+        modelo,
         input={
             "prompt": prompt,
-            "aspect_ratio": config.IMG_ASPECT_RATIO,
-            "output_format": config.IMG_OUTPUT_FORMAT,
+            "aspect_ratio": settings_service.get("IMG_ASPECT_RATIO"),
+            "output_format": settings_service.get("IMG_OUTPUT_FORMAT"),
             "num_outputs": 1,
             # FLUX schnell está destilado para 4 pasos: óptimo y ultra rápido.
-            "num_inference_steps": config.IMG_NUM_STEPS,
+            "num_inference_steps": settings_service.get("IMG_NUM_STEPS"),
         },
+        etiqueta="Replicate · escena",
     )
 
     return {
@@ -84,6 +144,68 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
         "ubicacion_id": ubicacion_id,
         "result_png_base64": _salida_a_base64(output),
     }
+
+
+def generar_avatar(personaje_id: str) -> bytes:
+    """Genera el AVATAR del carrusel de `personaje_id`: un PNG TRANSPARENTE.
+
+    Enfoque A1 (dos pasos en Replicate, todo en la nube):
+      1) FLUX (REPLICATE_MODEL) dibuja un retrato del personaje sobre fondo LISO,
+         a partir de su `prompt_imagen` envuelto en AVATAR_PROMPT + STYLE_SUFFIX.
+      2) Un modelo de recorte (AVATAR_REMOVE_BG_MODEL) quita ese fondo y devuelve
+         un PNG con canal alfa, para que el personaje "flote" en la carta.
+
+    Devuelve los bytes del PNG transparente. Lanza ValueError (→ 400) si el
+    personaje no existe o falta el token de Replicate.
+    """
+    ficha = personajes_service.obtener(personaje_id)
+    if ficha is None:
+        raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
+    _exigir_token()
+
+    # Paso 1: retrato sobre fondo plano. Forzamos PNG (calidad sin pérdidas antes
+    # de recortar) y la proporción propia del avatar.
+    personaje = ficha["prompt_imagen"]
+    prompt = (
+        f"{personaje}, {settings_service.get('AVATAR_PROMPT')}, "
+        f"{settings_service.get('STYLE_SUFFIX')}"
+    )
+    _avisar_si_prompt_largo(prompt)
+    modelo = settings_service.get("REPLICATE_MODEL")
+    debug_log.trazar_prompt(f"Replicate · avatar retrato ({modelo})", prompt=prompt)
+    salida = replicate_client.run(
+        modelo,
+        input={
+            "prompt": prompt,
+            "aspect_ratio": settings_service.get("AVATAR_ASPECT_RATIO"),
+            "output_format": "png",
+            "num_outputs": 1,
+            "num_inference_steps": settings_service.get("IMG_NUM_STEPS"),
+        },
+        etiqueta="Replicate · avatar retrato",
+    )
+    retrato_bytes = _primer_fichero(salida).read()
+
+    # Paso 2: quitar el fondo → PNG transparente. La imagen se pasa como data URI
+    # (forma fiable de mandar bytes a Replicate), en el campo 'image'.
+    modelo_bg = settings_service.get("AVATAR_REMOVE_BG_MODEL")
+    data_uri = f"data:image/png;base64,{base64.b64encode(retrato_bytes).decode('utf-8')}"
+    try:
+        salida_bg = replicate_client.run(
+            modelo_bg,
+            input={"image": data_uri},
+            etiqueta="Replicate · avatar recorte",
+        )
+    except ReplicateError as exc:
+        # Causa típica: un modelo de la comunidad indicado SIN versión → Replicate
+        # usa el endpoint de modelos oficiales y responde 404. Mensaje accionable
+        # (→ 400 en el router) en vez del 500 genérico.
+        raise ValueError(
+            f"El modelo de recorte de fondo '{modelo_bg}' falló ({exc}). Si es un modelo "
+            "de la comunidad, indícalo CON versión ('owner/model:hash'). Se ajusta en "
+            "Admin → Imagen → AVATAR_REMOVE_BG_MODEL."
+        ) from exc
+    return _primer_fichero(salida_bg).read()
 
 
 def generar_en_foto(
@@ -99,34 +221,48 @@ def generar_en_foto(
     personaje_id : str   personaje a añadir (debe existir en PROMPTS).
     mime : str           tipo MIME de la foto (image/jpeg, image/png...).
 
+    PRIVACIDAD (Hito 9): la foto se procesa SOLO EN MEMORIA. `image_bytes` llega del
+    endpoint (leído con tope de tamaño, sin tocar disco), se convierte a data URI y se
+    envía a Replicate; NUNCA se escribe en disco ni se guarda en la BBDD. Al terminar la
+    función, los bytes quedan fuera de alcance y se recolectan. Ver docs/PRIVACIDAD.md.
+
     Lanza ValueError (→ 400) si el personaje no existe o falta el token.
     """
-    if personaje_id not in personajes_cfg.PROMPTS:
+    ficha_personaje = personajes_service.obtener(personaje_id)
+    if ficha_personaje is None:
         raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
     _exigir_token()
 
-    personaje = personajes_cfg.PROMPTS[personaje_id]["prompt"]
-    # Instrucción de edición: estilizar + añadir, manteniendo el sitio reconocible
-    # y dejando ver el fondo (mismo criterio de encuadre que el modo predefinido).
+    personaje = ficha_personaje["prompt_imagen"]
+    # Instrucción de edición, también de MÁS a MENOS importante (CLIP vs T5):
+    # primero QUÉ hacer y a QUIÉN añadir, y al final el estilo común (STYLE_SUFFIX),
+    # que es lo que mejor tolera caer fuera de CLIP.
     instruccion = (
         "Transform this photo into a 3D Pixar style animated movie scene. "
         f"Add {personaje} standing in the scene, placed naturally and a bit in the "
         "background so the surroundings stay clearly visible. "
         "Keep the room layout and main objects recognizable. "
-        f"{personajes_cfg.STYLE_SUFFIX}"
+        f"{settings_service.get('STYLE_SUFFIX')}"
+    )
+    _avisar_si_prompt_largo(instruccion)
+    modelo_edicion = settings_service.get("REPLICATE_EDIT_MODEL")
+    debug_log.trazar_prompt(
+        f"Replicate · edición foto ({modelo_edicion})",
+        prompt=instruccion,
     )
 
     # Pasamos la imagen como data URI (forma fiable de mandar bytes a Replicate).
     data_uri = f"data:{mime};base64,{base64.b64encode(image_bytes).decode('utf-8')}"
 
-    output = replicate.run(
-        config.REPLICATE_EDIT_MODEL,
+    output = replicate_client.run(
+        modelo_edicion,
         input={
             "prompt": instruccion,
             "input_image": data_uri,
-            "output_format": config.IMG_OUTPUT_FORMAT,
+            "output_format": settings_service.get("IMG_OUTPUT_FORMAT"),
             # aspect_ratio por defecto "match_input_image": respeta la foto original.
         },
+        etiqueta="Replicate · edición foto",
     )
 
     return {

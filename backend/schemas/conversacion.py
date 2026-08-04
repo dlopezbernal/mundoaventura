@@ -1,0 +1,78 @@
+"""
+schemas/conversacion.py — Forma de los datos de la conversación (RAG)
+=====================================================================
+
+Define la ENTRADA y la SALIDA del endpoint POST /api/ask: el niño manda un
+personaje y una pregunta (texto), y recibe la respuesta del personaje junto a
+las fichas en las que se ha basado.
+
+La pregunta llega como texto. La versión por voz ya está implementada: el audio
+se transcribe en /api/transcribe (ElevenLabs Scribe) y su texto alimenta este
+mismo flujo. Además, la respuesta incluye `audio_base64` (voz del personaje, TTS).
+"""
+
+from pydantic import BaseModel, Field
+
+
+class AskRequest(BaseModel):
+    """Petición del endpoint POST /api/ask."""
+
+    personaje_id: str = Field(
+        ...,
+        max_length=100,
+        description="Identificador del personaje al que se pregunta (ej. 't-rex').",
+    )
+    # max_length=500: sin tope se pueden mandar megas de texto al LLM (coste y abuso).
+    # Una pregunta de un niño cabe de sobra; por encima → HTTP 422.
+    pregunta: str = Field(
+        ..., min_length=1, max_length=500, description="La pregunta del niño, en texto."
+    )
+    # Nombre del niño que juega (multi-perfil, H9.2c): personaliza el prompt del chat.
+    # Opcional (sin perfil → None). Se SANEA en el backend (solo se usa como nombre de
+    # pila); max_length pone un tope duro antes de llegar a la lógica.
+    nombre_nino: str | None = Field(
+        default=None, max_length=50, description="Nombre del niño que juega (para personalizar)."
+    )
+    # Sexo del niño (H9.2c): personaliza el género gramatical en español. Opcional.
+    sexo_nino: str | None = Field(
+        default=None, max_length=10, description="Sexo del niño: 'chico', 'chica' o vacío."
+    )
+
+
+class AskResponse(BaseModel):
+    """Respuesta del endpoint POST /api/ask."""
+
+    success: bool = Field(..., description="True si se generó la respuesta.")
+    personaje_id: str = Field(..., description="Personaje que respondió.")
+    pregunta: str = Field(..., description="Eco de la pregunta recibida.")
+    respuesta: str = Field(
+        ..., description="Respuesta del personaje, en primera persona y en español."
+    )
+    origen: str = Field(
+        ...,
+        description="De dónde sale la respuesta: 'RAG' (fundamentada en la "
+        "enciclopedia) o 'GENERAL' (conocimiento propio del modelo).",
+    )
+    metodo: str = Field(
+        default="",
+        description="Cómo se decidió el origen: 'umbral' (distancia) o 'llm' (juez).",
+    )
+    pregunta_traducida: str = Field(
+        default="",
+        description="La pregunta traducida a inglés (DeepL) usada para buscar. "
+        "Si es igual a la original, la traducción no se aplicó.",
+    )
+    distancia: float | None = Field(
+        default=None,
+        description="Mejor distancia coseno encontrada (menor = más parecido). "
+        "Útil para calibrar los umbrales del Evaluator.",
+    )
+    fuentes: list[str] = Field(
+        default_factory=list,
+        description="Fragmentos (chunks) de los documentos usados para fundamentar la respuesta.",
+    )
+    audio_base64: str | None = Field(
+        default=None,
+        description="Respuesta del personaje sintetizada a voz (mp3 en base64), o "
+        "null si el personaje no tiene voz o si el TTS falló (el texto no se rompe).",
+    )

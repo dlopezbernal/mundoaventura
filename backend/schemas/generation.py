@@ -14,19 +14,17 @@ class GenerateRequest(BaseModel):
     """Petición del endpoint POST /api/generate."""
 
     personaje_id: str = Field(
-        ..., description="Identificador del personaje (ej. 't-rex')."
+        ..., max_length=100, description="Identificador del personaje (ej. 't-rex')."
     )
     ubicacion_id: str = Field(
-        ..., description="Identificador de la ubicación (ej. 'laboratorio')."
+        ..., max_length=100, description="Identificador de la ubicación (ej. 'laboratorio')."
     )
 
 
 class GenerateResponse(BaseModel):
     """Respuesta del endpoint POST /api/generate."""
 
-    success: bool = Field(
-        ..., description="True si se generó la imagen correctamente."
-    )
+    success: bool = Field(..., description="True si se generó la imagen correctamente.")
 
     # Eco de lo que se pidió (útil para el frontend).
     personaje_id: str = Field(..., description="Identificador del personaje generado.")

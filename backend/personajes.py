@@ -9,6 +9,12 @@ y con el STYLE_SUFFIX común, y lo manda a Replicate como un único prompt.
 
 Ya NO usamos IP-Adapter ni imágenes base: con texto-a-imagen en la nube basta
 con describir bien al personaje y el estilo deseado.
+
+STYLE_SUFFIX y FRAMING son ahora solo el VALOR POR DEFECTO (seed): el ajuste
+editable en caliente vive en `settings_service` (categoría "estilo_imagen",
+pestaña "General" de configuración) y `generation_service` lee de ahí, nunca de
+estas constantes directamente. Igual que con PROMPTS/NOMBRES/VOCES: este
+fichero es la fuente de semilla, no el valor vigente.
 """
 
 # Estilo visual común a TODAS las imágenes. Es lo que da coherencia entre
@@ -62,4 +68,58 @@ PROMPTS = {
             "rounded friendly face"
         ),
     },
+    "peter_pan": {
+        "prompt": (
+            "Peter Pan as a joyful adventurous magical boy, big expressive eyes, "
+            "wearing clothes made of green leaves, flying with glowing fairy dust, "
+            "friendly rounded face"
+        ),
+    },
+}
+
+
+# Nombre con el que cada personaje se presenta al hablar en primera persona en el
+# chat (sistema RAG). Las claves deben coincidir con las de PROMPTS y con el
+# nombre de la carpeta en backend/documentos/<personaje_id>/.
+NOMBRES = {
+    "triceratops": "Triceratops",
+    "t-rex": "Tiranosaurio Rex",
+    "leonardo_da_vinci": "Leonardo da Vinci",
+    "sherlock_holmes": "Sherlock Holmes",
+    "peter_pan": "Peter Pan",
+}
+
+# voz_id de ElevenLabs con la que habla cada personaje en el chat (TTS).
+# Es el 5º sitio del invariante personaje_id: la clave debe coincidir con PROMPTS,
+# NOMBRES, la carta del frontend y la carpeta backend/documentos/<personaje_id>/.
+# Un personaje SIN entrada aquí responde solo en texto (no rompe).
+# Son voces "premade" de ElevenLabs (funcionan out-of-the-box). Suenan naturales
+# en español con el modelo multilingüe eleven_multilingual_v2 (ver ELEVENLABS_TTS_MODEL
+# en .env). Cámbialas por voces de tu biblioteca desde https://elevenlabs.io/voices.
+VOCES = {
+    "sherlock_holmes": "nPczCjzI2devNBz1zQrb",  # grave y madura (Brian)
+    "leonardo_da_vinci": "JBFqnCBsd6RMkjVDRZzb",  # cálida y sabia (George)
+    "t-rex": "IKne3meq5aSn9XLyUdCD",  # juguetona (Charlie)
+    "triceratops": "bIHbv24MWmeRgasZH58o",  # amable (Will)
+    "peter_pan": "TX3LPaxmHKxFdv7VOQHJ",  # aventurera y joven (Liam)
+}
+
+# Categoría y emoji de cada personaje (antes solo vivían en el frontend, en
+# frontend-react/src/data/personajes.ts). Se incluyen aquí para que el "seeding"
+# a la BBDD deje el catálogo COMPLETO: a partir del Hito 4 el catálogo se lee de
+# la tabla `personajes` (vía personajes_service) y el frontend lo consume por API.
+# categoria agrupa la carta en la UI: "prehistorico" | "historico" | "ficticio".
+CATEGORIAS = {
+    "triceratops": "prehistorico",
+    "t-rex": "prehistorico",
+    "leonardo_da_vinci": "historico",
+    "sherlock_holmes": "ficticio",
+    "peter_pan": "ficticio",
+}
+EMOJIS = {
+    "triceratops": "🦕",
+    "t-rex": "🦖",
+    "leonardo_da_vinci": "🎨",
+    "sherlock_holmes": "🕵️",
+    "peter_pan": "👦",
 }
