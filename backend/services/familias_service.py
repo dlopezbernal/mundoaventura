@@ -317,7 +317,7 @@ def login(email: str, password: str, ip: str = "?") -> tuple[dict, str]:
 
     Lanza BloqueoLoginError (→ 429) si la IP está bloqueada por intentos, o
     ValueError (→ 400) si las credenciales no son correctas. Aplica retardo fijo y
-    cuenta los fallos por IP (anti-fuerza-bruta, igual que el PIN de admin).
+    cuenta los fallos por IP (anti-fuerza-bruta, igual que el login de admin).
     """
     _comprobar_bloqueo(ip)
     time.sleep(_RETARDO_LOGIN)

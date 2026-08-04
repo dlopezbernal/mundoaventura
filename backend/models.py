@@ -9,10 +9,11 @@ Define las tablas de la BBDD de configuración (SQLite, ver db.py):
   - Ubicacion   → catálogo de lugares (Hito 6).
   - Documento   → metadatos de los documentos del RAG por personaje (Hito 5).
 
-En el Hito 1 se crean todas las tablas y se hace el "seeding" (volcar los valores
-actuales del código a la BBDD), pero la app sigue leyendo el catálogo desde el
-código; el cambio a leerlo de la BBDD llega en sus hitos respectivos. Los SECRETOS
-(claves API) NO se modelan aquí: viven en el `.env`.
+Todas las tablas se crean al arrancar y se hace el "seeding" (volcar los valores por
+defecto del código a la BBDD, idempotente). La app lee los catálogos de personajes y
+ubicaciones **desde la BBDD** (`personajes_service`/`ubicaciones_service`); los ficheros
+`personajes.py`/`ubicaciones.py` quedaron como fuente de seeding. Los SECRETOS (claves
+API) NO se modelan aquí: viven en el `.env`.
 """
 
 from datetime import UTC, datetime
@@ -115,7 +116,9 @@ class Familia(SQLModel, table=True):
     credencial de login (única, normalizada en minúsculas) y sirve de contacto para el
     consentimiento parental; la **contraseña** se guarda hasheada (PBKDF2, ver
     `seguridad.py`), nunca en claro. El **nombre de familia** personaliza la interfaz.
-    Los nombres de los niños y el PIN de adulto se añaden/gestionan en fases posteriores.
+    Los **nombres de los niños** (multi-perfil) y el **PIN de familia** viven también en
+    esta fila (`ninos`, `pin_familia_hash`, ver abajo); no confundir el PIN de familia
+    (4 dígitos, protege foto/perfil) con la credencial de **Admin** (contraseña + 2FA).
     """
 
     __tablename__ = "familias"

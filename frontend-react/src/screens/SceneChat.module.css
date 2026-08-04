@@ -1,7 +1,7 @@
 /**
  * SceneChat — Layout del paso 3 (escena + chat) y estados de carga/error holo.
- * (El estilado fino de Scene/Chat llega en la segunda tanda; aquí queda el
- * armazón para que el flujo funcione de principio a fin.)
+ * El estilado fino de Scene/Chat vive en sus propios módulos (SceneView/Chat);
+ * aquí queda el armazón del layout de dos columnas y los estados de carga/error.
  */
 
 .layout {

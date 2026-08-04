@@ -3,7 +3,8 @@
  * =================================================================
  *
  * Cuando una familia tiene VARIOS niños (hermanos), al entrar se elige quién juega,
- * para personalizar la experiencia ("¡Hola, Marco!") y, más adelante, el chat. Con un
+ * para personalizar la experiencia ("¡Hola, Marco!") y el chat (el nombre y el sexo del
+ * niño activo viajan con cada pregunta y ajustan el prompt del personaje). Con un
  * solo niño la app lo selecciona sola y no muestra esta pantalla; con ninguno, se
  * entra como familia. La elección se recuerda en el dispositivo (App).
  */

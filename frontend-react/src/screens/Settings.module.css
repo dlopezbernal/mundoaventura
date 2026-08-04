@@ -354,7 +354,7 @@
 }
 
 /* ===========================================================================
- * Puerta de adulto (AdminGate) — crear/introducir PIN
+ * Puerta de adulto (AdminGate) — crear/introducir la contraseña de administración
  * ======================================================================== */
 .gate {
   display: flex;

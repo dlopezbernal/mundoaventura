@@ -10,7 +10,9 @@ CRUD del catálogo de lugares (la lógica vive en services/ubicaciones_service.p
   DELETE /api/ubicaciones/{id}    → borrar una ubicación del catálogo.
 
 Lo consumen tanto la pantalla del niño (elegir mundo) como la pestaña de
-configuración. El control de acceso admin a la edición llega en el Hito 7.
+configuración. Las escrituras (POST/PUT/DELETE) van detrás del control de acceso
+admin (`requiere_admin`, enchufado en `main.py`); los `GET` del catálogo siguen
+públicos para el flujo del niño.
 """
 
 from fastapi import APIRouter, Depends, HTTPException

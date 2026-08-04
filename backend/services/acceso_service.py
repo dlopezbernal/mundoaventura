@@ -3,7 +3,7 @@ services/acceso_service.py — Candado del túnel por código de acceso (Hito 2)
 ============================================================================
 
 El despliegue es un túnel público (ngrok/Colab). Los endpoints del niño (chat,
-generación, voz) NO pueden ir detrás del PIN de adulto —los usa un niño—, pero sí
+generación, voz) NO pueden ir detrás del acceso admin —los usa un niño—, pero sí
 detrás de un candado ligero contra escaneo automático: un CÓDIGO DE ACCESO
 compartido que el frontend envía en la cabecera `X-Access-Code`.
 

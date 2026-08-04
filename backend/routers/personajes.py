@@ -14,7 +14,9 @@ voces de ElevenLabs para el desplegable de la pantalla de configuración:
                                     "Probar voz" de la pestaña Personajes).
 
 Lo consumen tanto la pantalla del niño (elegir personaje) como la pestaña de
-configuración. El control de acceso admin a la edición llega en el Hito 7.
+configuración. Las escrituras (POST/PUT/DELETE) y `GET /api/voices` van detrás del
+control de acceso admin (`requiere_admin`, enchufado en `main.py`); los `GET` del
+catálogo siguen públicos para el flujo del niño.
 """
 
 import base64

@@ -140,13 +140,52 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
 - **Umbral del RAG:** se expone como **distancia coseno directa (0–2), sin conversión a
   porcentaje**, la misma métrica nativa de ChromaDB que usa el Evaluator (ver README,
   "Decisiones de diseño").
-- **Acceso de adulto (Hito 7):** toda la zona de configuración va detrás de un **PIN**
-  (`admin_service`): el PIN se guarda *hasheado* (PBKDF2) en la tabla `settings`, el login
-  devuelve un token de sesión en memoria y la dependencia `requiere_admin` protege los
-  endpoints sensibles (config, apis, documentos, y las escrituras de personajes/ubicaciones);
-  los `GET` de catálogos y el flujo del niño (`/generate`, `/ask`, `/transcribe`, `/health`)
-  siguen públicos. Incluye **import/export** JSON de la configuración (sin secretos) y una
-  **copia de seguridad** del SQLite antes de importar.
+- **Dos niveles de acceso (Hito 7 → Hito 9.2):** la app dejó de ser anónima. Hay **dos zonas
+  de adulto**, con dos botones en el HUD:
+  - **⚙️ Configuración** — autoservicio de la **familia**. Cada familia es una cuenta con email
+    del adulto + contraseña (PBKDF2) + nombre; alta autoservicio, sesión **persistente** (en
+    SQLite solo el hash SHA-256 del token; el token real vive en `localStorage`). La app va
+    detrás de esta sesión (`GET /api/familias/me`, cabecera `X-Family-Token`). Multi-perfil de
+    niños (`{nombre, sexo}`); el perfil activo personaliza el prompt del chat. Un **PIN de
+    familia** (4 dígitos, hasheado) protege el consentimiento de la foto y la edición del perfil.
+    Verificación de correo por OTP **opcional** (`EMAIL_VERIFICACION`, por defecto OFF).
+    `familias_service`, `routers/familias.py`, tablas `familias`/`sesiones_familia`.
+  - **🛡️ Admin** — configuración global compartida. Credencial de **contraseña ≥ 8 caracteres**
+    con **2FA TOTP opcional** (toggle por defecto OFF; `pyotp`/`segno`). `admin_service`: la
+    dependencia `requiere_admin` protege los endpoints sensibles (config, apis, documentos, y
+    las escrituras de personajes/ubicaciones). El login está endurecido contra fuerza bruta
+    (retardo + bloqueo por IP → 429). Los `GET` de catálogos y el flujo del niño (`/generate`,
+    `/ask`, `/transcribe`, `/health`) siguen públicos. Incluye **import/export** JSON de la
+    configuración (sin secretos) y una **copia de seguridad** del SQLite antes de importar.
+
+  Flujos de datos y checklist RGPD (incluido el email del adulto como dato personal) en
+  [`PRIVACIDAD.md`](PRIVACIDAD.md).
+
+## Retrieval: reranker opcional (Hito 4.3)
+
+Entre el retrieval y el Evaluator hay un paso opcional. Con `RERANKER != off`,
+`rag_service._recuperar_contexto` recupera `RERANK_CANDIDATOS` candidatos y un
+**cross-encoder** (`jina-reranker-v2`, vía `fastembed`, ONNX/CPU, sin torch) los
+**reordena por relevancia** leyendo pregunta+ficha juntas (más fino que el coseno), y se
+queda con `RAG_TOP_K`. Reordena **en consulta**, así que se activa en caliente sin
+reindexar. Con reranker activo, el **ruteo lo decide su puntuación** (`rerank_score ≥
+RERANK_UMBRAL ⇒ RAG`) y el LLM-juez ya no se llama. Ver el
+[ADR-006](decisiones/ADR-006-reranker.md).
+
+## Seguridad infantil (Hito 9)
+
+Tres barreras que no se deben quitar (ver el
+[ADR-010](decisiones/ADR-010-seguridad-infantil.md)):
+
+1. **Anti-inyección** — las fichas del RAG entran **delimitadas** con `<documento>…</documento>`
+   y el prompt de sistema las trata como **datos, nunca órdenes**: un documento que diga "ignora
+   tus instrucciones" no reescribe al personaje.
+2. **Filtro de salida** (`safety_service.filtrar_salida`: idioma español + longitud + lista
+   mínima de términos inapropiados) — se aplica **solo a la vía GENERAL** (texto no fundamentado);
+   si no pasa, se entrega `MENSAJE_SIN_INFORMACION`. Con streaming, la vía GENERAL se genera
+   **completa y se filtra antes** de entregarse; solo la vía RAG se streamea palabra a palabra.
+3. **Consentimiento parental** — subir la foto pasa por `ConsentModal` (PIN de familia o casilla);
+   la **foto no se persiste** (`generation_service.generar_en_foto` la procesa solo en memoria).
 
 ## Degradación y modo DEBUG
 
@@ -165,8 +204,9 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
 - **DEBUG:** ajuste editable (`settings_service`, con valor inicial de `config.DEBUG`), por
   lo que se puede activar/desactivar en caliente desde el menú. Enciende trazas en la
   consola del backend: prompts al LLM/DeepL, origen RAG/GENERAL/SIN_INFO (`[CHAT] ...`) y
-  voz (`[VOZ] 🎙️ STT ...`, `[VOZ] 🔊 TTS ...`). **Único efecto visible al niño:** también
-  activa, en el chat mismo, el desplegable "📚 ¿De dónde lo he sacado?" con las fichas de
-  cada respuesta RAG (`rag_service.responder` solo incluye `fuentes` en la respuesta si
-  `DEBUG` está activo) — por eso debe quedar en `false` en la build final, no solo por
-  las trazas de consola.
+  voz (`[VOZ] 🎙️ STT ...`, `[VOZ] 🔊 TTS ...`). No tiene ningún efecto visible para el niño.
+- **MOSTRAR_FUENTES** (flag aparte, desde el Hito 4.2): controla si el chat muestra al niño el
+  desplegable "📚 ¿De dónde lo he sacado?" con las fichas de cada respuesta RAG
+  (`rag_service.responder` solo incluye `fuentes` si `MOSTRAR_FUENTES` está activo). Es
+  **pedagogía**, no depuración — por eso se separó de `DEBUG`. Si un doc o comentario antiguo
+  dice que `DEBUG` enseña las fuentes, está obsoleto.
