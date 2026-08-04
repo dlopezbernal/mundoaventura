@@ -2,7 +2,7 @@
 routers/auditoria.py — Informe de auditoría de uso (Admin)
 ==========================================================
 
-Detrás del PIN de admin. Deja consultar el registro de actividad de las familias
+Detrás del acceso admin. Deja consultar el registro de actividad de las familias
 (auditoria_service), filtrarlo y exportarlo a CSV. La configuración (activar,
 contenido, retención) se edita en la pestaña "Auditoría" con el ConfigForm normal
 (categoría `auditoria`), no aquí.

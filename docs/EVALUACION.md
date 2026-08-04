@@ -116,7 +116,7 @@ literales promedian 0,736, pegadas al umbral BAJO (0,75).
    suavizaron esas preguntas; el fenómeno queda anotado como riesgo del pipeline de
    traducción (relevante para H4/H5).
 
-## 7. Limitaciones declaradas
+## 7. Limitaciones de la línea base
 
 - Recall a nivel de fichero (no de fragmento), poco discriminante con pocos documentos.
 - El juicio de seguridad/tacto (set adversarial) es humano; no hay métrica automática.
@@ -125,7 +125,7 @@ literales promedian 0,736, pegadas al umbral BAJO (0,75).
 - Determinismo sujeto al LLM alojado: a `temperature=0` es casi determinista, no
   garantizado al 100 % (por eso se reporta σ).
 
-## 9. H4 — Mejoras de retrieval (tabla acumulada)
+## 8. H4 — Mejoras de retrieval (tabla acumulada)
 
 Cada sub-hito de H4 se mide contra la línea base y se acumula aquí. Cambio por
 sub-rama, con su ADR (`docs/decisiones/ADR-004…`).
@@ -182,10 +182,10 @@ Motivo: el corpus es inglés (Wikipedia), así que traducir la pregunta la manti
 faltas** del español infantil. Y el argumento de latencia ya no aplica: el reranker
 (~665 ms) domina, y la llamada a DeepL (~150 ms) es ruido a su lado. Conclusión: **se
 mantiene DeepL** (el dato defiende la traducción) y H4 se congela en H4.3, en línea con
-el "Plan B" de `docs/H4-retrieval.md`. Retomar solo tendría sentido con un corpus en
+el "Plan B" de `docs/plan/H4-retrieval.md`. Retomar solo tendría sentido con un corpus en
 español (retrieval monolingüe ES-ES), trabajo futuro.
 
-## 10. H6 — Estudio comparativo de LLMs (metodología)
+## 9. H6 — Estudio comparativo de LLMs (metodología)
 
 El instrumento de H3 se reutiliza para elegir el LLM generador con método defendible
 (**puertas primero, pesos después**), no con una impresión. La decisión y sus tablas
@@ -226,7 +226,72 @@ la máquina del usuario. Resultado (detalle y tablas en el **ADR-007**):
 - **Ajustes por disponibilidad** (documentados en ADR-007): Gemini 2.0→2.5-flash con
   *thinking off*, Qwen3→Gemma3 (4B, no thinking), juez `gemini-2.5-pro` retirado.
 
-## 8. Cómo reproducir
+## 10. H6 — Resultado del estudio (finalistas y test ciego)
+
+Las **puertas** (idioma ≥98 %, INFLESZ media ≥ 68, longitud 15–90, p95 ≤ 8 s, seguridad 0
+fallos) se aplican primero; solo los que pasan compiten por los **pesos** (calidad 50 /
+latencia 30 / coste 20). Detalle completo y tablas crudas en el
+[ADR-007](decisiones/ADR-007-eleccion-llm.md).
+
+| Candidato | Puertas | Score ponderado | Nota |
+|---|---|---|---|
+| `gemini-flash` | ✅ pasa | **0,80** (fidelidad 100 %, p95 0,89 s) | Ganador **automático** |
+| `groq-llama70b` | ✅ pasa | alto | **Ganador final** (test ciego) |
+| `ollama` (gemma3:4b) | 🟡 Opción B (1 fallo, riesgo residual) | 3º | Baja fidelidad (67 %) |
+| `llama3-replicate` (baseline) | ❌ seguridad | — | Rotura de papel en "hazte un robot" |
+| `mistral-small` | ❌ seguridad | — | Rotura de papel |
+
+**Desempate por test ciego (5 evaluadores).** Las métricas automáticas favorecían a
+`gemini-flash`, pero 5 personas prefirieron `groq-llama70b` por **respuestas más completas**.
+Por la regla §5 (preferencia humana **decisiva** entre finalistas), **decide groq**. Es justo la
+divergencia métrica-vs-humano que el test ciego existe para resolver — y confirma la señal
+preliminar (n=1 ya daba groq 63,6 %). La app quedó fijada a `groq-llama70b`.
+
+## 11. Progresión completa (resumen del arco de mejora)
+
+La cadena de mediciones, de la línea base a la config final, defendida hito a hito:
+
+| Hito | Palanca | Métrica que mueve | Antes → Después |
+|---|---|---|---|
+| Baseline (H3) | Sistema tal cual | ruteo · recall@3 chunk | 66,7 % · 78,2 % |
+| **H4.1** | Embeddings multilingües | recall chunk · latencia retrieval | 81,8 % · 191→27 ms (7×) |
+| **H4.2** | Troceado por estructura | recall chunk | 83,6 % |
+| **H4.3** | Reranker (cross-encoder) | **recall chunk · ruteo** | **90,9 % · 82,2 %** (equilibrado) |
+| H4.4 | Quitar DeepL (probado) | recall · ruteo | ❌ **descartado** (−5,4 · −11,1) |
+| **H6** | Elección de LLM | ganador por método | **groq-llama70b** (test ciego) |
+| H7 | STT local (faster-whisper) | WER · privacidad | tabla WER pendiente¹ · voz no sale del PC |
+| H8 | Streaming SSE + TTS por frases | latencia percibida (TTFT) | pendiente¹ (target ~1–2 s vs ~7–12 s) |
+
+¹ Mediciones que requieren el hardware/claves del usuario (ver §12). El **arco defendible** es
+claro: el retrieval sube de 78,2 % a 90,9 % de recall de chunk y el ruteo de 66,7 % a 82,2 %,
+todo **medido y comparado contra una línea base inmutable**.
+
+## 12. Limitaciones reconocidas del proyecto
+
+No es una debilidad enumerarlas: un tribunal valora más "sabemos qué no hemos podido demostrar y
+por qué" que un informe sin fisuras.
+
+- **Juez LLM no validado (H6).** Ningún juez alcanzó el ≥ 85 % de acuerdo con el humano (mejor:
+  gpt-4o, 75 %). Se usó como señal **indicativa**, no como árbitro, y el desempate real recayó en
+  el test ciego humano. Es la limitación más relevante del estudio de LLMs.
+- **Test ciego pequeño (n=5 evaluadores).** Suficiente para desempatar dos finalistas, no para
+  una conclusión estadísticamente robusta. Se declara el tamaño de muestra.
+- **Recall a nivel de fichero saturado (100 %).** Con 1–2 ficheros por personaje, casi cualquier
+  consulta recupera "el fichero correcto"; por eso la métrica que gobierna H4 es el recall de
+  **chunk**. Una verdad de referencia a nivel de fragmento más rica es trabajo futuro.
+- **Seguridad juzgada a mano.** El "tacto" del set adversarial (18 preguntas) no tiene métrica
+  automática; la corrida adversarial con el LLM real (0/18 fallos con groq) se ejecuta en la
+  máquina del usuario.
+- **Corpus monolingüe (inglés).** La retirada de DeepL se descartó **con datos** precisamente
+  porque el corpus es inglés; un corpus en español reabriría esa decisión ([ADR-014](decisiones/ADR-014-retirada-deepl.md)).
+- **Mediciones dependientes del hardware del usuario (H7/H8).** La tabla WER del STT y la latencia
+  p50/p95 del streaming requieren GPU/CUDA y claves de LLM/TTS que el sandbox no tiene; se
+  completan en la máquina del usuario. Los mecanismos están implementados y con tests verdes.
+- **Free tier y ruido del LLM alojado.** Algunas corridas completas sufrieron 429 transitorios de
+  Replicate (ajenos a la métrica medida); el determinismo a `temperature=0` es casi total, no
+  garantizado al 100 % (por eso se reporta σ).
+
+## 13. Cómo reproducir
 
 ```powershell
 uv run python -m evals.runner --modo completo --etiqueta baseline   # regenera una corrida

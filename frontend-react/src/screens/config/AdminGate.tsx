@@ -2,14 +2,15 @@
  * AdminGate — Puerta de adulto del menú de configuración (Hito 7)
  * ===============================================================
  *
- * Toda la zona de ajustes (claves API, personajes, documentos, borrados) va
- * detrás de un PIN de adulto, porque la app la usan niños. Este componente:
+ * Toda la zona de ajustes (claves API, personajes, documentos, borrados) va detrás
+ * de una contraseña de administración (≥ 8 caracteres + 2FA opcional desde H9.2d),
+ * porque la app la usan niños. Este componente:
  *
- *   - La PRIMERA vez (no hay PIN) muestra "crear PIN" (setup).
- *   - Si ya hay PIN, muestra "introduce el PIN" (login).
+ *   - La PRIMERA vez (no hay contraseña) muestra "crear contraseña" (setup).
+ *   - Si ya hay contraseña, muestra "introduce la contraseña" (login) + 2FA si procede.
  *   - Si la sesión ya está activa (token válido), llama a onListo() y desaparece.
  *
- * El PIN nunca viaja en claro al almacenamiento del navegador: solo se envía al
+ * La contraseña nunca viaja en claro al almacenamiento del navegador: solo se envía al
  * backend, que devuelve un token de sesión temporal (ver api/client.ts).
  */
 

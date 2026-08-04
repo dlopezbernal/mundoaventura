@@ -18,8 +18,8 @@ services/documentos_service.py):
   GET    /api/reindex/estado                                 → progreso del reindexado global en curso (sondeo).
 
 Al subir/ingerir/editar/copiar/borrar se reindexa automáticamente al/los personaje(s)
-afectado(s) (solo sus chunks). Todo el router va detrás del PIN de adulto (Hito 7,
-aplicado en bloque desde main.py).
+afectado(s) (solo sus chunks). Todo el router va detrás del control de acceso admin
+(`requiere_admin`, aplicado en bloque desde main.py).
 
 Un nombre de documento repetido para el mismo personaje se señaliza con
 ConflictoDocumentoError → HTTP 409 (no 400), para que el frontend pueda distinguir
