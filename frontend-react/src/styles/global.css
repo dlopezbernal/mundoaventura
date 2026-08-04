@@ -18,6 +18,17 @@ body {
   min-height: 100%;
 }
 
+/* Desplazamiento suave al saltar a un ancla (lo usa el manual con #manual-nino /
+   #manual-adulto). Se desactiva si el usuario ha pedido menos movimiento. */
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   font-family: var(--font-body);
   color: var(--txt);

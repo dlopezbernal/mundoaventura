@@ -23,6 +23,7 @@ import SceneChat from "./screens/SceneChat";
 import Admin from "./screens/Admin";
 import Configuracion from "./screens/Configuracion";
 import LoginFamilia from "./screens/LoginFamilia";
+import Manual from "./screens/Manual";
 import QuienJuega from "./screens/QuienJuega";
 import {
   BackendError,
@@ -59,6 +60,10 @@ export default function App() {
   // Configuración (⚙️) = gestionar el PIN; Admin (🛡️) = config global (H9.2).
   const [mostrarConfig, setMostrarConfig] = useState(false);
   const [mostrarAdmin, setMostrarAdmin] = useState(false);
+  // Manual de usuario: se abre desde el HUD y TAMBIÉN desde el login (para poder
+  // leerlo antes de dar el correo y crear la cuenta), así que vive aquí, fuera de
+  // las dos ramas de render.
+  const [mostrarManual, setMostrarManual] = useState(false);
 
   const cargarCatalogos = useCallback(async () => {
     setErrorCarga(null);
@@ -121,6 +126,7 @@ export default function App() {
   function volverAlLogin() {
     setMostrarAdmin(false);
     setMostrarConfig(false);
+    setMostrarManual(false);
     setPersonajes(null);
     setUbicaciones(null);
     elegirNino(null);
@@ -152,12 +158,18 @@ export default function App() {
   }
 
   // Sin sesión de familia: puerta de entrada (login / alta), sin HUD ni flujo.
+  // El manual sí es accesible desde aquí: el adulto debe poder saber qué es la app
+  // ANTES de registrar su correo.
   if (familia === null) {
     return (
       <>
         <Background />
         <main className="holo-wrap">
-          <LoginFamilia onListo={setFamilia} />
+          {mostrarManual ? (
+            <Manual onCerrar={() => setMostrarManual(false)} />
+          ) : (
+            <LoginFamilia onListo={setFamilia} onAbrirManual={() => setMostrarManual(true)} />
+          )}
           <div className="crt-scan" aria-hidden="true" />
         </main>
       </>
@@ -174,18 +186,27 @@ export default function App() {
           onCambiarNino={familia.ninos.length > 1 ? () => elegirNino(null) : undefined}
           // Abrir una pantalla de adulto CIERRA la otra: si no, al alternar entre los
           // botones del HUD, Admin (que tiene prioridad en el render) se quedaba "clavado".
+          onAbrirManual={() => {
+            setMostrarAdmin(false);
+            setMostrarConfig(false);
+            setMostrarManual(true);
+          }}
           onAbrirConfig={() => {
             setMostrarAdmin(false);
+            setMostrarManual(false);
             setMostrarConfig(true);
           }}
           onAbrirAdmin={() => {
             setMostrarConfig(false);
+            setMostrarManual(false);
             setMostrarAdmin(true);
           }}
           onSalir={() => void salirFamilia()}
         />
 
-        {mostrarAdmin ? (
+        {mostrarManual ? (
+          <Manual onCerrar={() => setMostrarManual(false)} />
+        ) : mostrarAdmin ? (
           <Admin onCerrar={cerrarAdmin} />
         ) : mostrarConfig ? (
           <Configuracion

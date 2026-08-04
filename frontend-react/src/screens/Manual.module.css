@@ -1,0 +1,547 @@
+/**
+ * Manual — Guía de uso en pantalla, en clave Arcade Holo.
+ * Portada + dos secciones separadas (niño / adulto) + FAQ + pie.
+ *
+ * Solo lectura: aquí no hay controles reales, así que las "muestras" de la
+ * interfaz (chips de pregunta, badges) son estáticas y no imitan estados
+ * interactivos que no existen.
+ */
+
+.pagina {
+  /* Tokens que el mockup usa y que no están (todavía) en tokens.css. Se
+     declaran aquí, acotados a esta pantalla, en vez de ensuciar el global. */
+  --m2: #8fa3e0; /* texto terciario (el --muted-2 del mockup, con más contraste) */
+  --inset: rgba(4, 8, 28, 0.6); /* superficie hundida */
+  --clip: polygon(0 0, 100% 0, 100% 88%, 88% 100%, 0 100%); /* esquina recortada (HoloCard) */
+
+  max-width: 1000px;
+  margin: 0 auto;
+  padding-bottom: 40px;
+}
+
+/* ===========================================================================
+ * Nav pegajosa: marca + saltos a cada sección + cerrar
+ * ======================================================================== */
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 4px;
+  margin-bottom: 8px;
+  backdrop-filter: blur(8px);
+  background: linear-gradient(180deg, rgba(4, 10, 28, 0.85), rgba(4, 10, 28, 0.35));
+}
+.navRotulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.cerrar {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: var(--holo);
+  border: 1px solid var(--edge);
+  background: var(--inset);
+  border-radius: 10px;
+  padding: 8px 14px;
+}
+.cerrar:hover {
+  filter: brightness(1.15);
+}
+
+/* ===========================================================================
+ * Portada
+ * ======================================================================== */
+.portada {
+  text-align: center;
+  padding: 34px 8px 30px;
+}
+.kicker {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  color: var(--amber);
+  margin: 0 0 22px;
+}
+.marca {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.marcaMark {
+  filter: drop-shadow(0 0 16px rgba(94, 234, 212, 0.55));
+  margin-bottom: 12px;
+}
+.marcaTitulo {
+  font-family: var(--font-disp);
+  font-weight: 900;
+  font-size: clamp(24px, 6vw, 40px);
+  letter-spacing: 0.02em;
+  margin: 0;
+  background: linear-gradient(90deg, #5eead4, #c084fc 55%, #f472b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.marcaEslogan {
+  margin: 6px 0 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--lime);
+}
+.lead {
+  max-width: 640px;
+  margin: 20px auto 0;
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--txt);
+}
+
+/* Dos "puertas" a las secciones */
+.puertas {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 660px;
+  margin: 30px auto 0;
+}
+.puerta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 20px;
+  border-radius: 14px;
+  clip-path: var(--clip);
+  text-decoration: none;
+}
+.puertaNino {
+  border: 1px solid rgba(255, 46, 151, 0.45);
+  background: linear-gradient(180deg, rgba(255, 46, 151, 0.12), rgba(6, 12, 34, 0.6));
+  box-shadow: inset 0 0 26px rgba(255, 46, 151, 0.08);
+}
+.puertaAdulto {
+  border: 1px solid var(--edge);
+  background: linear-gradient(180deg, rgba(62, 242, 255, 0.1), rgba(6, 12, 34, 0.6));
+  box-shadow: inset 0 0 26px rgba(62, 242, 255, 0.06);
+}
+.puerta:hover {
+  filter: brightness(1.12);
+}
+.puertaEmoji {
+  font-size: 38px;
+  line-height: 1;
+}
+.puertaTitulo {
+  font-family: var(--font-disp);
+  font-weight: 900;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+}
+.puertaNino .puertaTitulo {
+  color: var(--pink);
+}
+.puertaAdulto .puertaTitulo {
+  color: var(--holo);
+}
+.puertaSub {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* Fila "qué necesitas" */
+.requisitos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 26px;
+}
+.requisito {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.82rem;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 7px 13px;
+}
+
+/* ===========================================================================
+ * Secciones (niño / adulto)
+ * ======================================================================== */
+.seccion {
+  scroll-margin-top: 70px;
+  margin-top: 24px;
+}
+.seccionAdulto {
+  margin-top: 40px;
+}
+
+.banda {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  border-radius: 16px;
+}
+.bandaNino {
+  border: 1px solid rgba(255, 46, 151, 0.5);
+  border-left: 4px solid var(--pink);
+  background: linear-gradient(90deg, rgba(255, 46, 151, 0.16), rgba(6, 12, 34, 0.5));
+  box-shadow: 0 0 18px rgba(255, 46, 151, 0.18);
+}
+.bandaAdulto {
+  border: 1px solid var(--edge);
+  border-left: 4px solid var(--holo);
+  background: linear-gradient(90deg, rgba(62, 242, 255, 0.14), rgba(6, 12, 34, 0.5));
+  box-shadow: 0 0 18px rgba(62, 242, 255, 0.15);
+}
+.bandaEmoji {
+  font-size: 34px;
+  line-height: 1;
+}
+.bandaTitulo {
+  margin: 0;
+  font-family: var(--font-disp);
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+.bandaNino .bandaTitulo {
+  font-size: clamp(1.4rem, 3.4vw, 2rem);
+  color: var(--pink);
+}
+.bandaAdulto .bandaTitulo {
+  font-size: clamp(1.3rem, 3.2vw, 1.9rem);
+  color: var(--holo);
+}
+
+/* Tira "voz de máquina" (guiño arcade) */
+.tira {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--edge);
+  background: var(--inset);
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+.tiraOk {
+  color: var(--lime);
+}
+.tiraTexto {
+  color: var(--muted);
+}
+
+.parrafo {
+  font-size: 1.05rem;
+  line-height: 1.65;
+  color: var(--txt);
+  margin: 18px 2px 4px;
+}
+.parrafoAdulto {
+  font-size: 1rem;
+}
+.aparte {
+  color: var(--m2);
+  font-size: 0.9rem;
+}
+/* Acentos de color para las dos "voces" del manual (niño / adulto). */
+.acentoNino {
+  color: var(--pink);
+}
+.acentoAdulto {
+  color: var(--holo);
+}
+
+/* --- Tarjetas de paso --- */
+.pasos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+.paso {
+  padding: 22px 18px;
+  border-radius: 14px;
+  clip-path: var(--clip);
+}
+.pasoAmber {
+  border: 1px solid rgba(255, 207, 107, 0.5);
+  background: linear-gradient(180deg, rgba(255, 207, 107, 0.12), rgba(6, 12, 34, 0.62));
+  box-shadow: inset 0 0 26px rgba(255, 207, 107, 0.08);
+}
+.pasoHolo {
+  border: 1px solid rgba(62, 242, 255, 0.5);
+  background: linear-gradient(180deg, rgba(62, 242, 255, 0.1), rgba(6, 12, 34, 0.62));
+  box-shadow: inset 0 0 26px rgba(62, 242, 255, 0.06);
+}
+.pasoLime {
+  border: 1px solid rgba(141, 255, 207, 0.5);
+  background: linear-gradient(180deg, rgba(141, 255, 207, 0.1), rgba(6, 12, 34, 0.62));
+  box-shadow: inset 0 0 26px rgba(141, 255, 207, 0.08);
+}
+.pasoTag {
+  font-family: var(--font-pixel);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+}
+.pasoAmber .pasoTag {
+  color: var(--amber);
+}
+.pasoHolo .pasoTag {
+  color: var(--holo);
+}
+.pasoLime .pasoTag {
+  color: var(--lime);
+}
+.pasoEmoji {
+  font-size: 54px;
+  line-height: 1;
+  margin: 10px 0 12px;
+}
+.pasoTitulo {
+  margin: 0 0 8px;
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  color: var(--txt);
+}
+.pasoTexto {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* --- Panel genérico (mismo look que los de configuración) --- */
+.panel {
+  margin-top: 18px;
+  padding: 20px;
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.55), rgba(6, 12, 34, 0.6));
+  box-shadow: inset 0 0 26px rgba(62, 242, 255, 0.06);
+}
+.panelTitulo {
+  margin: 0 0 14px;
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 1.1rem;
+  letter-spacing: 0.02em;
+  color: var(--txt);
+}
+.paneles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.paneles .panel {
+  margin-top: 0;
+}
+
+/* Cómo se habla con el personaje: cuadrícula de iconos + explicación */
+.usos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+.uso {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.usoEmoji {
+  font-size: 26px;
+  line-height: 1.2;
+}
+.usoTexto {
+  margin: 0;
+  font-size: 0.94rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.destacado {
+  color: var(--txt);
+}
+
+.nota {
+  margin: 18px 0 8px;
+  font-size: 0.82rem;
+  color: var(--m2);
+}
+/* Muestras de los chips de pregunta rápida (estáticas: aquí no envían nada). */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.78rem;
+  color: var(--holo);
+  background: var(--inset);
+  border: 1px solid var(--edge);
+  border-radius: 99px;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+
+/* --- Consejos en formato "badge" pixel --- */
+.badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+.badge {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  line-height: 1.4;
+  border-radius: 99px;
+  padding: 8px 12px;
+}
+.badgeHolo {
+  color: var(--holo);
+  border: 1px solid var(--edge);
+  background: rgba(62, 242, 255, 0.08);
+}
+.badgeAmber {
+  color: var(--amber);
+  border: 1px solid rgba(255, 207, 107, 0.45);
+  background: rgba(255, 207, 107, 0.08);
+}
+.badgePink {
+  color: var(--pink);
+  border: 1px solid rgba(255, 46, 151, 0.45);
+  background: rgba(255, 46, 151, 0.08);
+}
+
+/* --- Listas del bloque de adulto --- */
+.lista {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 0.94rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.lista li::marker {
+  color: var(--holo);
+}
+.introPanel {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: var(--m2);
+}
+.cierrePanel {
+  margin: 14px 0 0;
+  font-size: 0.82rem;
+  color: var(--m2);
+}
+.peligro {
+  color: var(--pink);
+}
+.enlace {
+  color: var(--holo);
+}
+
+/* --- FAQ --- */
+.faqTitulo {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.03em;
+  color: var(--txt);
+  margin: 22px 0 14px;
+}
+.faq {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+.faqCard {
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--inset);
+}
+.faqPregunta {
+  margin: 0 0 4px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--amber);
+}
+.faqTexto {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+/* ===========================================================================
+ * Pie
+ * ======================================================================== */
+.pie {
+  margin-top: 48px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.pieMarca {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--muted);
+}
+.pieTexto {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--m2);
+}
+/* Salida alternativa al final del documento (el otro cierre está en la nav). */
+.volver {
+  margin-top: 24px;
+}
+
+@media (max-width: 640px) {
+  .puertas {
+    grid-template-columns: 1fr;
+  }
+  .navRotulo {
+    display: none;
+  }
+}
