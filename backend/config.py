@@ -391,6 +391,23 @@ DEBUG: bool = _leer_bool("DEBUG", "false")
 #   - EMAIL_VERIFICACION=true: el alta queda "pendiente" hasta teclear el código.
 EMAIL_VERIFICACION: bool = _leer_bool("EMAIL_VERIFICACION", "false")
 
+# --- Sesión de familia obligatoria en el flujo del niño (despliegue en servidor) ---
+# Complementa el candado del túnel de 3f. ACCESS_CODE es un secreto COMPARTIDO que el
+# frontend lleva incrustado en el bundle (VITE_ACCESS_CODE): frena el escaneo
+# automático, pero cualquiera que abra las DevTools lo lee y puede llamar directamente
+# a /api/generate, /api/ask y /api/transcribe — es decir, gastar tu saldo de
+# Replicate/ElevenLabs. En un túnel efímero es un riesgo asumible; en un servidor
+# permanente con dominio, no.
+#   - true (por defecto): esos tres endpoints exigen ADEMÁS una sesión de familia
+#     válida (X-Family-Token). No cambia nada para el niño —la app ya obliga a iniciar
+#     sesión antes de jugar, y el frontend manda el token en todas las peticiones—;
+#     lo que cierra es la llamada directa por curl/Postman de un desconocido.
+#   - false: comportamiento previo al despliegue en servidor (solo ACCESS_CODE). Útil
+#     para trastear desde /docs o para un banco de pruebas que ataque la API por HTTP.
+# Es un toggle de DESPLIEGUE (.env), no un ajuste editable en caliente: la autenticación
+# no debe poder desactivarse desde el menú de configuración.
+EXIGIR_SESION_FAMILIA: bool = _leer_bool("EXIGIR_SESION_FAMILIA", "true")
+
 # Envío de correo (SMTP). Si SMTP_HOST está vacío —o con DEBUG activo— el código NO
 # se envía: se ESCRIBE EN EL LOG del backend (fallback de consola), para poder probar
 # el flujo completo sin un servidor de correo real. Con SMTP configurado, se envía de

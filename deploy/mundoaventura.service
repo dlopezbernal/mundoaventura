@@ -1,0 +1,80 @@
+# =====================================================================
+#  Unidad systemd del BACKEND (FastAPI + uvicorn)
+# ---------------------------------------------------------------------
+#  Instalación en el servidor:
+#      cp deploy/mundoaventura.service /etc/systemd/system/
+#      systemctl daemon-reload
+#      systemctl enable --now mundoaventura
+#      journalctl -u mundoaventura -f        # ver los logs en vivo
+#
+#  Sustituye APP_USER y /opt/mundoaventura si usas otro usuario/ruta.
+# =====================================================================
+
+[Unit]
+Description=MundoAventura — backend FastAPI (chat RAG + generacion de escena)
+Documentation=https://github.com/dlopezbernal/mundoaventura
+# network-online (no solo network): el hook de arranque comprueba DeepL/ElevenLabs.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=exec
+User=mundoaventura
+Group=mundoaventura
+WorkingDirectory=/opt/mundoaventura
+
+# El backend NO se configura con EnvironmentFile a propósito: config.py hace
+# load_dotenv(.env) por su cuenta, y secrets_service REESCRIBE ese .env cuando el
+# adulto cambia una clave desde el menú. Con EnvironmentFile, systemd tendría una
+# copia congelada del arranque y las dos fuentes se desincronizarían.
+
+# --host 127.0.0.1  → el backend NO se expone directo: solo Caddy habla con él.
+# --workers 1       → OBLIGATORIO. Hay estado EN MEMORIA que no se comparte entre
+#                     procesos: sesiones de admin, contador de fuerza bruta por IP,
+#                     cubos de slowapi y la caché de settings_service. Con 2+ workers
+#                     el login de admin fallaría de forma intermitente y el rate limit
+#                     contaría la mitad. Si algún día hace falta escalar, primero hay
+#                     que mover ese estado a SQLite/Redis.
+# --proxy-headers   → sin esto, slowapi vería TODAS las peticiones como 127.0.0.1
+#   + forwarded-allow-ips  (la IP de Caddy) y el rate limit "por IP" sería un cubo
+#                     único global: un niño agotando su cupo bloquearía a los demás.
+ExecStart=/opt/mundoaventura/.venv/bin/uvicorn backend.main:app \
+    --host 127.0.0.1 \
+    --port 8000 \
+    --workers 1 \
+    --proxy-headers \
+    --forwarded-allow-ips=127.0.0.1 \
+    --timeout-keep-alive 75
+
+Restart=always
+RestartSec=3
+# SIGINT = el apagado limpio de uvicorn (SIGTERM también vale, pero INT es su ruta
+# probada). Damos margen a que terminen las respuestas SSE en vuelo.
+KillSignal=SIGINT
+TimeoutStopSec=30
+
+# --- Endurecimiento ------------------------------------------------------
+# La app necesita ESCRIBIR dentro de su propio directorio: .env (secrets_service),
+# config_db.sqlite3, backend/chroma_db/, backend/documentos/, backend/avatares/ y
+# backend/.cache/ (audio TTS + modelos ONNX de fastembed). Todo cuelga de
+# /opt/mundoaventura, así que basta con un único ReadWritePaths.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/mundoaventura
+# El home del usuario `mundoaventura` ES /opt/mundoaventura, así que ProtectHome (que tapa
+# /home y /root) no estorba a la caché de modelos de ~/.cache.
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mundoaventura
+
+[Install]
+WantedBy=multi-user.target
