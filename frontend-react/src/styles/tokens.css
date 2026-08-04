@@ -23,6 +23,7 @@
   --edge: rgba(79, 242, 255, 0.32);
   --line: #243a7a;
   --txt: #e8f4ff;
+  --muted: #a9bcec; /* texto secundario / de apoyo (contraste mejorado) */
 
   /* --- Tipografías (Google Fonts, cargadas en index.html) --- */
   --font-disp: "Orbitron", sans-serif; /* títulos / display */

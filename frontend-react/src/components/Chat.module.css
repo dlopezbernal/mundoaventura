@@ -39,7 +39,7 @@
 
 .vacio {
   margin: auto;
-  color: #8fa3e0;
+  color: var(--muted);
   font-size: 0.9rem;
   font-style: italic;
   text-align: center;
@@ -57,9 +57,10 @@
   position: relative;
 }
 .autor {
-  font-family: var(--font-pixel);
-  font-size: 7px;
-  letter-spacing: 0.04em;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.02em;
   opacity: 0.85;
 }
 .texto {
@@ -170,10 +171,10 @@
 .confirmNo {
   border: 1px solid var(--line);
   background: rgba(4, 8, 28, 0.6);
-  color: #8fa3e0;
+  color: var(--muted);
 }
 .confirmNo:hover {
-  border-color: #8fa3e0;
+  border-color: var(--muted);
 }
 .confirmSi:disabled,
 .confirmNo:disabled {
@@ -246,11 +247,11 @@
   border: 1px solid var(--line);
   border-radius: 50%;
   background: rgba(4, 8, 28, 0.6);
-  color: #8fa3e0;
+  color: var(--muted);
   font-size: 0.9rem;
 }
 .cancelar:hover {
-  border-color: #8fa3e0;
+  border-color: var(--muted);
 }
 
 .enviar {
