@@ -63,6 +63,14 @@ _PROVEEDORES: dict[str, dict[str, str]] = {
         "nombre": "Groq (transcripción Whisper)",
         "ayuda_url": "https://console.groq.com/keys",
     },
+    # Contraseña del SMTP para enviar el código de verificación de las familias
+    # (Hito 9.2). Es un secreto: va en el .env, nunca en settings_service/export. El
+    # resto de ajustes SMTP (host/puerto/usuario…) están en la pestaña "Correo".
+    "smtp": {
+        "variable": "SMTP_PASSWORD",
+        "nombre": "SMTP (contraseña del correo de verificación)",
+        "ayuda_url": "https://support.google.com/mail/answer/185833",
+    },
 }
 
 # Ruta del .env (bootstrap). Módulo-variable para poder apuntarla a un fichero
@@ -216,6 +224,27 @@ def _probar_replicate() -> dict:
         return {"ok": False, "mensaje": f"No se pudo conectar con Replicate: {exc}"}
 
 
+def _probar_smtp() -> dict:
+    """Intenta conectar y autenticarse en el SMTP con los ajustes de la pestaña Correo."""
+    import smtplib
+
+    from backend.services import settings_service
+
+    host = str(settings_service.get("SMTP_HOST")).strip()
+    if not host:
+        return {"ok": False, "mensaje": "Falta el servidor SMTP (pestaña Correo)."}
+    try:
+        with smtplib.SMTP(host, int(settings_service.get("SMTP_PORT")), timeout=10) as servidor:
+            if settings_service.get("SMTP_STARTTLS"):
+                servidor.starttls()
+            usuario = str(settings_service.get("SMTP_USER")).strip()
+            if usuario:
+                servidor.login(usuario, _valor("smtp"))
+        return {"ok": True, "mensaje": "Conexión SMTP correcta."}
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "mensaje": f"No se pudo conectar por SMTP: {exc}"}
+
+
 def probar(proveedor: str) -> dict:
     """Prueba la conexión de un proveedor: {ok: bool, mensaje: str}."""
     if proveedor not in _PROVEEDORES:
@@ -228,4 +257,6 @@ def probar(proveedor: str) -> dict:
         return llm_service.probar()
     if proveedor == "groq":
         return stt_service.probar()
+    if proveedor == "smtp":
+        return _probar_smtp()
     return voice_service.probar()

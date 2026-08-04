@@ -41,6 +41,7 @@ const PESTANAS = [
   { id: "voz", label: "Voz", emoji: "🎙️" },
   { id: "personajes", label: "Personajes", emoji: "🎭" },
   { id: "ubicaciones", label: "Ubicaciones", emoji: "🗺️" },
+  { id: "correo", label: "Correo", emoji: "📧" },
   { id: "auditoria", label: "Auditoría", emoji: "🧾" },
   { id: "sistema", label: "Sistema", emoji: "🛠️" },
 ] as const;
@@ -108,6 +109,12 @@ export default function Admin({ onCerrar }: Props) {
           )}
           {pestana === "personajes" && <PersonajesTab />}
           {pestana === "ubicaciones" && <UbicacionesTab />}
+          {pestana === "correo" && (
+            <ConfigForm
+              categorias={["correo"]}
+              intro="Servidor de correo (SMTP) para enviar el código de verificación al dar de alta una familia. Sin SMTP configurado (o en modo desarrollo), el código se muestra en la consola del backend. La CONTRASEÑA del SMTP es un secreto y se pone en la pestaña APIs (proveedor «SMTP»). Los cambios se aplican al instante."
+            />
+          )}
           {pestana === "auditoria" && <AuditoriaTab />}
           {pestana === "sistema" && <SistemaTab onLogout={() => void cerrarSesion()} />}
         </>

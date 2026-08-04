@@ -46,8 +46,11 @@ function resumenDetalle(ev: AuditoriaEvento): string {
   }
 }
 
+const POR_PAGINA = 100;
+
 export default function AuditoriaTab() {
   const [tipo, setTipo] = useState("");
+  const [pagina, setPagina] = useState(0); // 0-based
   const [eventos, setEventos] = useState<AuditoriaEvento[] | null>(null);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -57,17 +60,29 @@ export default function AuditoriaTab() {
   const cargar = useCallback(async () => {
     setError(null);
     try {
-      const res = await getAuditoria({ tipo: tipo || undefined, limite: 300 });
+      const res = await getAuditoria({
+        tipo: tipo || undefined,
+        limite: POR_PAGINA,
+        offset: pagina * POR_PAGINA,
+      });
       setEventos(res.eventos);
       setTotal(res.total);
     } catch (exc) {
       setError(exc instanceof BackendError ? exc.message : String(exc));
     }
-  }, [tipo]);
+  }, [tipo, pagina]);
 
   useEffect(() => {
     void cargar();
   }, [cargar]);
+
+  /** Cambiar el filtro vuelve a la primera página (el offset dejaría de tener sentido). */
+  function cambiarTipo(nuevo: string) {
+    setTipo(nuevo);
+    setPagina(0);
+  }
+
+  const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
   async function onExportar() {
     setError(null);
@@ -113,7 +128,7 @@ export default function AuditoriaTab() {
             className={styles.select}
             value={tipo}
             aria-label="Filtrar por tipo de evento"
-            onChange={(e) => setTipo(e.target.value)}
+            onChange={(e) => cambiarTipo(e.target.value)}
           >
             {TIPOS.map((t) => (
               <option key={t.valor} value={t.valor}>
@@ -137,9 +152,31 @@ export default function AuditoriaTab() {
           </button>
         </div>
 
-        <p className={styles.filaAyuda}>
-          {eventos ? `${eventos.length} de ${total} evento(s)` : "Cargando…"}
-        </p>
+        <div className={styles.auditPaginacion}>
+          <span className={styles.filaAyuda}>
+            {eventos
+              ? `${total} evento(s) · página ${pagina + 1} de ${totalPaginas}`
+              : "Cargando…"}
+          </span>
+          <div className={styles.auditPagBotones}>
+            <button
+              type="button"
+              className={styles.testBtn}
+              onClick={() => setPagina((p) => Math.max(0, p - 1))}
+              disabled={pagina === 0}
+            >
+              ◀ Anteriores
+            </button>
+            <button
+              type="button"
+              className={styles.testBtn}
+              onClick={() => setPagina((p) => p + 1)}
+              disabled={pagina + 1 >= totalPaginas}
+            >
+              Siguientes ▶
+            </button>
+          </div>
+        </div>
 
         {eventos && eventos.length > 0 ? (
           <div className={styles.auditWrap}>
