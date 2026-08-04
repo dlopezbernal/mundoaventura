@@ -30,9 +30,9 @@ from datetime import UTC, datetime, timedelta
 from fastapi import Header, HTTPException
 from sqlmodel import select
 
-from backend import config, db
+from backend import db
 from backend.models import Familia, SesionFamilia
-from backend.services import email_service, seguridad
+from backend.services import email_service, seguridad, settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -219,7 +219,7 @@ def crear(email: str, password: str, nombre_familia: str) -> dict:
         fam.password_hash = seguridad.hashear(password)
         fam.nombre_familia = nombre_familia
 
-        if not config.EMAIL_VERIFICACION:
+        if not settings_service.get("EMAIL_VERIFICACION"):
             fam.verificada = True
             fam.codigo_hash = None
             fam.codigo_expira = None

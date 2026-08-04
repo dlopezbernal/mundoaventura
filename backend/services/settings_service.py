@@ -40,6 +40,7 @@ CAT_VOZ = "voz"
 CAT_PROMPTS = "prompts"
 CAT_GENERAL = "general"
 CAT_AUDITORIA = "auditoria"
+CAT_CORREO = "correo"
 # Estilo visual COMÚN a personajes y ubicaciones (pestaña "General" de la UI):
 # antes constantes fijas en personajes.py, ahora editables sin tocar código.
 CAT_ESTILO_IMAGEN = "estilo_imagen"
@@ -650,6 +651,55 @@ _SPEC: dict[str, dict[str, Any]] = {
         "activo_si": {"clave": "AUDITORIA_ACTIVA", "igual_a": "true"},
         "ayuda": "Días que se conserva cada registro antes de borrarse automáticamente "
         "(minimización de datos). Por defecto 90.",
+    },
+    # --- Correo (verificación de la cuenta de familia por código) ---
+    "EMAIL_VERIFICACION": {
+        "categoria": CAT_CORREO,
+        "tipo": "bool",
+        "default": config.EMAIL_VERIFICACION,
+        "ayuda": "Exigir verificar el correo del adulto con un código al dar de alta una "
+        "familia. Con SMTP configurado, el código se envía por email; si no (o en DEBUG), "
+        "se escribe en la consola del backend. Por defecto desactivado.",
+    },
+    "SMTP_HOST": {
+        "categoria": CAT_CORREO,
+        "tipo": "str",
+        "default": config.SMTP_HOST,
+        "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
+        "ayuda": "Servidor SMTP de salida (p. ej. smtp.gmail.com). Vacío = sin envío real: "
+        "el código cae a la consola del backend. La CONTRASEÑA SMTP se pone en la pestaña APIs.",
+    },
+    "SMTP_PORT": {
+        "categoria": CAT_CORREO,
+        "tipo": "int",
+        "default": config.SMTP_PORT,
+        "min": 1,
+        "max": 65535,
+        "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
+        "ayuda": "Puerto SMTP. 587 para STARTTLS (lo habitual), 25 sin cifrar.",
+    },
+    "SMTP_USER": {
+        "categoria": CAT_CORREO,
+        "tipo": "str",
+        "default": config.SMTP_USER,
+        "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
+        "ayuda": "Usuario de la cuenta SMTP (normalmente la dirección de correo). Si va "
+        "vacío, no se hace login (servidor abierto/relay local).",
+    },
+    "SMTP_FROM": {
+        "categoria": CAT_CORREO,
+        "tipo": "str",
+        "default": config.SMTP_FROM,
+        "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
+        "ayuda": "Dirección remitente del correo (From). Si va vacía, se usa SMTP_USER.",
+    },
+    "SMTP_STARTTLS": {
+        "categoria": CAT_CORREO,
+        "tipo": "bool",
+        "default": config.SMTP_STARTTLS,
+        "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
+        "ayuda": "Cifrar la conexión con STARTTLS (recomendado, puerto 587). Desactívalo "
+        "solo para un relay local sin cifrado.",
     },
     # --- General ---
     "DEBUG": {

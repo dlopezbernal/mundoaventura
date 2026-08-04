@@ -20,6 +20,7 @@ import smtplib
 from email.message import EmailMessage
 
 from backend import config
+from backend.services import settings_service
 
 logger = logging.getLogger(__name__)
 
@@ -30,37 +31,45 @@ class EmailError(Exception):
 
 def smtp_configurado() -> bool:
     """¿Hay un servidor SMTP configurado para enviar correo de verdad?"""
-    return bool(config.SMTP_HOST)
+    return bool(str(settings_service.get("SMTP_HOST")).strip())
 
 
 def enviar(destinatario: str, asunto: str, cuerpo: str) -> str:
     """Envía un correo. Devuelve el canal usado: ``"email"`` o ``"consola"``.
 
-    Cae al log del backend (canal ``"consola"``) si no hay SMTP configurado o si
-    DEBUG está activo. Lanza EmailError si hay SMTP pero el envío falla.
+    Los ajustes SMTP se editan en caliente desde Admin → Correo (host, puerto, usuario,
+    remitente, STARTTLS); la CONTRASEÑA es un secreto del `.env` (pestaña APIs), que
+    `secrets_service` mantiene en `config.SMTP_PASSWORD`. Cae al log del backend (canal
+    ``"consola"``) si no hay SMTP configurado o si DEBUG está activo. Lanza EmailError si
+    hay SMTP pero el envío falla.
     """
-    if config.DEBUG or not smtp_configurado():
+    depurando = bool(settings_service.get("DEBUG"))
+    if depurando or not smtp_configurado():
         # Fallback de consola: el código queda visible en el log para poder probar.
         logger.warning(
             "[EMAIL · consola] Para: %s | Asunto: %s\n%s\n(No se envió por SMTP: %s.)",
             destinatario,
             asunto,
             cuerpo,
-            "DEBUG activo" if config.DEBUG else "SMTP no configurado",
+            "DEBUG activo" if depurando else "SMTP no configurado",
         )
         return "consola"
 
+    host = str(settings_service.get("SMTP_HOST")).strip()
+    usuario = str(settings_service.get("SMTP_USER")).strip()
+    remitente = str(settings_service.get("SMTP_FROM")).strip() or usuario
+
     msg = EmailMessage()
     msg["Subject"] = asunto
-    msg["From"] = config.SMTP_FROM or config.SMTP_USER
+    msg["From"] = remitente
     msg["To"] = destinatario
     msg.set_content(cuerpo)
     try:
-        with smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT, timeout=10) as servidor:
-            if config.SMTP_STARTTLS:
+        with smtplib.SMTP(host, int(settings_service.get("SMTP_PORT")), timeout=10) as servidor:
+            if settings_service.get("SMTP_STARTTLS"):
                 servidor.starttls()
-            if config.SMTP_USER:
-                servidor.login(config.SMTP_USER, config.SMTP_PASSWORD)
+            if usuario:
+                servidor.login(usuario, config.SMTP_PASSWORD)
             servidor.send_message(msg)
     except Exception as exc:  # noqa: BLE001 — cualquier fallo de SMTP se envuelve
         logger.warning("Fallo al enviar correo a %s: %s", destinatario, exc)

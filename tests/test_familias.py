@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from backend import config, db
 from backend.main import app
-from backend.services import email_service, familias_service, seguridad
+from backend.services import email_service, familias_service, seguridad, settings_service
 
 _CLIENTE = TestClient(app)
 
@@ -22,11 +22,14 @@ def _bbdd_temporal(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "CONFIG_DB_PATH", tmp_path / "test_familias.sqlite3")
     monkeypatch.setattr(db, "_engine", None)  # fuerza recrear el motor sobre la BBDD temporal
     monkeypatch.setattr(familias_service, "_RETARDO_LOGIN", 0)
-    monkeypatch.setattr(config, "EMAIL_VERIFICACION", False)  # por defecto, sin verificación
+    settings_service._cache = None  # la caché de ajustes debe releer la BBDD temporal
     familias_service._fallos_login.clear()
     db.init_db()
+    # EMAIL_VERIFICACION se lee ahora de settings_service; por defecto DESACTIVADA.
+    settings_service.set_many({"EMAIL_VERIFICACION": False})
     yield
     monkeypatch.setattr(db, "_engine", None)
+    settings_service._cache = None
     familias_service._fallos_login.clear()
 
 
@@ -150,7 +153,7 @@ def test_sesion_caducada_se_rechaza():
 @pytest.fixture
 def _con_verificacion(monkeypatch):
     """Activa la verificación y captura el código en vez de enviar correo."""
-    monkeypatch.setattr(config, "EMAIL_VERIFICACION", True)
+    settings_service.set_many({"EMAIL_VERIFICACION": True})
     capturado: dict[str, str] = {}
 
     def _fake_enviar(destinatario, nombre_familia, codigo, minutos):
