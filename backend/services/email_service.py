@@ -71,10 +71,10 @@ def enviar(destinatario: str, asunto: str, cuerpo: str) -> str:
 
 def enviar_codigo(destinatario: str, nombre_familia: str, codigo: str, minutos: int) -> str:
     """Envía el código de verificación (OTP) de una familia. Devuelve el canal usado."""
-    asunto = "Tu código de La Máquina del Tiempo"
+    asunto = "Tu código de MundoAventura"
     cuerpo = (
         f"¡Hola, {nombre_familia}!\n\n"
-        f"Tu código para activar la cuenta de La Máquina del Tiempo es:\n\n"
+        f"Tu código para activar la cuenta de MundoAventura es:\n\n"
         f"    {codigo}\n\n"
         f"Escríbelo en la aplicación para terminar el registro. "
         f"Caduca en {minutos} minutos.\n\n"

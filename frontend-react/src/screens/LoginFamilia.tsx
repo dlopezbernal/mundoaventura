@@ -26,6 +26,7 @@ import {
   familiaVerificar,
 } from "../api/client";
 import type { FamiliaDTO } from "../api/types";
+import Marca from "../components/Marca/Marca";
 import styles from "./Settings.module.css";
 
 interface Props {
@@ -211,6 +212,11 @@ export default function LoginFamilia({ onListo }: Props) {
 
   return (
     <div className={styles.gate}>
+      <div className={styles.marca}>
+        <Marca size={92} className={styles.marcaMark} title="MundoAventura" />
+        <h1 className={styles.marcaTitulo}>MundoAventura</h1>
+        <p className={styles.marcaEslogan}>¡Descubre tu próxima aventura!</p>
+      </div>
       <div className={styles.gateCard}>
         <span className={styles.gateIcono} aria-hidden="true">
           {esSignup ? "👨‍👩‍👧‍👦" : "👋"}

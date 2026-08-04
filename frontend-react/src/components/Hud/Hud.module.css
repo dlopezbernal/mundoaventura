@@ -1,5 +1,5 @@
 /**
- * Hud — Barra superior de recreativa: marca (máquina del tiempo) + botón de
+ * Hud — Barra superior de recreativa: marca (MundoAventura) + botón de
  * configuración (y, en DEBUG, el botón de diagnóstico de conexión).
  */
 
@@ -30,11 +30,20 @@
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+}
+.logoMark {
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(94, 234, 212, 0.6));
+}
+.logoTexto {
   font-family: var(--font-disp);
   font-weight: 900;
   font-size: clamp(15px, 2.7vw, 21px);
-  letter-spacing: 0.04em;
-  background: linear-gradient(90deg, var(--holo), var(--pink));
+  letter-spacing: 0.02em;
+  background: linear-gradient(90deg, #5eead4, #c084fc 55%, #f472b6);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

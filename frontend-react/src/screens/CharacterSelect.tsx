@@ -2,7 +2,7 @@
  * CharacterSelect — Paso 1: elegir personaje
  * ===========================================
  *
- * Coverflow de personajes (la carta central es el héroe elegido) + roster de
+ * Coverflow de personajes (la carta central es el personaje elegido) + roster de
  * acceso rápido + consola con el CTA "SIGUIENTE". La carta central siempre
  * queda seleccionada, así que el paso está listo desde el primer momento.
  *
@@ -69,7 +69,7 @@ export default function CharacterSelect({ personajes, index, onMove, onNext }: P
       <Coverflow
         kicker="◇ ESCANEANDO LÍNEA TEMPORAL ◇"
         title="SELECCIONA TU PERSONAJE"
-        subtitle="Rota los hologramas con ◀ ▶ · el proyectado en el centro es tu héroe"
+        subtitle="Rota los hologramas con ◀ ▶ · el proyectado en el centro es tu personaje"
         items={cartas}
         index={index}
         selected
@@ -82,7 +82,7 @@ export default function CharacterSelect({ personajes, index, onMove, onNext }: P
       <Console
         status={
           <>
-            HÉROE FIJADO: <b>{elegido.nombre}</b> · sector{" "}
+            PERSONAJE FIJADO: <b>{elegido.nombre}</b> · sector{" "}
             {CATEGORIA_LABEL[elegido.categoria ?? ""] ?? elegido.categoria ?? "—"}
           </>
         }

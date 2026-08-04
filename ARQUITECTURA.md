@@ -1,4 +1,4 @@
-# Arquitectura — Máquina del Tiempo en tu Habitación
+# Arquitectura — MundoAventura
 
 Documento técnico de conjunto del pipeline completo (imagen + RAG + voz). El
 README es la guía de uso; este documento es la referencia de arquitectura para la

@@ -12,7 +12,7 @@ familia con correo del adulto; 2026-08-03).
 
 ## Por qué esto es obligatorio
 
-La Máquina del Tiempo es una app para **menores** (8–12), que puede exponerse por un
+MundoAventura es una app para **menores** (8–12), que puede exponerse por un
 **túnel público** (ngrok/Colab), **sube fotos** de cuartos infantiles a un tercero y les
 hace **hablar con un LLM**. Entran de lleno el **RGPD** (UE 2016/679) y la **LOPDGDD**
 (LO 3/2018), que en España fija el **consentimiento parental por debajo de los 14 años**

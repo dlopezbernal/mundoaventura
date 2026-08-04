@@ -166,11 +166,11 @@ async function fetchBackend(
   } catch (exc) {
     if (exc instanceof DOMException && exc.name === "AbortError") {
       throw new BackendError(
-        "La máquina del tiempo está tardando mucho. Espera un poquito y vuelve a intentarlo.",
+        "MundoAventura está tardando mucho. Espera un poquito y vuelve a intentarlo.",
       );
     }
     throw new BackendError(
-      "No pude conectar con la máquina del tiempo. Pide a un adulto que compruebe que está encendida.",
+      "No pude conectar con MundoAventura. Pide a un adulto que compruebe que está encendido.",
     );
   } finally {
     clearTimeout(timer);
@@ -375,7 +375,7 @@ export async function askStream(
   } catch (exc) {
     if (exc instanceof DOMException && exc.name === "AbortError") return; // cancelado a propósito
     throw new BackendError(
-      "No pude conectar con la máquina del tiempo. Pide a un adulto que compruebe que está encendida.",
+      "No pude conectar con MundoAventura. Pide a un adulto que compruebe que está encendido.",
     );
   }
 

@@ -2,7 +2,7 @@
  * Hud — Barra HUD superior
  * =========================
  *
- * Marca de la app (icono de máquina del tiempo sci-fi + título), un saludo a la
+ * Marca de la app (icono sci-fi + título "MundoAventura"), un saludo a la
  * familia con sesión iniciada (Hito 9.2) y, a la derecha, los accesos de adulto:
  * "Configuración" (ligero: gestionar el PIN), "Admin" (la config global y peligrosa)
  * y "Salir" (cierra la sesión de familia). El diagnóstico "Probar conexión" ya no
@@ -13,6 +13,7 @@
  * como tooltip al pasar por encima o al enfocar con teclado.
  */
 
+import Marca from "../Marca/Marca";
 import styles from "./Hud.module.css";
 
 interface Props {
@@ -40,7 +41,10 @@ export default function Hud({
 }: Props) {
   return (
     <header className={styles.hud}>
-      <span className={styles.logo}>🌀 MÁQUINA DEL TIEMPO</span>
+      <span className={styles.logo}>
+        <Marca size={26} className={styles.logoMark} />
+        <span className={styles.logoTexto}>MundoAventura</span>
+      </span>
       <div className={styles.readout}>
         <span className={styles.saludo}>
           Hola, {ninoActivo ?? nombreFamilia}

@@ -360,8 +360,42 @@
  * ======================================================================== */
 .gate {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
   padding: 24px 0;
+}
+
+/* Marca de la app en la pantalla de entrada (login): isotipo + nombre + eslogan,
+   en lockup vertical (opción 1a, "PORTAL-MUNDO"). */
+.marca {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 22px;
+}
+.marcaMark {
+  filter: drop-shadow(0 0 16px rgba(94, 234, 212, 0.55));
+  margin-bottom: 12px;
+}
+.marcaTitulo {
+  font-family: var(--font-disp);
+  font-weight: 900;
+  font-size: clamp(24px, 6vw, 40px);
+  letter-spacing: 0.02em;
+  margin: 0;
+  background: linear-gradient(90deg, #5eead4, #c084fc 55%, #f472b6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.marcaEslogan {
+  margin: 6px 0 0;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--lime);
 }
 .gateCard {
   width: 100%;

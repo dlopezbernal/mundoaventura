@@ -116,7 +116,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Máquina del Tiempo en tu Habitación — Backend",
+    title="MundoAventura — Backend",
     description="Servidor de IA. Genera una escena (ubicación + personaje) con Replicate.",
     version="0.3.0",
     lifespan=lifespan,
@@ -192,7 +192,7 @@ app.include_router(familias_router.router)
 def root():
     """Mensaje de bienvenida. Útil para comprobar que el server responde."""
     return {
-        "proyecto": "Máquina del Tiempo en tu Habitación",
+        "proyecto": "MundoAventura",
         "fases_activas": [
             "Elegir ubicación + personaje → escena (Replicate)",
             "Conversar con el personaje por texto (RAG: ChromaDB + LLM)",

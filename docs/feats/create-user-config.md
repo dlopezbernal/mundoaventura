@@ -2,7 +2,7 @@
 
 > **Objetivo del proyecto**
 > Que **cualquier persona** (un adulto sin conocimientos de programación) pueda poner en marcha y
-> personalizar por completo la *Máquina del Tiempo en tu Habitación* **sin tocar el código**:
+> personalizar por completo *MundoAventura* **sin tocar el código**:
 > dándose de alta en las plataformas de IA, pegando sus claves y ajustando personajes, ubicaciones,
 > prompts, umbrales del RAG y parámetros generales desde una interfaz de configuración.
 

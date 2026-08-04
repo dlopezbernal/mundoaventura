@@ -357,7 +357,7 @@ MAX_IMAGENES_DIA: int = int(os.getenv("MAX_IMAGENES_DIA", "50"))
 # delante de un niño de 9 años es un fallo de producto.
 MENSAJE_LIMITE: str = os.getenv(
     "MENSAJE_LIMITE",
-    "¡Uf! Mi máquina del tiempo necesita descansar un ratito. "
+    "¡Uf! Necesito descansar un ratito antes de la próxima aventura. "
     "Vuelve a intentarlo dentro de un momento, ¿vale?",
 ).strip()
 

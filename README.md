@@ -1,4 +1,6 @@
-# 🕰️ Máquina del Tiempo en tu Habitación
+# 🌀 MundoAventura
+
+> ¡Descubre tu próxima aventura!
 
 [![CI](https://github.com/dlopezbernal/maquina-del-tiempo/actions/workflows/ci.yml/badge.svg?branch=dev)](https://github.com/dlopezbernal/maquina-del-tiempo/actions/workflows/ci.yml)
 

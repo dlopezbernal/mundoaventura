@@ -79,8 +79,8 @@ delante de un niño de 9 años). La protección va en otra capa:
 - **Rate limit por IP** (`slowapi`): distinto para `/api/ask` (generoso) y para
   `/api/generate*` (restrictivo).
 - **Tope diario de generaciones de imagen** en SQLite, configurable.
-- Cuando se agote el cupo: que **el personaje conteste en personaje** ("mi
-  máquina del tiempo necesita descansar un rato"). Un 429 crudo en la cara de un
+- Cuando se agote el cupo: que **el personaje conteste en personaje** ("necesito
+  descansar un ratito antes de la próxima aventura"). Un 429 crudo en la cara de un
   niño es un fallo de producto.
 
 ### 6. Endurecer el PIN
