@@ -10,8 +10,9 @@
  * las pestañas:
  *
  *   - APIs         → claves de los proveedores (Hito 2).
- *   - IA           → parámetros del motor: RAG, troceado, LLM y prompts (Hito 3).
- *   - General      → estilo visual común de las imágenes (STYLE_SUFFIX/FRAMING).
+ *   - IA           → motor de chat: recuperación, Evaluator/reranker, LLM y prompts.
+ *   - Imagen       → modelos de generación, salida y estilo visual común de la escena.
+ *   - Voz          → transcripción (STT) y voz de la respuesta (TTS).
  *   - Personajes   → CRUD de personajes + documentos del RAG (Hitos 4 y 5).
  *   - Ubicaciones  → CRUD de ubicaciones (Hito 6).
  *   - Sistema      → import/export y modo desarrollo/DEBUG + cerrar sesión (Hito 7).
@@ -35,7 +36,8 @@ interface Props {
 const PESTANAS = [
   { id: "apis", label: "APIs", emoji: "🔑" },
   { id: "ia", label: "IA", emoji: "🧠" },
-  { id: "general", label: "General", emoji: "🎨" },
+  { id: "imagen", label: "Imagen", emoji: "🖼️" },
+  { id: "voz", label: "Voz", emoji: "🎙️" },
   { id: "personajes", label: "Personajes", emoji: "🎭" },
   { id: "ubicaciones", label: "Ubicaciones", emoji: "🗺️" },
   { id: "sistema", label: "Sistema", emoji: "🛠️" },
@@ -87,13 +89,19 @@ export default function Admin({ onCerrar }: Props) {
           {pestana === "ia" && (
             <ConfigForm
               categorias={["rag", "chunking", "llm", "prompts"]}
-              intro="Ajusta el motor de conversación: cómo decide el Evaluator (RAG vs conocimiento general), cuántas fichas recupera, el modelo de lenguaje, el troceado de documentos y los prompts de sistema. Los cambios se aplican al instante, sin reiniciar."
+              intro="Ajusta el motor de conversación, agrupado por lógica: cómo se recuperan las fichas, cómo se decide RAG vs conocimiento general (reranker o Evaluator), el modelo de lenguaje y los prompts. Algunos ajustes se desactivan según otro (p. ej. con el reranker activo, el Evaluator por umbral coseno no interviene). Los cambios se aplican al instante, sin reiniciar."
             />
           )}
-          {pestana === "general" && (
+          {pestana === "imagen" && (
             <ConfigForm
-              categorias={["estilo_imagen"]}
-              intro="Estilo visual común a TODAS las imágenes (personajes y ubicaciones), para que la escena final se vea coherente sea cual sea la combinación. Los cambios se aplican al instante, sin reiniciar."
+              categorias={["imagen", "estilo_imagen"]}
+              intro="Generación de la escena: modelos de Replicate, formato de salida y el estilo visual común a TODAS las imágenes (personajes y ubicaciones), para que se vea coherente sea cual sea la combinación. Los cambios se aplican al instante, sin reiniciar."
+            />
+          )}
+          {pestana === "voz" && (
+            <ConfigForm
+              categorias={["voz"]}
+              intro="Voz: la transcripción de la pregunta hablada (STT, seleccionable entre ElevenLabs, faster-whisper local o Groq) y la voz de la respuesta (TTS, ElevenLabs). Los ajustes de cada proveedor de STT se desactivan si no está elegido. Los cambios se aplican al instante, sin reiniciar."
             />
           )}
           {pestana === "personajes" && <PersonajesTab />}

@@ -135,7 +135,7 @@ export interface paths {
         put?: never;
         /**
          * Setup
-         * @description Crea el PIN de adulto por primera vez (auto-login). 400 si ya existe o es corto.
+         * @description Crea la contraseña de administración por primera vez (auto-login). 400 si ya existe o es corta.
          */
         post: operations["setup_api_admin_setup_post"];
         delete?: never;
@@ -2028,6 +2028,12 @@ export interface components {
             opciones?: string[] | null;
             /** Multilinea */
             multilinea?: boolean | null;
+            /** Grupo */
+            grupo?: string | null;
+            /** Activo Si */
+            activo_si?: {
+                [key: string]: string;
+            } | null;
         };
         /**
          * SubidaDocumentoResponse

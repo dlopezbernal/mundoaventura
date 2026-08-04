@@ -13,7 +13,8 @@
   backdrop-filter: blur(6px);
   padding: 10px 16px;
   position: relative;
-  overflow: hidden;
+  /* Sin overflow:hidden: los tooltips de los iconos cuelgan por debajo de la
+     barra y no deben recortarse. */
 }
 .hud::after {
   content: "";
@@ -22,6 +23,8 @@
   top: 0;
   bottom: 0;
   width: 4px;
+  border-top-left-radius: 14px;
+  border-bottom-left-radius: 14px;
   background: var(--holo);
   box-shadow: 0 0 16px var(--holo);
 }
@@ -44,7 +47,9 @@
   align-items: center;
 }
 
-/* Saludo a la familia/niño con sesión iniciada (Hito 9.2). */
+/* Saludo a la familia/niño con sesión iniciada (Hito 9.2). Se separa del bloque
+   de accesos de adulto con un divisor, para que "Hola X · cambiar de niño" se lea
+   como un grupo aparte de Configuración/Admin/Salir. */
 .saludo {
   font-family: var(--font-body);
   font-size: 13px;
@@ -54,50 +59,89 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  padding-right: 16px;
+  margin-right: 6px;
+  border-right: 1px solid var(--edge);
 }
-/* Enlace "cambiar" de perfil de niño, junto al saludo. */
-.cambiarNino {
+/* Botón de acción del HUD: SOLO ICONO + tooltip. Ghost/minimalista por defecto,
+   se ilumina al pasar por encima. El texto va en aria-label + data-tip. */
+.iconBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  line-height: 1;
+  color: #cfe6ff;
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  background: rgba(4, 8, 28, 0.5);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+}
+.iconBtn:hover {
+  background: rgba(62, 242, 255, 0.14);
+  transform: translateY(-1px);
+  box-shadow: 0 0 12px rgba(62, 242, 255, 0.35);
+}
+.iconBtn:focus-visible {
+  outline: 2px solid var(--holo);
+  outline-offset: 2px;
+}
+
+/* Variante pequeña: el "cambiar de niño" junto al saludo. */
+.mini {
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+  border-radius: 8px;
+}
+
+/* El icono de "Salir" tira a rojo suave para diferenciar la acción destructiva. */
+.salir:hover {
+  background: rgba(255, 92, 122, 0.18);
+  box-shadow: 0 0 12px rgba(255, 92, 122, 0.4);
+}
+
+/* --- Tooltip (el texto que antes iba en el botón) --- */
+.iconBtn::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  padding: 5px 9px;
+  border-radius: 7px;
+  background: rgba(6, 12, 34, 0.96);
+  border: 1px solid var(--edge);
+  color: #cfe6ff;
   font-family: var(--font-body);
   font-size: 11px;
   font-weight: 700;
-  color: var(--holo);
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: underline;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 20;
 }
-.cambiarNino:hover {
-  color: #fff;
+.iconBtn:hover::after,
+.iconBtn:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
-
-/* Botón de Configuración/Setup (acción principal del HUD). */
-.config {
-  font-family: var(--font-pixel);
-  font-size: 8px;
-  letter-spacing: 0.06em;
-  color: #04121f;
-  background: linear-gradient(90deg, var(--holo), var(--lime));
-  border: none;
-  border-radius: 8px;
-  padding: 8px 12px;
-  box-shadow: 0 0 14px rgba(62, 242, 255, 0.4);
-  transition: filter 0.15s ease, transform 0.15s ease;
+/* El último botón (Salir) queda pegado al borde derecho: alineamos su tooltip
+   a la derecha para que no se salga del viewport. */
+.salir::after {
+  left: auto;
+  right: 0;
+  transform: translateY(-4px);
 }
-.config:hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
-}
-
-/* Botón de diagnóstico (solo DEBUG). */
-.debug {
-  font-family: var(--font-pixel);
-  font-size: 8px;
-  color: var(--holo);
-  border: 1px solid var(--edge);
-  background: rgba(4, 8, 28, 0.6);
-  border-radius: 8px;
-  padding: 6px 10px;
+.salir:hover::after,
+.salir:focus-visible::after {
+  transform: translateY(0);
 }
 
 @media (max-width: 640px) {
@@ -105,12 +149,13 @@
   .saludo {
     display: none;
   }
-  /* En móvil el botón conserva solo el icono para no romper la barra. */
-  .config {
-    font-size: 0;
-    padding: 10px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .iconBtn,
+  .iconBtn::after {
+    transition: none;
   }
-  .config::first-letter {
-    font-size: 14px;
+  .iconBtn:hover {
+    transform: none;
   }
 }

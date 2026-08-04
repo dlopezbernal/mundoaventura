@@ -85,6 +85,11 @@ class SettingMeta(BaseModel):
     paso: float | None = None
     opciones: list[str] | None = None
     multilinea: bool | None = None
+    # Subtítulo de la sección a la que pertenece (agrupa los ajustes en la UI).
+    grupo: str | None = None
+    # Dependencia: el ajuste está INACTIVO salvo que otro cumpla una condición.
+    # Forma: {"clave": <otro ajuste>, "igual_a"|"distinto_de": <valor>}.
+    activo_si: dict[str, str] | None = None
 
 
 class ApiProviderStatus(BaseModel):

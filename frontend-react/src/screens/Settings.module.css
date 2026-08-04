@@ -297,6 +297,32 @@
   vertical-align: middle;
 }
 
+/* Subtítulo de sección: agrupa los ajustes por lógica dentro de una pestaña. */
+.cfgGrupo {
+  font-family: var(--font-disp);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  font-size: 0.95rem;
+  color: var(--holo);
+  margin: 14px 0 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--edge);
+}
+.cfgGrupo:first-child {
+  margin-top: 0;
+}
+
+/* Ajuste INACTIVO (su dependencia no se cumple): atenuado, no editable. */
+.cfgCampoInactivo {
+  opacity: 0.55;
+}
+.cfgMotivo {
+  font-size: 0.72rem;
+  color: var(--pink);
+  font-style: italic;
+  margin: 0;
+}
+
 .textarea {
   width: 100%;
   font-family: var(--font-mono, monospace);

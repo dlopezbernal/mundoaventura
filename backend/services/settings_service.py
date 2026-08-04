@@ -43,6 +43,21 @@ CAT_GENERAL = "general"
 # antes constantes fijas en personajes.py, ahora editables sin tocar código.
 CAT_ESTILO_IMAGEN = "estilo_imagen"
 
+# Grupos de presentación DENTRO de una pestaña (subtítulos en la UI). Ordenan los
+# ajustes del motor de chat por lógica: ConfigForm pinta un subtítulo cada vez que
+# cambia el grupo, así la pestaña "IA" se lee por secciones y no como una lista plana.
+GRUPO_RECUPERACION = "🔎 Recuperación (indexado y búsqueda)"
+GRUPO_DECISION = "🧭 Reordenado y decisión (Evaluator / Router)"
+GRUPO_LLM = "🧠 Modelo de lenguaje (LLM)"
+GRUPO_PROMPTS = "✍️ Prompts y presentación"
+# Pestaña "Imagen".
+GRUPO_IMG_MODELOS = "🎨 Modelos de generación"
+GRUPO_IMG_SALIDA = "🖼️ Salida de imagen"
+GRUPO_IMG_ESTILO = "🎭 Estilo visual común"
+# Pestaña "Voz".
+GRUPO_STT = "🎙️ Transcripción (voz→texto, STT)"
+GRUPO_TTS = "🔊 Voz de la respuesta (texto→voz, TTS)"
+
 # Modos válidos del Evaluator (mismo criterio que config.py). Strings planos desde
 # el enum, para que las opciones que ve la UI sean texto normal.
 _MODOS_EVALUATOR = tuple(str(m) for m in ModoEvaluator)
@@ -111,53 +126,70 @@ _MENSAJE_SIN_INFORMACION = (
 # Registro central de ajustes editables (default = valor actual de config.py)
 # ---------------------------------------------------------------------------
 _SPEC: dict[str, dict[str, Any]] = {
-    # --- Imagen / generación ---
+    # =====================================================================
+    # IMAGEN (pestaña "Imagen"): modelos de generación, formato de salida y el
+    # estilo visual común. Agrupado con `grupo` para pintarlo por secciones.
+    # =====================================================================
+    # --- Grupo 1: Modelos de generación (Replicate) ---
     "REPLICATE_MODEL": {
         "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_MODELOS,
         "tipo": "str",
         "default": config.REPLICATE_MODEL,
-        "ayuda": "Modelo de texto-a-imagen de Replicate para la escena.",
+        "ayuda": "Modelo de texto-a-imagen de Replicate para 'generar escena' "
+        "(personaje + ubicación). Por defecto FLUX schnell (rápido, sin negative prompt).",
     },
     "REPLICATE_EDIT_MODEL": {
         "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_MODELOS,
         "tipo": "str",
         "default": config.REPLICATE_EDIT_MODEL,
-        "ayuda": "Modelo de edición para el modo 'Usar mi foto'.",
+        "ayuda": "Modelo de edición para el modo 'Usar mi foto' (dibuja al personaje "
+        "sobre la foto que sube el niño). Por defecto FLUX Kontext.",
     },
+    # --- Grupo 2: Salida de imagen (proporción, formato, calidad) ---
     "IMG_ASPECT_RATIO": {
         "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_SALIDA,
         "tipo": "str",
         "default": config.IMG_ASPECT_RATIO,
         "opciones": ["1:1", "16:9", "9:16", "4:3", "3:4"],
-        "ayuda": "Proporción de la imagen generada.",
+        "ayuda": "Proporción de la imagen generada (ancho:alto).",
     },
     "IMG_OUTPUT_FORMAT": {
         "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_SALIDA,
         "tipo": "str",
         "default": config.IMG_OUTPUT_FORMAT,
         "opciones": ["png", "jpg", "webp"],
-        "ayuda": "Formato del archivo de imagen.",
+        "ayuda": "Formato del archivo de imagen. webp es el más ligero (por defecto); "
+        "el frontend deduce el tipo de los propios bytes.",
     },
     "IMG_NUM_STEPS": {
         "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_SALIDA,
         "tipo": "int",
         "default": config.IMG_NUM_STEPS,
         "min": 1,
         "max": 50,
-        "ayuda": "Pasos de difusión. FLUX schnell rinde óptimo con 4 (su máximo).",
+        "ayuda": "Pasos de difusión (más = más detalle pero más lento y caro). FLUX "
+        "schnell rinde óptimo con 4 (su máximo); otros modelos admiten más.",
     },
     "CLIP_TOKEN_LIMIT": {
         "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_SALIDA,
         "tipo": "int",
         "default": config.CLIP_TOKEN_LIMIT,
         "min": 1,
         "max": 512,
-        "ayuda": "Límite de tokens de CLIP; si el prompt lo supera, solo se avisa.",
+        "ayuda": "Límite de tokens del codificador CLIP de FLUX (~77). Si el prompt lo "
+        "supera solo se AVISA en el log (T5 lee el resto), no falla. Rara vez se toca.",
     },
-    # --- Estilo de imagen (pestaña "General"): común a TODOS los personajes y
-    # ubicaciones, para que la imagen final se vea coherente (ver generation_service).
+    # --- Grupo 3: Estilo visual común a TODOS los personajes y ubicaciones, para
+    # que la escena final se vea coherente sea cual sea la combinación. ---
     "STYLE_SUFFIX": {
         "categoria": CAT_ESTILO_IMAGEN,
+        "grupo": GRUPO_IMG_ESTILO,
         "tipo": "str",
         "default": personajes_cfg.STYLE_SUFFIX,
         "multilinea": True,
@@ -168,6 +200,7 @@ _SPEC: dict[str, dict[str, Any]] = {
     },
     "FRAMING": {
         "categoria": CAT_ESTILO_IMAGEN,
+        "grupo": GRUPO_IMG_ESTILO,
         "tipo": "str",
         "default": personajes_cfg.FRAMING,
         "multilinea": True,
@@ -175,202 +208,225 @@ _SPEC: dict[str, dict[str, Any]] = {
         "personaje). Solo se usa en 'generar escena' (personaje + ubicación); el modo "
         "'usar mi foto' respeta el encuadre de la foto original.",
     },
-    # --- RAG / Evaluator ---
-    "EVALUATOR_MODE": {
+    # =====================================================================
+    # MOTOR DE CHAT (pestaña "IA"). Ordenado por lógica y etiquetado con `grupo`
+    # para que la UI lo pinte por secciones. Algunos ajustes se DESACTIVAN según
+    # otro (`activo_si`): p. ej. con el reranker activo, el Evaluator por umbral
+    # coseno no interviene, así que sus campos aparecen inactivos en la pantalla.
+    # =====================================================================
+    # --- Grupo 1: Recuperación (cómo se indexan y buscan las fichas) ---
+    "EMBEDDING_BACKEND": {
         "categoria": CAT_RAG,
+        "grupo": GRUPO_RECUPERACION,
         "tipo": "str",
-        "default": config.EVALUATOR_MODE,
-        "opciones": list(_MODOS_EVALUATOR),
-        "ayuda": "Cómo se decide RAG vs GENERAL: umbral (gratis), llm (juez) o hibrido.",
+        "default": config.EMBEDDING_BACKEND,
+        "opciones": ["minilm-en", "multi-minilm", "e5-large"],
+        "requires_reindex": True,
+        "ayuda": "Modelo de embeddings del RAG (convierte texto en vectores para buscar "
+        "por significado). minilm-en = original (solo inglés, necesita que DeepL traduzca "
+        "la pregunta); multi-minilm / e5-large = multilingües locales (embeben el español "
+        "directo). Cada backend tiene su propia colección: cambiarlo OBLIGA a reindexar y "
+        "a recalibrar los umbrales del Evaluator.",
     },
-    "PERMITIR_CONOCIMIENTO_GENERAL": {
+    "CHUNKING": {
         "categoria": CAT_RAG,
-        "tipo": "bool",
-        "default": config.PERMITIR_CONOCIMIENTO_GENERAL,
-        "ayuda": "Si las fichas no sirven (origen GENERAL), ¿el personaje responde con "
-        'su conocimiento propio (llamada extra al LLM) o con un mensaje fijo de "no lo '
-        'sé" sin llamar a ningún modelo? Desactívalo para un chat anclado solo a tus '
-        "documentos (MENSAJE_SIN_INFORMACION, más abajo).",
+        "grupo": GRUPO_RECUPERACION,
+        "tipo": "str",
+        "default": config.CHUNKING,
+        "opciones": ["recursivo", "estructura"],
+        "requires_reindex": True,
+        "ayuda": "Cómo se trocean los documentos. recursivo = por tamaño "
+        "(CHUNK_SIZE/CHUNK_OVERLAP); estructura = por secciones de Markdown, guardando la "
+        "ruta de encabezados como procedencia. Cambiarlo OBLIGA a reindexar.",
     },
-    "EVALUATOR_UMBRAL_BAJO": {
-        "categoria": CAT_RAG,
-        "tipo": "float",
-        "default": config.EVALUATOR_UMBRAL_BAJO,
-        "min": 0.0,
-        "max": 2.0,
-        "paso": 0.01,
-        "ayuda": "Distancia coseno (0=idéntico, 2=opuesto). ≤ BAJO ⇒ RAG seguro.",
-    },
-    "EVALUATOR_UMBRAL_ALTO": {
-        "categoria": CAT_RAG,
-        "tipo": "float",
-        "default": config.EVALUATOR_UMBRAL_ALTO,
-        "min": 0.0,
-        "max": 2.0,
-        "paso": 0.01,
-        "ayuda": "Distancia coseno (0=idéntico, 2=opuesto). ≥ ALTO ⇒ GENERAL.",
-    },
-    "RAG_TOP_K": {
-        "categoria": CAT_RAG,
-        "tipo": "int",
-        "default": config.RAG_TOP_K,
-        "min": 1,
-        "max": 20,
-        "ayuda": "Cuántas fichas recupera ChromaDB por pregunta.",
-    },
-    # --- Chunking (cambiarlo obliga a REINDEXAR) ---
     "CHUNK_SIZE": {
         "categoria": CAT_CHUNKING,
+        "grupo": GRUPO_RECUPERACION,
         "tipo": "int",
         "default": config.CHUNK_SIZE,
         "min": 100,
         "max": 4000,
         "requires_reindex": True,
-        "ayuda": "Tamaño de cada fragmento (caracteres). Cambiarlo exige reindexar.",
+        "ayuda": "Tamaño de cada fragmento en caracteres (solo con CHUNKING=recursivo). "
+        "Más grande = más contexto por ficha pero búsqueda menos precisa. Cambiarlo "
+        "OBLIGA a reindexar.",
     },
     "CHUNK_OVERLAP": {
         "categoria": CAT_CHUNKING,
+        "grupo": GRUPO_RECUPERACION,
         "tipo": "int",
         "default": config.CHUNK_OVERLAP,
         "min": 0,
         "max": 1000,
         "requires_reindex": True,
-        "ayuda": "Caracteres que se repiten entre fragmentos. Cambiarlo exige reindexar.",
+        "ayuda": "Caracteres que se solapan entre fragmentos consecutivos (solo con "
+        "CHUNKING=recursivo), para no cortar una idea a la mitad. Cambiarlo OBLIGA a "
+        "reindexar.",
     },
-    "EMBEDDING_BACKEND": {
-        "categoria": CAT_RAG,
+    "CHROMA_COLLECTION": {
+        "categoria": CAT_CHUNKING,
+        "grupo": GRUPO_RECUPERACION,
         "tipo": "str",
-        "default": config.EMBEDDING_BACKEND,
-        "opciones": ["minilm-en", "multi-minilm", "e5-large"],
+        "default": config.CHROMA_COLLECTION,
         "requires_reindex": True,
-        "ayuda": "Modelo de embeddings del RAG. minilm-en = original (inglés, necesita "
-        "DeepL); multi-minilm / e5-large = multilingües locales (embeben el español "
-        "directo). Cambiarlo exige reindexar (cada backend tiene su colección).",
+        "ayuda": "Nombre de la colección de ChromaDB donde viven los vectores. "
+        "Normalmente no hace falta tocarlo. Cambiarlo OBLIGA a reindexar.",
     },
-    "CHUNKING": {
+    "RAG_TOP_K": {
         "categoria": CAT_RAG,
-        "tipo": "str",
-        "default": config.CHUNKING,
-        "opciones": ["recursivo", "estructura"],
-        "requires_reindex": True,
-        "ayuda": "Troceado de documentos. recursivo = por tamaño; estructura = por "
-        "secciones de Markdown, prefijando cada fragmento con su ruta de encabezados "
-        "(da contexto al embedding y procedencia real). Cambiarlo exige reindexar.",
+        "grupo": GRUPO_RECUPERACION,
+        "tipo": "int",
+        "default": config.RAG_TOP_K,
+        "min": 1,
+        "max": 20,
+        "ayuda": "Cuántas fichas se usan como contexto para responder. Con reranker "
+        "activo es el tamaño del top-K FINAL (tras reordenar los RERANK_CANDIDATOS).",
     },
-    "MOSTRAR_FUENTES": {
-        "categoria": CAT_RAG,
-        "tipo": "bool",
-        "default": config.MOSTRAR_FUENTES,
-        "ayuda": "Mostrar al niño en el chat los fragmentos usados (desplegable "
-        "'¿de dónde lo he sacado?'). Flag propio, independiente de DEBUG.",
-    },
-    # --- Reranker (Hito 4.3): reordena en CONSULTA, NO exige reindexar ---
+    # --- Grupo 2: Reordenado y decisión RAG vs GENERAL (Evaluator / Router) ---
+    # El reranker, si está activo, MANDA: decide el ruteo por su puntuación y deja
+    # inactivos EVALUATOR_MODE y los umbrales coseno (ver `activo_si`).
     "RERANKER": {
         "categoria": CAT_RAG,
+        "grupo": GRUPO_DECISION,
         "tipo": "str",
         "default": config.RERANKER,
         "opciones": ["off", "jina-v2"],
-        "ayuda": "Reordena los candidatos con un cross-encoder (lee pregunta+ficha "
-        "juntas, más preciso que la distancia coseno). off = solo coseno; jina-v2 = "
-        "reranker multilingüe. Con reranker activo, el Evaluator decide por su "
-        "puntuación (RERANK_UMBRAL), no por los umbrales coseno. No exige reindexar.",
+        "ayuda": "Cross-encoder que reordena los candidatos leyendo pregunta+ficha juntas "
+        "(más preciso que la distancia coseno). off = solo coseno; jina-v2 = reranker "
+        "multilingüe (local, NO exige reindexar). Cuando está ACTIVO, MANDA: el ruteo RAG "
+        "vs GENERAL lo decide su puntuación (RERANK_UMBRAL) y EVALUATOR_MODE + los umbrales "
+        "coseno quedan inactivos.",
     },
     "RERANK_CANDIDATOS": {
         "categoria": CAT_RAG,
+        "grupo": GRUPO_DECISION,
         "tipo": "int",
         "default": config.RERANK_CANDIDATOS,
         "min": 1,
         "max": 50,
-        "ayuda": "Cuántos candidatos recupera ChromaDB ANTES de reordenar (solo si el "
-        "reranker está activo). Se reordenan y se queda con RAG_TOP_K.",
+        "activo_si": {"clave": "RERANKER", "distinto_de": "off"},
+        "ayuda": "Cuántos candidatos recupera ChromaDB ANTES de reordenar. El reranker los "
+        "reordena y se queda con los RAG_TOP_K mejores. Solo aplica con reranker activo.",
     },
     "RERANK_UMBRAL": {
         "categoria": CAT_RAG,
+        "grupo": GRUPO_DECISION,
         "tipo": "float",
         "default": config.RERANK_UMBRAL,
         "min": -15.0,
         "max": 15.0,
         "paso": 0.1,
-        "ayuda": "Puntuación mínima del reranker para fundamentar (RAG). Logit: más "
-        "alto = más relevante (puede ser negativo). Solo aplica con reranker activo.",
+        "activo_si": {"clave": "RERANKER", "distinto_de": "off"},
+        "ayuda": "Puntuación mínima del reranker para responder desde las fichas (RAG); "
+        "por debajo → GENERAL. Es un logit: más alto = más relevante (puede ser "
+        "negativo). Solo aplica con reranker activo. (Recomendado de H4: -2,75.)",
     },
-    "CHROMA_COLLECTION": {
-        "categoria": CAT_CHUNKING,
+    "EVALUATOR_MODE": {
+        "categoria": CAT_RAG,
+        "grupo": GRUPO_DECISION,
         "tipo": "str",
-        "default": config.CHROMA_COLLECTION,
-        "requires_reindex": True,
-        "ayuda": "Nombre de la colección de ChromaDB. Cambiarlo exige reindexar.",
+        "default": config.EVALUATOR_MODE,
+        "opciones": list(_MODOS_EVALUATOR),
+        "activo_si": {"clave": "RERANKER", "igual_a": "off"},
+        "ayuda": "Cómo se decide RAG vs GENERAL cuando NO hay reranker: umbral (solo la "
+        "distancia coseno, gratis), llm (un LLM-juez decide, cuesta una llamada) o hibrido "
+        "(el umbral resuelve los casos claros y el juez solo desempata la zona dudosa). "
+        "INACTIVO si RERANKER ≠ off (entonces manda el reranker).",
     },
-    # --- LLM (capa de proveedor, Hito 5) ---
+    "EVALUATOR_UMBRAL_BAJO": {
+        "categoria": CAT_RAG,
+        "grupo": GRUPO_DECISION,
+        "tipo": "float",
+        "default": config.EVALUATOR_UMBRAL_BAJO,
+        "min": 0.0,
+        "max": 2.0,
+        "paso": 0.01,
+        "activo_si": {"clave": "RERANKER", "igual_a": "off"},
+        "ayuda": "Distancia coseno (0=idéntico, 2=opuesto): por DEBAJO de este valor las "
+        "fichas se dan por buenas ⇒ RAG seguro. Depende del EMBEDDING_BACKEND (recalíbralo "
+        "al cambiarlo). Solo aplica sin reranker.",
+    },
+    "EVALUATOR_UMBRAL_ALTO": {
+        "categoria": CAT_RAG,
+        "grupo": GRUPO_DECISION,
+        "tipo": "float",
+        "default": config.EVALUATOR_UMBRAL_ALTO,
+        "min": 0.0,
+        "max": 2.0,
+        "paso": 0.01,
+        "activo_si": {"clave": "RERANKER", "igual_a": "off"},
+        "ayuda": "Distancia coseno (0=idéntico, 2=opuesto): por ENCIMA de este valor las "
+        "fichas se descartan ⇒ GENERAL. Entre BAJO y ALTO está la zona 'dudosa' (la "
+        "resuelve el LLM-juez en modo hibrido/llm). Solo aplica sin reranker.",
+    },
+    "PERMITIR_CONOCIMIENTO_GENERAL": {
+        "categoria": CAT_RAG,
+        "grupo": GRUPO_DECISION,
+        "tipo": "bool",
+        "default": config.PERMITIR_CONOCIMIENTO_GENERAL,
+        "ayuda": "Qué hacer cuando las fichas no sirven (ruta GENERAL). Activado: el "
+        "personaje responde con su conocimiento propio (una llamada extra al LLM). "
+        "Desactivado: da un mensaje fijo de 'no lo sé' (MENSAJE_SIN_INFORMACION, más "
+        "abajo) SIN llamar a ningún modelo — chat anclado solo a tus documentos.",
+    },
+    # --- Grupo 3: Modelo de lenguaje (el LLM que redacta la respuesta) ---
     "LLM_PROVIDER": {
         "categoria": CAT_LLM,
+        "grupo": GRUPO_LLM,
         "tipo": "str",
         "default": config.LLM_PROVIDER,
         "opciones": ["replicate", "openai"],
-        "ayuda": "Proveedor del LLM. replicate = línea base; openai = endpoint "
-        "openai-compatible (Groq, Mistral, Gemini-compat, OpenRouter, Ollama local…) "
-        "vía LLM_BASE_URL. Cambiar de proveedor es cambiar config, no código.",
+        "ayuda": "Proveedor del LLM. replicate = línea base; openai = cualquier endpoint "
+        "openai-compatible (Groq, Mistral, Gemini-compat, OpenRouter, Ollama local…) vía "
+        "LLM_BASE_URL. Cambiar de proveedor es cambiar config, no código.",
     },
     "LLM_MODEL": {
         "categoria": CAT_LLM,
+        "grupo": GRUPO_LLM,
         "tipo": "str",
         "default": config.LLM_MODEL,
         "ayuda": "Id del modelo en el proveedor activo (p. ej. "
-        "meta/meta-llama-3-8b-instruct en Replicate, o llama3 en Ollama).",
+        "meta/meta-llama-3-8b-instruct en Replicate, llama-3.3-70b-versatile en Groq, o "
+        "llama3 en Ollama).",
     },
     "LLM_BASE_URL": {
         "categoria": CAT_LLM,
+        "grupo": GRUPO_LLM,
         "tipo": "str",
         "default": config.LLM_BASE_URL,
-        "ayuda": "URL del endpoint openai-compatible (solo si el proveedor es openai). "
-        "Ej.: http://localhost:11434/v1 (Ollama) o https://api.groq.com/openai/v1.",
+        "activo_si": {"clave": "LLM_PROVIDER", "igual_a": "openai"},
+        "ayuda": "URL del endpoint openai-compatible. Solo aplica con LLM_PROVIDER=openai. "
+        "Ej.: https://api.groq.com/openai/v1 (Groq) o http://localhost:11434/v1 (Ollama).",
     },
     "LLM_MAX_TOKENS": {
         "categoria": CAT_LLM,
+        "grupo": GRUPO_LLM,
         "tipo": "int",
         "default": config.LLM_MAX_TOKENS,
         "min": 16,
         "max": 2000,
-        "ayuda": "Longitud máxima de la respuesta del LLM (en tokens).",
+        "ayuda": "Longitud máxima de la respuesta del LLM (en tokens; ~1 token ≈ 0,75 "
+        "palabras). Para respuestas de 2-4 frases, 300 sobra.",
     },
     "LLM_TEMPERATURE": {
         "categoria": CAT_LLM,
+        "grupo": GRUPO_LLM,
         "tipo": "float",
         "default": 0.3,
         "min": 0.0,
         "max": 1.0,
         "paso": 0.05,
-        "ayuda": "Creatividad de la respuesta (0=predecible, 1=creativa). El juez "
-        "del Evaluator siempre usa 0.",
+        "ayuda": "Creatividad de la respuesta (0=predecible, 1=creativa). El LLM-juez del "
+        "Evaluator siempre usa 0, al margen de este valor.",
     },
-    # --- Voz ---
-    "ELEVENLABS_STT_MODEL": {
-        "categoria": CAT_VOZ,
-        "tipo": "str",
-        "default": config.ELEVENLABS_STT_MODEL,
-        "ayuda": "Modelo de transcripción (voz→texto) de ElevenLabs.",
-    },
-    "ELEVENLABS_TTS_MODEL": {
-        "categoria": CAT_VOZ,
-        "tipo": "str",
-        "default": config.ELEVENLABS_TTS_MODEL,
-        "ayuda": "Modelo de síntesis (texto→voz) de ElevenLabs.",
-    },
-    "TTS_OUTPUT_FORMAT": {
-        "categoria": CAT_VOZ,
-        "tipo": "str",
-        "default": config.TTS_OUTPUT_FORMAT,
-        "ayuda": "Formato del audio de la respuesta (mp3).",
-    },
-    "STT_LANG": {
-        "categoria": CAT_VOZ,
-        "tipo": "str",
-        "default": config.STT_LANG,
-        "ayuda": "Idioma de la transcripción (la pregunta del niño).",
-    },
-    # --- STT: proveedor de transcripción seleccionable (Hito 7) ---
+    # =====================================================================
+    # VOZ (pestaña "Voz"): transcripción (STT) y voz de la respuesta (TTS).
+    # Los ajustes de cada proveedor de STT se DESACTIVAN si no está elegido.
+    # =====================================================================
+    # --- Grupo 1: Transcripción (voz del niño → texto), STT seleccionable (H7) ---
     "STT_PROVIDER": {
         "categoria": CAT_VOZ,
+        "grupo": GRUPO_STT,
         "tipo": "str",
         "default": config.STT_PROVIDER,
         "opciones": ["elevenlabs", "local", "groq"],
@@ -378,41 +434,86 @@ _SPEC: dict[str, dict[str, Any]] = {
         "local = faster-whisper en tu PC (la voz del niño no sale del equipo; requiere el "
         "extra 'stt-local'); groq = Whisper en Groq. Si 'local' no carga, cae a nube.",
     },
+    "STT_LANG": {
+        "categoria": CAT_VOZ,
+        "grupo": GRUPO_STT,
+        "tipo": "str",
+        "default": config.STT_LANG,
+        "ayuda": "Idioma de la transcripción (la pregunta del niño), p. ej. 'es'. "
+        "Aplica a cualquier proveedor de STT.",
+    },
+    "ELEVENLABS_STT_MODEL": {
+        "categoria": CAT_VOZ,
+        "grupo": GRUPO_STT,
+        "tipo": "str",
+        "default": config.ELEVENLABS_STT_MODEL,
+        "activo_si": {"clave": "STT_PROVIDER", "igual_a": "elevenlabs"},
+        "ayuda": "Modelo de transcripción de ElevenLabs (Scribe). Solo aplica con "
+        "STT_PROVIDER=elevenlabs.",
+    },
     "STT_LOCAL_MODEL": {
         "categoria": CAT_VOZ,
+        "grupo": GRUPO_STT,
         "tipo": "str",
         "default": config.STT_LOCAL_MODEL,
         "opciones": ["large-v3-turbo", "large-v3", "medium", "small"],
-        "ayuda": "Modelo de faster-whisper (solo si STT_PROVIDER=local). large-v3-turbo "
-        "en int8 ~1–1,5 GB VRAM; medium/small son más ligeros y menos precisos.",
+        "activo_si": {"clave": "STT_PROVIDER", "igual_a": "local"},
+        "ayuda": "Modelo de faster-whisper. large-v3-turbo en int8 ~1–1,5 GB VRAM; "
+        "medium/small son más ligeros y menos precisos. Solo aplica con STT_PROVIDER=local.",
     },
     "STT_LOCAL_DEVICE": {
         "categoria": CAT_VOZ,
+        "grupo": GRUPO_STT,
         "tipo": "str",
         "default": config.STT_LOCAL_DEVICE,
         "opciones": ["cuda", "cpu"],
+        "activo_si": {"clave": "STT_PROVIDER", "igual_a": "local"},
         "ayuda": "Dispositivo de faster-whisper. cuda = GPU (recomendado); cpu = plan B "
-        "si fallan las DLLs de cuBLAS/cuDNN en Windows (más lento pero funciona).",
+        "si fallan las DLLs de cuBLAS/cuDNN en Windows (más lento pero funciona). Solo "
+        "aplica con STT_PROVIDER=local.",
     },
     "STT_LOCAL_COMPUTE": {
         "categoria": CAT_VOZ,
+        "grupo": GRUPO_STT,
         "tipo": "str",
         "default": config.STT_LOCAL_COMPUTE,
         "opciones": ["int8", "int8_float16", "float16", "float32"],
-        "ayuda": "Precisión de faster-whisper. int8 es lo más ligero (recomendado en 6 GB).",
+        "activo_si": {"clave": "STT_PROVIDER", "igual_a": "local"},
+        "ayuda": "Precisión de faster-whisper. int8 es lo más ligero (recomendado en "
+        "6 GB). Solo aplica con STT_PROVIDER=local.",
     },
     "GROQ_STT_MODEL": {
         "categoria": CAT_VOZ,
+        "grupo": GRUPO_STT,
         "tipo": "str",
         "default": config.GROQ_STT_MODEL,
-        "ayuda": "Modelo de Whisper en Groq (solo si STT_PROVIDER=groq).",
+        "activo_si": {"clave": "STT_PROVIDER", "igual_a": "groq"},
+        "ayuda": "Modelo de Whisper en Groq. Solo aplica con STT_PROVIDER=groq "
+        "(clave GROQ_API_KEY en la pestaña APIs).",
     },
-    # --- Prompts de sistema (editables sin tocar código) ---
-    # Van en inglés (Llama 3 obedece mejor); la respuesta se pide en español dentro
-    # del propio texto. Variables: {nombre}, {fichas}, {pregunta}. multilinea → la UI
-    # los pinta como área de texto grande.
+    # --- Grupo 2: Voz de la respuesta (texto → voz), TTS con ElevenLabs ---
+    "ELEVENLABS_TTS_MODEL": {
+        "categoria": CAT_VOZ,
+        "grupo": GRUPO_TTS,
+        "tipo": "str",
+        "default": config.ELEVENLABS_TTS_MODEL,
+        "ayuda": "Modelo de síntesis de voz (texto→voz) de ElevenLabs (Flash). Pone voz "
+        "a la respuesta del personaje con su voz_id.",
+    },
+    "TTS_OUTPUT_FORMAT": {
+        "categoria": CAT_VOZ,
+        "grupo": GRUPO_TTS,
+        "tipo": "str",
+        "default": config.TTS_OUTPUT_FORMAT,
+        "ayuda": "Formato del audio de la respuesta (mp3).",
+    },
+    # --- Grupo 4: Prompts de sistema y presentación (editables sin tocar código) ---
+    # Los PROMPT_* van en inglés (Llama 3 obedece mejor); la respuesta se pide en
+    # español dentro del propio texto. Variables: {nombre}, {fichas}, {pregunta}.
+    # multilinea → la UI los pinta como área de texto grande.
     "PROMPT_RAG_SYSTEM": {
         "categoria": CAT_PROMPTS,
+        "grupo": GRUPO_PROMPTS,
         "tipo": "str",
         "default": _PROMPT_RAG_SYSTEM,
         "multilinea": True,
@@ -420,6 +521,7 @@ _SPEC: dict[str, dict[str, Any]] = {
     },
     "PROMPT_RAG_USER": {
         "categoria": CAT_PROMPTS,
+        "grupo": GRUPO_PROMPTS,
         "tipo": "str",
         "default": _PROMPT_RAG_USER,
         "multilinea": True,
@@ -427,34 +529,46 @@ _SPEC: dict[str, dict[str, Any]] = {
     },
     "PROMPT_GENERAL_SYSTEM": {
         "categoria": CAT_PROMPTS,
+        "grupo": GRUPO_PROMPTS,
         "tipo": "str",
         "default": _PROMPT_GENERAL_SYSTEM,
         "multilinea": True,
-        "ayuda": "Reglas del personaje cuando responde SIN documentos (conocimiento propio). Variable: {nombre}.",
+        "ayuda": "Reglas del personaje cuando responde SIN documentos (conocimiento "
+        "propio, ruta GENERAL). Solo se usa si PERMITIR_CONOCIMIENTO_GENERAL está "
+        "activado. Variable: {nombre}.",
     },
     "PROMPT_GENERAL_USER": {
         "categoria": CAT_PROMPTS,
+        "grupo": GRUPO_PROMPTS,
         "tipo": "str",
         "default": _PROMPT_GENERAL_USER,
         "multilinea": True,
-        "ayuda": "Mensaje con la pregunta (sin fichas). Variable: {pregunta}.",
+        "ayuda": "Mensaje con la pregunta (sin fichas, ruta GENERAL). Variable: {pregunta}.",
     },
     "PROMPT_EVALUATOR_SYSTEM": {
         "categoria": CAT_PROMPTS,
+        "grupo": GRUPO_PROMPTS,
         "tipo": "str",
         "default": _PROMPT_EVALUATOR_SYSTEM,
         "multilinea": True,
-        "ayuda": "Reglas del juez que decide si las fichas sirven (responde YES/NO).",
+        "activo_si": {"clave": "RERANKER", "igual_a": "off"},
+        "ayuda": "Reglas del LLM-juez que decide si las fichas sirven (responde YES/NO). "
+        "Solo se usa sin reranker y con EVALUATOR_MODE = llm/hibrido; con reranker activo "
+        "el juez no se llama.",
     },
     "PROMPT_EVALUATOR_USER": {
         "categoria": CAT_PROMPTS,
+        "grupo": GRUPO_PROMPTS,
         "tipo": "str",
         "default": _PROMPT_EVALUATOR_USER,
         "multilinea": True,
-        "ayuda": "Mensaje del juez con fichas y pregunta. Variables: {fichas}, {pregunta}.",
+        "activo_si": {"clave": "RERANKER", "igual_a": "off"},
+        "ayuda": "Mensaje del LLM-juez con fichas y pregunta. Variables: {fichas}, "
+        "{pregunta}. Inactivo con reranker activo (el juez no se llama).",
     },
     "MENSAJE_SIN_INFORMACION": {
         "categoria": CAT_PROMPTS,
+        "grupo": GRUPO_PROMPTS,
         "tipo": "str",
         "default": _MENSAJE_SIN_INFORMACION,
         "multilinea": True,
@@ -462,6 +576,15 @@ _SPEC: dict[str, dict[str, Any]] = {
         "personaje cuando no tiene información y PERMITIR_CONOCIMIENTO_GENERAL está "
         "desactivado. No se llama a ningún modelo para generarlo. Variable opcional: "
         "{nombre}.",
+    },
+    "MOSTRAR_FUENTES": {
+        "categoria": CAT_RAG,
+        "grupo": GRUPO_PROMPTS,
+        "tipo": "bool",
+        "default": config.MOSTRAR_FUENTES,
+        "ayuda": "Mostrar al niño en el chat los fragmentos usados, en el desplegable "
+        "'📚 ¿de dónde lo he sacado?'. Es pedagogía (procedencia), no depuración: flag "
+        "propio, independiente de DEBUG.",
     },
     # --- General ---
     "DEBUG": {
@@ -650,7 +773,7 @@ def exportar() -> list[dict[str, Any]]:
             "requiere_reindex": bool(spec.get("requires_reindex", False)),
             "ayuda": spec.get("ayuda", ""),
         }
-        for extra in ("min", "max", "paso", "opciones", "multilinea"):
+        for extra in ("min", "max", "paso", "opciones", "multilinea", "grupo", "activo_si"):
             if extra in spec:
                 entrada[extra] = spec[extra]
         salida.append(entrada)

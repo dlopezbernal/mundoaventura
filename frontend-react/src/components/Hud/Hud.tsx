@@ -7,6 +7,10 @@
  * "Configuración" (ligero: gestionar el PIN), "Admin" (la config global y peligrosa)
  * y "Salir" (cierra la sesión de familia). Opcionalmente muestra el botón de
  * diagnóstico "Probar conexión" (solo en modo DEBUG), que se le pasa como acción.
+ *
+ * Los accesos son botones de SOLO ICONO (más limpios/minimalistas): el texto vive
+ * en `aria-label` (accesibilidad) y en `data-tip`, que la hoja de estilos muestra
+ * como tooltip al pasar por encima o al enfocar con teclado.
  */
 
 import styles from "./Hud.module.css";
@@ -44,24 +48,54 @@ export default function Hud({
         <span className={styles.saludo}>
           Hola, {ninoActivo ?? nombreFamilia}
           {onCambiarNino && (
-            <button type="button" className={styles.cambiarNino} onClick={onCambiarNino}>
-              cambiar
+            <button
+              type="button"
+              className={`${styles.iconBtn} ${styles.mini}`}
+              data-tip="Cambiar de niño"
+              aria-label="Cambiar de niño"
+              onClick={onCambiarNino}
+            >
+              👥
             </button>
           )}
         </span>
         {onProbarConexion && (
-          <button type="button" className={styles.debug} onClick={onProbarConexion}>
-            🔌 CONEXIÓN
+          <button
+            type="button"
+            className={styles.iconBtn}
+            data-tip="Probar conexión"
+            aria-label="Probar conexión"
+            onClick={onProbarConexion}
+          >
+            🔌
           </button>
         )}
-        <button type="button" className={styles.config} onClick={onAbrirConfig}>
-          ⚙️ CONFIGURACIÓN
+        <button
+          type="button"
+          className={styles.iconBtn}
+          data-tip="Configuración"
+          aria-label="Configuración"
+          onClick={onAbrirConfig}
+        >
+          ⚙️
         </button>
-        <button type="button" className={styles.config} onClick={onAbrirAdmin}>
-          🛡️ ADMIN
+        <button
+          type="button"
+          className={styles.iconBtn}
+          data-tip="Admin"
+          aria-label="Admin"
+          onClick={onAbrirAdmin}
+        >
+          🛡️
         </button>
-        <button type="button" className={styles.config} onClick={onSalir}>
-          🚪 SALIR
+        <button
+          type="button"
+          className={`${styles.iconBtn} ${styles.salir}`}
+          data-tip="Salir"
+          aria-label="Salir"
+          onClick={onSalir}
+        >
+          🚪
         </button>
       </div>
     </header>

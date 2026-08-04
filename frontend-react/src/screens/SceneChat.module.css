@@ -12,16 +12,39 @@
   align-items: start;
 }
 
-/* --- Carga --- */
+/* --- Carga (panel izquierdo, junto al chat) --- */
 .loading {
-  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
+  min-height: 320px;
   padding: 40px 20px;
+  border: 1px dashed var(--edge);
+  border-radius: 16px;
+  background: rgba(4, 8, 28, 0.35);
+}
+.loadingHint {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--holo);
+  opacity: 0.9;
 }
 .loadingEmoji {
   font-size: 56px;
   display: block;
   filter: drop-shadow(0 0 16px rgba(62, 242, 255, 0.6));
+  animation: pulso 1.6s ease-in-out infinite;
+}
+@keyframes pulso {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.12);
+  }
 }
 .loadingText {
   font-family: var(--font-disp);
@@ -58,11 +81,18 @@
   }
 }
 
-/* --- Error --- */
+/* --- Error (panel izquierdo, junto al chat) --- */
 .error {
-  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   text-align: center;
+  min-height: 320px;
   padding: 32px 20px;
+  border: 1px dashed var(--edge);
+  border-radius: 16px;
+  background: rgba(4, 8, 28, 0.35);
 }
 .errorBotones {
   display: flex;
@@ -98,5 +128,8 @@
   .bar::after {
     animation: none;
     width: 100%;
+  }
+  .loadingEmoji {
+    animation: none;
   }
 }

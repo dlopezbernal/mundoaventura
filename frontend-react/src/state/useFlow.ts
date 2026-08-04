@@ -53,8 +53,8 @@ type Accion =
   | { type: "MOVER_LUGAR"; delta: number }
   | { type: "ELEGIR_FOTO"; file: File }
   | { type: "IR_PASO"; paso: 1 | 2 | 3 }
-  | { type: "GENERANDO" }
-  | { type: "ESCENA_OK"; base64: string; clave: string }
+  | { type: "GENERANDO"; clave: string }
+  | { type: "ESCENA_OK"; base64: string }
   | { type: "ESCENA_ERROR"; mensaje: string }
   | { type: "REINICIAR" };
 
@@ -96,14 +96,19 @@ function crearReducer(personajeKeys: string[], lugarKeys: string[]) {
     case "IR_PASO":
       return { ...estado, paso: accion.paso, error: null };
     case "GENERANDO":
-      return { ...estado, paso: 3, cargando: true, error: null, escenaBase64: null };
-    case "ESCENA_OK":
+      // Fijamos ya la clave del chat (generadoPara): el chat se monta a la vez
+      // que arranca la generación, y esta clave estable evita que se remonte
+      // (perdiendo la conversación) cuando la imagen llegue con ESCENA_OK.
       return {
         ...estado,
-        cargando: false,
-        escenaBase64: accion.base64,
+        paso: 3,
+        cargando: true,
+        error: null,
+        escenaBase64: null,
         generadoPara: accion.clave,
       };
+    case "ESCENA_OK":
+      return { ...estado, cargando: false, escenaBase64: accion.base64 };
     case "ESCENA_ERROR":
       return { ...estado, cargando: false, error: accion.mensaje };
     case "REINICIAR":
@@ -154,17 +159,13 @@ export function useFlow(personajes: PersonajeDTO[], ubicaciones: UbicacionDTO[])
   async function generarEscena(pid: string, uid: string, foto: File | null) {
     if (generandoRef.current) return; // ya hay una generación en vuelo
     generandoRef.current = true;
-    dispatch({ type: "GENERANDO" });
+    dispatch({ type: "GENERANDO", clave: claveSeleccion(pid, uid, foto) });
     try {
       const resultado =
         uid === FOTO_ID
           ? await generateOnPhoto(foto as File, pid)
           : await generate(uid, pid);
-      dispatch({
-        type: "ESCENA_OK",
-        base64: resultado.result_png_base64,
-        clave: claveSeleccion(pid, uid, foto),
-      });
+      dispatch({ type: "ESCENA_OK", base64: resultado.result_png_base64 });
     } catch (exc) {
       const mensaje =
         exc instanceof BackendError
