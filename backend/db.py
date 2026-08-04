@@ -57,8 +57,9 @@ def init_db() -> None:
 # instalaciones con una BBDD previa se quedarán con el esquema viejo.
 _COLUMNAS_NUEVAS: dict[str, list[tuple[str, str]]] = {
     "documentos": [("actualizado_en", "TEXT"), ("copiado_de_id", "INTEGER")],
-    # Avatar del carrusel (Hito 10): NULL para las filas previas (sin avatar aún).
+    # Avatar/imagen del carrusel (Hito 10): NULL para las filas previas (sin imagen aún).
     "personajes": [("avatar", "TEXT")],
+    "ubicaciones": [("avatar", "TEXT")],
     # Verificación de correo (H9.2): añadida a `familias` tras su creación inicial.
     "familias": [
         ("verificada", "INTEGER"),

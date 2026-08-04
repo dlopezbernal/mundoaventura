@@ -16,11 +16,12 @@ defecto se vuelcan a la BBDD en el "seeding" del arranque (ver seed.py).
 """
 
 import re
+import time
 from typing import Any
 
 from sqlmodel import select
 
-from backend import db
+from backend import config, db
 from backend.models import Ubicacion
 
 # Formato admitido para el id (minúsculas, números, guion y guion bajo).
@@ -39,6 +40,11 @@ def _a_dict(fila: Ubicacion) -> dict[str, Any]:
         "emoji": fila.emoji,
         "prompt_imagen": fila.prompt,
         "activo": fila.activo,
+        # URL relativa de la imagen del carrusel si existe (con token de versión para
+        # invalidar la caché del navegador al regenerar); None si aún no se ha generado.
+        "avatar_url": (
+            f"/api/ubicaciones/{fila.id}/avatar?v={fila.avatar}" if fila.avatar else None
+        ),
     }
 
 
@@ -161,4 +167,57 @@ def eliminar(ubicacion_id: str) -> None:
             raise ValueError(f"No existe la ubicación '{ubicacion_id}'.")
         sesion.delete(fila)
         sesion.commit()
+    # La imagen SÍ se borra (se regenera desde la ficha; no es contenido del adulto).
+    _ruta_avatar(ubicacion_id).unlink(missing_ok=True)
     _invalidar()
+
+
+# ---------------------------------------------------------------------------
+# Imagen del carrusel (Hito 10): PNG transparente en disco, generado bajo demanda.
+# Vive en un subdirectorio propio para no chocar con los avatares de personajes.
+# ---------------------------------------------------------------------------
+def _ruta_avatar(ubicacion_id: str):
+    """Ruta del PNG de la imagen de esta ubicación (exista o no)."""
+    return config.AVATARES_DIR / "ubicaciones" / f"{ubicacion_id}.png"
+
+
+def ruta_avatar(ubicacion_id: str):
+    """Ruta del PNG si existe en disco (para servirlo), o None."""
+    ruta = _ruta_avatar(ubicacion_id)
+    return ruta if ruta.is_file() else None
+
+
+def guardar_avatar(ubicacion_id: str, png_bytes: bytes) -> dict[str, Any]:
+    """Guarda el PNG de la imagen en disco y marca su versión en la fila. 400 si no existe."""
+    if not existe(ubicacion_id):
+        raise ValueError(f"No existe la ubicación '{ubicacion_id}'.")
+    ruta = _ruta_avatar(ubicacion_id)
+    ruta.parent.mkdir(parents=True, exist_ok=True)
+    ruta.write_bytes(png_bytes)
+
+    db.init_db()
+    with db.get_session() as sesion:
+        fila = sesion.get(Ubicacion, ubicacion_id)
+        fila.avatar = str(int(time.time()))
+        sesion.add(fila)
+        sesion.commit()
+
+    _invalidar()
+    return obtener(ubicacion_id)  # type: ignore[return-value]
+
+
+def borrar_avatar(ubicacion_id: str) -> dict[str, Any]:
+    """Elimina la imagen (fichero + marca), volviendo al emoji. 400 si no existe."""
+    if not existe(ubicacion_id):
+        raise ValueError(f"No existe la ubicación '{ubicacion_id}'.")
+    _ruta_avatar(ubicacion_id).unlink(missing_ok=True)
+
+    db.init_db()
+    with db.get_session() as sesion:
+        fila = sesion.get(Ubicacion, ubicacion_id)
+        fila.avatar = None
+        sesion.add(fila)
+        sesion.commit()
+
+    _invalidar()
+    return obtener(ubicacion_id)  # type: ignore[return-value]

@@ -10,9 +10,12 @@
 
 import { useEffect, useState } from "react";
 import {
+  assetUrl,
   BackendError,
+  borrarAvatarUbicacion,
   createUbicacion,
   deleteUbicacion,
+  generarAvatarUbicacion,
   getUbicaciones,
   updateUbicacion,
 } from "../../api/client";
@@ -134,8 +137,10 @@ export default function UbicacionesTab() {
         <UbicacionForm
           inicial={FORM_VACIO}
           esNuevo
+          ubicacion={null}
           onCancelar={() => setEditando(null)}
           onGuardar={(f) => onSubmit(f, true)}
+          onAvatarCambiado={() => void cargar()}
         />
       ) : (
         <button
@@ -158,14 +163,20 @@ export default function UbicacionesTab() {
               key={u.id}
               inicial={aForm(u)}
               esNuevo={false}
+              ubicacion={u}
               onCancelar={() => setEditando(null)}
               onGuardar={(f) => onSubmit(f, false)}
+              onAvatarCambiado={() => void cargar()}
             />
           ) : (
             <div key={u.id} className={styles.pjCard}>
-              <span className={styles.pjEmoji} aria-hidden="true">
-                {u.emoji ?? "🗺️"}
-              </span>
+              {u.avatar_url ? (
+                <img className={styles.pjMini} src={assetUrl(u.avatar_url)} alt="" aria-hidden="true" />
+              ) : (
+                <span className={styles.pjEmoji} aria-hidden="true">
+                  {u.emoji ?? "🗺️"}
+                </span>
+              )}
               <div className={styles.pjInfo}>
                 <span className={styles.pjNombre}>
                   {u.nombre}
@@ -205,13 +216,28 @@ export default function UbicacionesTab() {
 interface FormProps {
   inicial: FormState;
   esNuevo: boolean;
+  /** La ubicación en edición (null al crear): aporta id + avatar_url para la imagen. */
+  ubicacion: UbicacionDTO | null;
   onCancelar: () => void;
   onGuardar: (form: FormState) => void | Promise<void>;
+  /** Se llama tras generar/quitar la imagen, para refrescar el catálogo del carrusel. */
+  onAvatarCambiado: () => void;
 }
 
-function UbicacionForm({ inicial, esNuevo, onCancelar, onGuardar }: FormProps) {
+function UbicacionForm({
+  inicial,
+  esNuevo,
+  ubicacion,
+  onCancelar,
+  onGuardar,
+  onAvatarCambiado,
+}: FormProps) {
   const [form, setForm] = useState<FormState>(inicial);
   const [guardando, setGuardando] = useState(false);
+  // Imagen del carrusel: URL vigente y estado de generación/borrado.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(ubicacion?.avatar_url ?? null);
+  const [avatarOcupado, setAvatarOcupado] = useState(false);
+  const [errorAvatar, setErrorAvatar] = useState<string | null>(null);
 
   function set<K extends keyof FormState>(campo: K, valor: FormState[K]) {
     setForm((prev) => ({ ...prev, [campo]: valor }));
@@ -223,6 +249,36 @@ function UbicacionForm({ inicial, esNuevo, onCancelar, onGuardar }: FormProps) {
       await onGuardar(form);
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function onGenerarAvatar() {
+    if (!ubicacion) return;
+    setErrorAvatar(null);
+    setAvatarOcupado(true);
+    try {
+      const actualizada = await generarAvatarUbicacion(ubicacion.id);
+      setAvatarUrl(actualizada.avatar_url ?? null);
+      onAvatarCambiado();
+    } catch (exc) {
+      setErrorAvatar(exc instanceof BackendError ? exc.message : String(exc));
+    } finally {
+      setAvatarOcupado(false);
+    }
+  }
+
+  async function onQuitarAvatar() {
+    if (!ubicacion) return;
+    setErrorAvatar(null);
+    setAvatarOcupado(true);
+    try {
+      await borrarAvatarUbicacion(ubicacion.id);
+      setAvatarUrl(null);
+      onAvatarCambiado();
+    } catch (exc) {
+      setErrorAvatar(exc instanceof BackendError ? exc.message : String(exc));
+    } finally {
+      setAvatarOcupado(false);
     }
   }
 
@@ -281,6 +337,48 @@ function UbicacionForm({ inicial, esNuevo, onCancelar, onGuardar }: FormProps) {
           Describe el escenario para un render 3D estilo Pixar (colorido y amable).
         </span>
       </label>
+
+      {/* Imagen del carrusel: se genera desde la descripción de arriba (solo al editar,
+          no al crear: la ubicación aún no existe). Mientras no haya imagen, se usa el emoji. */}
+      {!esNuevo && ubicacion && (
+        <div className={styles.pjAvatar}>
+          <div className={styles.pjAvatarPreview}>
+            {avatarUrl ? (
+              <img src={assetUrl(avatarUrl)} alt={`Imagen de ${ubicacion.nombre}`} />
+            ) : (
+              <span className={styles.pjAvatarEmoji}>{form.emoji.trim() || "🗺️"}</span>
+            )}
+          </div>
+          <div className={styles.pjAvatarCuerpo}>
+            <strong>Imagen del carrusel</strong>
+            <span className={styles.filaAyuda}>
+              Genera una imagen con fondo transparente a partir de la descripción de arriba
+              (cuesta una generación de Replicate). Mientras no la generes, se usa el emoji.
+            </span>
+            {errorAvatar && <p className={styles.testNo}>❌ {errorAvatar}</p>}
+            <div className={styles.pjBarra}>
+              <button
+                type="button"
+                className={styles.testBtn}
+                onClick={() => void onGenerarAvatar()}
+                disabled={avatarOcupado || !form.prompt_imagen.trim()}
+              >
+                {avatarOcupado ? "Generando…" : avatarUrl ? "🎨 Regenerar imagen" : "🎨 Generar imagen"}
+              </button>
+              {avatarUrl && (
+                <button
+                  type="button"
+                  className={styles.testBtn}
+                  onClick={() => void onQuitarAvatar()}
+                  disabled={avatarOcupado}
+                >
+                  🗑 Quitar imagen
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       <label className={styles.pjToggleFila}>
         <span className={styles.filaEtiqueta}>Activa (visible para el niño)</span>

@@ -66,6 +66,9 @@ class Ubicacion(SQLModel, table=True):
     emoji: str | None = None
     prompt: str = ""
     activo: bool = True
+    # Imagen del carrusel (Hito 10): token de versión (None = sin imagen). El PNG
+    # transparente vive en backend/avatares/ubicaciones/<id>.png. Igual que en Personaje.
+    avatar: str | None = None
     creado_en: datetime = Field(default_factory=_ahora_utc)
 
 

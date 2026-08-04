@@ -869,6 +869,28 @@ export async function deleteUbicacion(id: string): Promise<void> {
   await fetchBackend(`/api/ubicaciones/${id}`, { method: "DELETE" }, TIMEOUT_CONFIG);
 }
 
+/** Genera la imagen del carrusel de una ubicación (coste Replicate). POST .../avatar. */
+export async function generarAvatarUbicacion(id: string): Promise<UbicacionDTO> {
+  const response = await fetchBackend(
+    `/api/ubicaciones/${id}/avatar`,
+    { method: "POST" },
+    TIMEOUT_GENERATE_ON_PHOTO, // dos llamadas a Replicate (imagen + recorte): puede tardar
+  );
+  const body = (await response.json()) as { ubicacion: UbicacionDTO };
+  return body.ubicacion;
+}
+
+/** Quita la imagen (vuelve al emoji). DELETE .../avatar. */
+export async function borrarAvatarUbicacion(id: string): Promise<UbicacionDTO> {
+  const response = await fetchBackend(
+    `/api/ubicaciones/${id}/avatar`,
+    { method: "DELETE" },
+    TIMEOUT_CONFIG,
+  );
+  const body = (await response.json()) as { ubicacion: UbicacionDTO };
+  return body.ubicacion;
+}
+
 // ---------------------------------------------------------------------------
 // Configuración · Admin (Hito 7): PIN de adulto + import/export.
 // ---------------------------------------------------------------------------

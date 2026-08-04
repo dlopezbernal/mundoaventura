@@ -44,6 +44,8 @@ class UbicacionDTO(BaseModel):
     emoji: str | None = None
     prompt_imagen: str
     activo: bool
+    # URL relativa de la imagen del carrusel (con ?v=<versión>), o None si no tiene.
+    avatar_url: str | None = None
 
 
 class VozDTO(BaseModel):
