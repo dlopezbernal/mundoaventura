@@ -25,6 +25,7 @@ import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
+from sqlalchemy import func
 from sqlmodel import delete, select
 
 from backend import db
@@ -132,10 +133,11 @@ def listar(
         consulta = consulta.order_by(Auditoria.creado_en.desc()).offset(offset).limit(limite)
         filas = sesion.exec(consulta).all()
 
-        total_q = select(Auditoria)
+        # Conteo con COUNT(*) en SQL (no carga las filas): escala a miles de registros.
+        cuenta_q = select(func.count()).select_from(Auditoria)
         for c in cond:
-            total_q = total_q.where(c)
-        total = len(sesion.exec(total_q).all())
+            cuenta_q = cuenta_q.where(c)
+        total = sesion.exec(cuenta_q).one()
 
     return {"eventos": [_fila_a_dict(f) for f in filas], "total": total}
 

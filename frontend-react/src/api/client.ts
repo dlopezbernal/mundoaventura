@@ -982,14 +982,15 @@ function _auditoriaQuery(filtros: { tipo?: string; familiaId?: string }): string
   return s ? `?${s}` : "";
 }
 
-/** Página de eventos de auditoría (con filtros opcionales). GET /api/auditoria. */
+/** Página de eventos de auditoría (con filtros y paginación). GET /api/auditoria. */
 export async function getAuditoria(
-  filtros: { tipo?: string; familiaId?: string; limite?: number } = {},
+  filtros: { tipo?: string; familiaId?: string; limite?: number; offset?: number } = {},
 ): Promise<AuditoriaLista> {
   const p = new URLSearchParams();
   if (filtros.tipo) p.set("tipo", filtros.tipo);
   if (filtros.familiaId) p.set("familia_id", filtros.familiaId);
   if (filtros.limite) p.set("limite", String(filtros.limite));
+  if (filtros.offset) p.set("offset", String(filtros.offset));
   const q = p.toString();
   const response = await fetchBackend(
     `/api/auditoria${q ? `?${q}` : ""}`,

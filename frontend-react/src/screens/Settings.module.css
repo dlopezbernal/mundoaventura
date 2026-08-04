@@ -1008,6 +1008,20 @@
   text-decoration: underline;
 }
 
+/* --- Paginación del informe de auditoría --- */
+.auditPaginacion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 6px 0 10px;
+}
+.auditPagBotones {
+  display: flex;
+  gap: 8px;
+}
+
 /* --- Tabla del informe de auditoría --- */
 .auditWrap {
   overflow-x: auto;
