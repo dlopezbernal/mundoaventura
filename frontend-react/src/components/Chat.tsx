@@ -79,6 +79,11 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [pregunta, setPregunta] = useState("");
   const [pensando, setPensando] = useState(false);
+  // `generando`: desde que se envía la pregunta hasta que TERMINA el stream (cubre
+  // todo, no solo hasta el primer token como `pensando`). `hablando`: el personaje
+  // está reproduciendo su voz. Ambos bloquean nuevas preguntas y el micrófono.
+  const [generando, setGenerando] = useState(false);
+  const [hablando, setHablando] = useState(false);
   const [micEstado, setMicEstado] = useState<MicEstado>(() =>
     micSoportado() ? "reposo" : "no-disponible",
   );
@@ -91,10 +96,11 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
   const colaAudioRef = useRef<string[]>([]);
   const reproduciendoRef = useRef(false);
 
-  // Mientras se responde, se graba o se transcribe, no se puede escribir/enviar
-  // (evita solapar una pregunta escrita con una hablada, como en Flet).
+  // Mientras se genera la respuesta, el personaje habla, se graba o se transcribe, no
+  // se puede escribir/enviar ni lanzar otra pregunta: evita solapar preguntas y activar
+  // el micrófono mientras el personaje aún está hablando.
   const ocupado =
-    pensando || micEstado === "grabando" || micEstado === "transcribiendo";
+    generando || hablando || micEstado === "grabando" || micEstado === "transcribiendo";
 
   // Foco correcto: al quedar libre el input (respuesta recibida, grabación
   // cancelada...), el cursor vuelve solo para seguir preguntando.
@@ -132,8 +138,12 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
   function bombearCola() {
     if (reproduciendoRef.current) return;
     const siguiente = colaAudioRef.current.shift();
-    if (!siguiente) return;
+    if (!siguiente) {
+      setHablando(false); // cola vacía: el personaje deja de hablar
+      return;
+    }
     reproduciendoRef.current = true;
+    setHablando(true); // suena una frase → el personaje está hablando
     const seguir = () => {
       reproduciendoRef.current = false;
       bombearCola();
@@ -183,6 +193,7 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
 
   async function enviarPregunta(texto: string) {
     setMensajes((previos) => [...previos, { autor: "nino", texto }]);
+    setGenerando(true);
     setPensando(true);
     let creada = false; // ¿ya existe la burbuja del personaje que vamos rellenando?
     let acumulado = "";
@@ -229,6 +240,7 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
       setPregunta(texto); // la pregunta vuelve al input: no se pierde
     } finally {
       setPensando(false);
+      setGenerando(false); // stream terminado; si aún queda voz sonando, `hablando` sigue bloqueando
     }
   }
 
@@ -316,7 +328,9 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
   }
 
   function onMicClick() {
-    if (micEstado === "reposo") void empezarGrabacion();
+    // No arrancar el micro mientras el personaje genera o habla (defensa extra al
+    // `disabled` del botón). Estando grabando, siempre se puede parar/enviar.
+    if (micEstado === "reposo" && !generando && !hablando) void empezarGrabacion();
     else if (micEstado === "grabando") pararGrabacion(false);
   }
 
@@ -411,7 +425,8 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
           disabled={
             micEstado === "no-disponible" ||
             micEstado === "transcribiendo" ||
-            pensando
+            generando ||
+            hablando
           }
           onClick={onMicClick}
         >
