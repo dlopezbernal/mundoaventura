@@ -82,6 +82,29 @@ class UsoDiario(SQLModel, table=True):
     imagenes: int = 0
 
 
+class Auditoria(SQLModel, table=True):
+    """Registro de auditoría de uso por familia/niño (informe para el adulto).
+
+    Dos niveles (ver `auditoria_service` / ajuste AUDITORIA_CONTENIDO): METADATOS
+    (evento + quién/cuándo + ids de personaje/ubicación, siempre) y CONTENIDO (el
+    texto de preguntas/respuestas, opcional). Dato personal de un menor: se purga por
+    retención (AUDITORIA_RETENCION_DIAS) y con la supresión RGPD de la cuenta (ver
+    familias_service.eliminar). `familia_id` permite borrar solo lo de una familia.
+    """
+
+    __tablename__ = "auditoria"
+
+    id: int | None = Field(default=None, primary_key=True)
+    creado_en: datetime = Field(default_factory=_ahora_utc, index=True)
+    tipo: str = Field(index=True)  # login/logout/signup/perfil/escena/pregunta…
+    familia_id: str | None = Field(default=None, index=True)
+    familia_nombre: str | None = None  # denormalizado para el informe (legible)
+    nino: str | None = None  # nombre del niño activo (metadato: "con quién juega")
+    detalle: str | None = None  # metadatos en JSON (ids, origen, longitud…)
+    contenido: str | None = None  # texto pregunta/respuesta (solo nivel CONTENIDO)
+    ip: str | None = None
+
+
 class Familia(SQLModel, table=True):
     """Cuenta de una familia (Hito 9.2): la credencial de acceso a la aplicación.
 

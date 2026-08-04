@@ -9,7 +9,7 @@ Dos puertas de entrada (la lógica vive en services/generation_service.py):
                                 (multipart: archivo + personaje_id).
 """
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 
 from backend import config
@@ -17,9 +17,25 @@ from backend.ratelimit import limiter
 from backend.routers import errores
 from backend.routers.limites import leer_con_limite
 from backend.schemas.generation import GenerateRequest, GenerateResponse
-from backend.services import cuota_service, generation_service
+from backend.services import auditoria_service, cuota_service, familias_service, generation_service
+from backend.services.auditoria_service import Evento
 
 router = APIRouter(prefix="/api", tags=["Generación"])
+
+# Familia opcional: el flujo del niño va abierto, pero si hay sesión atribuimos la
+# actividad a esa familia en la auditoría.
+_familia_opt = Depends(familias_service.familia_opcional)
+
+
+def _auditar_escena(familia: dict | None, request: Request, detalle: dict) -> None:
+    """Registra el evento ESCENA (best-effort) con la familia si hay sesión."""
+    auditoria_service.registrar(
+        Evento.ESCENA,
+        familia_id=familia["id"] if familia else None,
+        familia_nombre=familia["nombre_familia"] if familia else None,
+        detalle=detalle,
+        ip=request.client.host if request.client else None,
+    )
 
 
 def _exigir_cupo_diario() -> None:
@@ -36,7 +52,7 @@ def _exigir_cupo_diario() -> None:
 # `request` es obligatorio para que slowapi identifique al cliente.
 @router.post("/generate", response_model=GenerateResponse)
 @limiter.limit(lambda: config.RATE_LIMIT_GENERATE)
-def generate(request: Request, req: GenerateRequest):
+def generate(request: Request, req: GenerateRequest, familia: dict | None = _familia_opt):
     """Genera una imagen del personaje en la ubicación predefinida elegidos."""
     _exigir_cupo_diario()
     try:
@@ -50,6 +66,9 @@ def generate(request: Request, req: GenerateRequest):
         raise errores.error_500(exc, "generar la imagen") from exc
 
     cuota_service.registrar()  # solo se cuenta la generación que sale bien
+    _auditar_escena(
+        familia, request, {"personaje_id": req.personaje_id, "ubicacion_id": req.ubicacion_id}
+    )
     return result
 
 
@@ -59,6 +78,7 @@ async def generate_on_photo(
     request: Request,
     image: UploadFile = File(..., description="Foto que sube el niño."),
     personaje_id: str = Form(..., description="Identificador del personaje a añadir."),
+    familia: dict | None = _familia_opt,
 ):
     """Estiliza la foto subida a Pixar 3D y añade el personaje (una sola llamada)."""
     _exigir_cupo_diario()
@@ -79,4 +99,5 @@ async def generate_on_photo(
         raise errores.error_500(exc, "generar la imagen") from exc
 
     cuota_service.registrar()
+    _auditar_escena(familia, request, {"personaje_id": personaje_id, "ubicacion_id": "__foto__"})
     return result

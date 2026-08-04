@@ -39,6 +39,7 @@ CAT_LLM = "llm"
 CAT_VOZ = "voz"
 CAT_PROMPTS = "prompts"
 CAT_GENERAL = "general"
+CAT_AUDITORIA = "auditoria"
 # Estilo visual COMÚN a personajes y ubicaciones (pestaña "General" de la UI):
 # antes constantes fijas en personajes.py, ahora editables sin tocar código.
 CAT_ESTILO_IMAGEN = "estilo_imagen"
@@ -621,6 +622,34 @@ _SPEC: dict[str, dict[str, Any]] = {
         "ayuda": "Mostrar al niño en el chat los fragmentos usados, en el desplegable "
         "'📚 ¿de dónde lo he sacado?'. Es pedagogía (procedencia), no depuración: flag "
         "propio, independiente de DEBUG.",
+    },
+    # --- Auditoría de uso (informe para el adulto) ---
+    "AUDITORIA_ACTIVA": {
+        "categoria": CAT_AUDITORIA,
+        "tipo": "bool",
+        "default": True,
+        "ayuda": "Registrar la actividad de cada familia/niño para el informe de "
+        "auditoría (accesos, personaje/ubicación, preguntas…). Metadatos, sin el "
+        "texto de las preguntas salvo que actives AUDITORIA_CONTENIDO.",
+    },
+    "AUDITORIA_CONTENIDO": {
+        "categoria": CAT_AUDITORIA,
+        "tipo": "bool",
+        "default": False,
+        "activo_si": {"clave": "AUDITORIA_ACTIVA", "igual_a": "true"},
+        "ayuda": "Guardar TAMBIÉN el texto de las preguntas del niño y las respuestas. "
+        "Es dato sensible de un menor: actívalo solo con un propósito claro y "
+        "conociendo tus obligaciones (RGPD). Se borra por retención y con la cuenta.",
+    },
+    "AUDITORIA_RETENCION_DIAS": {
+        "categoria": CAT_AUDITORIA,
+        "tipo": "int",
+        "default": 90,
+        "min": 1,
+        "max": 3650,
+        "activo_si": {"clave": "AUDITORIA_ACTIVA", "igual_a": "true"},
+        "ayuda": "Días que se conserva cada registro antes de borrarse automáticamente "
+        "(minimización de datos). Por defecto 90.",
     },
     # --- General ---
     "DEBUG": {

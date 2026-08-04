@@ -36,7 +36,8 @@ from backend.schemas.respuestas import (
     FamiliaSignupResponse,
     OkResponse,
 )
-from backend.services import email_service, familias_service
+from backend.services import auditoria_service, email_service, familias_service
+from backend.services.auditoria_service import Evento
 
 # Dependencia: exige sesión de familia y entrega la familia (dict) al handler.
 _familia = Depends(familias_service.requiere_familia)
@@ -58,7 +59,7 @@ def me(x_family_token: str | None = Header(default=None)):
 
 
 @router.post("/signup", response_model=FamiliaSignupResponse, response_model_exclude_none=False)
-def signup(req: FamiliaSignup):
+def signup(req: FamiliaSignup, request: Request):
     """Da de alta una familia.
 
     Sin verificación de correo (por defecto): responde con sesión iniciada. Con
@@ -72,6 +73,13 @@ def signup(req: FamiliaSignup):
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    fam = res.get("familia") or {}
+    auditoria_service.registrar(
+        Evento.SIGNUP,
+        familia_id=fam.get("id"),
+        familia_nombre=fam.get("nombre_familia"),
+        ip=request.client.host if request.client else None,
+    )
     return {"ok": True, **res}
 
 
@@ -110,13 +118,28 @@ def login(req: FamiliaLogin, request: Request):
         raise HTTPException(status_code=429, detail=str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    auditoria_service.registrar(
+        Evento.LOGIN,
+        familia_id=familia["id"],
+        familia_nombre=familia["nombre_familia"],
+        ip=ip,
+    )
     return {"ok": True, "token": token, "familia": familia}
 
 
 @router.post("/logout", response_model=OkResponse)
-def logout(x_family_token: str | None = Header(default=None)):
+def logout(request: Request, x_family_token: str | None = Header(default=None)):
     """Cierra la sesión invalidando el token del dispositivo."""
+    # Resolvemos la familia ANTES de invalidar, para poder atribuir el evento.
+    familia = familias_service.validar_sesion(x_family_token)
     familias_service.logout(x_family_token)
+    if familia is not None:
+        auditoria_service.registrar(
+            Evento.LOGOUT,
+            familia_id=familia["id"],
+            familia_nombre=familia["nombre_familia"],
+            ip=request.client.host if request.client else None,
+        )
     return {"ok": True}
 
 
@@ -128,9 +151,16 @@ def actualizar_perfil(req: FamiliaPerfilUpdate, familia: dict = _familia):
     """Edita el nombre de la familia y/o la lista de niños. 400 si algo no es válido."""
     ninos = [n.model_dump() for n in req.ninos] if req.ninos is not None else None
     try:
-        return familias_service.actualizar_perfil(familia["id"], req.nombre_familia, ninos)
+        actualizada = familias_service.actualizar_perfil(familia["id"], req.nombre_familia, ninos)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    auditoria_service.registrar(
+        Evento.PERFIL,
+        familia_id=actualizada["id"],
+        familia_nombre=actualizada["nombre_familia"],
+        detalle={"ninos": [n.get("nombre") for n in actualizada.get("ninos", [])]},
+    )
+    return actualizada
 
 
 @router.put("/pin", response_model=OkResponse)

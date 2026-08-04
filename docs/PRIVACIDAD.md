@@ -29,11 +29,16 @@ no adornos.
 | **Respuesta del personaje** (texto) | Sí, para la voz | ElevenLabs (TTS) si el personaje tiene voz | El texto no se persiste; el mp3 se **cachea en disco local** (`backend/.cache/tts/`, regenerable, sin datos del niño) | Consentimiento |
 | **Historial del chat** | No | — | Vive solo en memoria del navegador; se borra al recargar o empezar de nuevo. El backend no lo guarda | — |
 | **Cuenta de familia** (correo del adulto, nombre de familia, contraseña) | **No** (se queda en el SQLite local) | — | Persistente en `backend/config_db.sqlite3`: el correo y el nombre en claro, la **contraseña hasheada** (PBKDF2), hasta borrar la cuenta/BBDD | **Ejecución del servicio + consentimiento parental** (identifica a la familia y da un contacto de adulto, H9.2) |
+| **Auditoría de uso** (H10, opcional) | **No** (SQLite local) | — | En `backend/config_db.sqlite3`, tabla `auditoria`. **Metadatos** por defecto (evento, familia, niño, personaje/ubicación, hora, IP); el **texto de preguntas/respuestas** solo si el adulto activa `AUDITORIA_CONTENIDO`. Purga automática por `AUDITORIA_RETENCION_DIAS` (def. 90) y con la supresión de la cuenta | **Interés legítimo del responsable / consentimiento** — actividad de un menor: activar el contenido exige propósito claro |
 | **Claves API** | No | — | En `.env` (fuera de git); nunca se exportan ni se muestran completas | — |
 
 **Lectura clave:** con **STT local (H7)**, la **voz del niño no sale del PC**; y las fotos
 **no se persisten** (H9). El texto de la pregunta y la respuesta sí pasan por proveedores
-en la nube (traducción, LLM, TTS). El backend **no guarda historial** de conversaciones.
+en la nube (traducción, LLM, TTS). El backend **no guarda historial de conversaciones para
+el niño** (el chat vive en memoria del navegador). **Excepción (H10):** la **auditoría de
+uso** —local, para el adulto— sí registra la actividad; guarda **metadatos** por defecto y
+**el texto de preguntas/respuestas solo si el adulto lo activa** (`AUDITORIA_CONTENIDO`), con
+retención limitada y borrado con la cuenta.
 El **único dato personal que la app almacena** (H9.2) es la **cuenta de familia** (correo
 de un adulto + nombre de familia + contraseña **hasheada**), y lo guarda **en el propio
 dispositivo** (SQLite local): **no se envía a ningún tercero**. Es el correo del **adulto**
@@ -92,11 +97,13 @@ también pasa por **DeepL** (traducción, Alemania/UE) en todos los casos.
 ## Checklist RGPD / LOPDGDD
 
 - [x] **Minimización de datos** (art. 5.1.c RGPD): solo se procesa lo imprescindible
-      (pregunta, foto opcional); no se guarda historial. El **único dato personal**
-      almacenado es la **cuenta de familia** (correo del **adulto** + nombre de familia +
-      contraseña hasheada, H9.2): el mínimo para identificar a la familia y tener un contacto
-      de consentimiento; no se pide ningún dato del niño más allá de su nombre de pantalla
-      (previsto en fases posteriores).
+      (pregunta, foto opcional); el chat del niño no se guarda. El dato personal
+      almacenado de base es la **cuenta de familia** (correo del **adulto** + nombre de
+      familia + contraseña hasheada, H9.2). La **auditoría de uso (H10)** añade actividad
+      de la familia/niño, pero **minimizada**: metadatos por defecto, el **contenido** de
+      preguntas/respuestas es **opt-in** (`AUDITORIA_CONTENIDO`) y todo tiene **retención
+      configurable** (`AUDITORIA_RETENCION_DIAS`, purga automática) — se puede desactivar
+      por completo (`AUDITORIA_ACTIVA`).
 - [x] **Consentimiento parental** (<14 años, art. 7 LOPDGDD): confirmación explícita de
       adulto antes de subir la **foto** (implementado, H9), por ser el dato sensible que
       sale a un tercero. Para el **chat y la voz** —el núcleo de la app— el consentimiento
@@ -108,12 +115,13 @@ también pasa por **DeepL** (traducción, Alemania/UE) en todos los casos.
 - [x] **Información transparente** (arts. 13–14 RGPD): esta página se enlaza desde la app
       —en el aviso de consentimiento de la foto y en la pestaña Sistema (zona de adulto)—
       mediante una copia navegable (`frontend-react/public/privacidad.html`).
-- [x] **Derecho de supresión** (art. 17): no se persisten historial ni fotos. El único dato
-      suprimible es la **cuenta de familia**, y hay **borrado autoservicio** desde la UI
-      (Configuración → "Eliminar la cuenta"): borra la cuenta, los perfiles de los niños y
-      las sesiones (`familias_service.eliminar`, `DELETE /api/familias/cuenta`). El **logout**
-      elimina solo la sesión del dispositivo. La caché de audio local es borrable a mano
-      (`backend/.cache/`).
+- [x] **Derecho de supresión** (art. 17): no se persisten fotos ni el chat del niño. Hay
+      **borrado autoservicio** de la **cuenta de familia** desde la UI (Configuración →
+      "Eliminar la cuenta"): borra la cuenta, los perfiles de los niños, las sesiones **y
+      toda su auditoría** (`familias_service.eliminar` → `auditoria_service.eliminar_familia`,
+      `DELETE /api/familias/cuenta`). La auditoría, además, se purga sola por retención. El
+      **logout** elimina solo la sesión del dispositivo. La caché de audio local es borrable
+      a mano (`backend/.cache/`).
 - [ ] **Transferencias internacionales** (cap. V RGPD): el LLM por defecto (Groq, EEUU) y
       opcionalmente el STT/TTS en nube implican transferencia; *a gestionar:* preferir
       proveedores UE (Mistral) o local (Ollama) la elimina, a cambio de calidad/latencia.

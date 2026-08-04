@@ -997,6 +997,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auditoria": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar
+         * @description Eventos de auditoría (más recientes primero), con filtros y total.
+         */
+        get: operations["listar_api_auditoria_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auditoria/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exportar
+         * @description Exporta a CSV los eventos que cumplen el filtro (el 'fichero LOG' descargable).
+         */
+        get: operations["exportar_api_auditoria_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auditoria/purgar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Purgar
+         * @description Aplica la retención ahora: borra los registros más antiguos que el límite.
+         */
+        post: operations["purgar_api_auditoria_purgar_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/": {
         parameters: {
             query?: never;
@@ -1313,6 +1373,40 @@ export interface components {
         AudioResponse: {
             /** Audio Base64 */
             audio_base64: string;
+        };
+        /**
+         * AuditoriaEvento
+         * @description Un evento del registro de auditoría (para el informe de Admin).
+         */
+        AuditoriaEvento: {
+            /** Id */
+            id: number;
+            /** Creado En */
+            creado_en: string;
+            /** Tipo */
+            tipo: string;
+            /** Familia Id */
+            familia_id?: string | null;
+            /** Familia Nombre */
+            familia_nombre?: string | null;
+            /** Nino */
+            nino?: string | null;
+            /** Detalle */
+            detalle?: string | null;
+            /** Contenido */
+            contenido?: string | null;
+            /** Ip */
+            ip?: string | null;
+        };
+        /**
+         * AuditoriaLista
+         * @description Página de eventos de auditoría + total que cumplen el filtro.
+         */
+        AuditoriaLista: {
+            /** Eventos */
+            eventos: components["schemas"]["AuditoriaEvento"][];
+            /** Total */
+            total: number;
         };
         /** Body_generate_on_photo_api_generate_on_photo_post */
         Body_generate_on_photo_api_generate_on_photo_post: {
@@ -2245,6 +2339,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-access-code"?: string | null;
+                "x-family-token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2280,6 +2375,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-access-code"?: string | null;
+                "x-family-token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2315,6 +2411,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-access-code"?: string | null;
+                "x-family-token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -2350,6 +2447,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-access-code"?: string | null;
+                "x-family-token"?: string | null;
             };
             path?: never;
             cookie?: never;
@@ -4095,6 +4193,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    listar_api_auditoria_get: {
+        parameters: {
+            query?: {
+                limite?: number;
+                offset?: number;
+                tipo?: string | null;
+                familia_id?: string | null;
+            };
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditoriaLista"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    exportar_api_auditoria_export_get: {
+        parameters: {
+            query?: {
+                tipo?: string | null;
+                familia_id?: string | null;
+            };
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    purgar_api_auditoria_purgar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

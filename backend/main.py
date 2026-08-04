@@ -25,6 +25,7 @@ from slowapi.errors import RateLimitExceeded
 from backend import config, logging_config, ratelimit, seed
 from backend.routers import admin as admin_router
 from backend.routers import apis as apis_router
+from backend.routers import auditoria as auditoria_router
 from backend.routers import config as config_router
 from backend.routers import conversacion, errores, generation, transcription
 from backend.routers import documentos as documentos_router
@@ -35,6 +36,7 @@ from backend.schemas.respuestas import HealthResponse, RootResponse
 from backend.services import (
     acceso_service,
     admin_service,
+    auditoria_service,
     translation_service,
     voice_service,
 )
@@ -97,6 +99,12 @@ async def lifespan(app: FastAPI):
 
     # Con la BBDD ya lista, ajustar el nivel de log al ajuste DEBUG vigente.
     logging_config.aplicar_nivel_debug()
+
+    # Auditoría: aplicar la retención (borrar registros antiguos) al arrancar.
+    try:
+        auditoria_service.purgar_antiguos()
+    except Exception:  # noqa: BLE001 — nunca debe impedir arrancar el servidor
+        logger.warning("No se pudo purgar la auditoría antigua al arrancar.", exc_info=True)
 
     est = translation_service.estado()
     if est["deepl_ok"]:
@@ -183,6 +191,9 @@ app.include_router(ubicaciones_router.router)
 # Familias (Hito 9.2): cuentas + sesión persistente. Endpoints públicos (son la puerta
 # de entrada); sin sesión válida, el frontend no deja jugar.
 app.include_router(familias_router.router)
+# Auditoría de uso: informe para el adulto (todo protegido por PIN de admin dentro
+# del propio router).
+app.include_router(auditoria_router.router)
 
 
 # ---------------------------------------------------------------------------

@@ -94,6 +94,27 @@ class SettingMeta(BaseModel):
     activo_si: dict[str, str] | None = None
 
 
+class AuditoriaEvento(BaseModel):
+    """Un evento del registro de auditoría (para el informe de Admin)."""
+
+    id: int
+    creado_en: str
+    tipo: str
+    familia_id: str | None = None
+    familia_nombre: str | None = None
+    nino: str | None = None
+    detalle: str | None = None  # JSON de metadatos
+    contenido: str | None = None  # texto pregunta/respuesta (solo nivel CONTENIDO)
+    ip: str | None = None
+
+
+class AuditoriaLista(BaseModel):
+    """Página de eventos de auditoría + total que cumplen el filtro."""
+
+    eventos: list[AuditoriaEvento]
+    total: int
+
+
 class ApiProviderStatus(BaseModel):
     """Estado de un proveedor de API (GET /api/apis), con nombre y enlace de alta."""
 

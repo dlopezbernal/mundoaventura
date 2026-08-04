@@ -23,6 +23,7 @@ import { adminLogout } from "../api/client";
 import styles from "./Settings.module.css";
 import AdminGate from "./config/AdminGate";
 import ApisTab from "./config/ApisTab";
+import AuditoriaTab from "./config/AuditoriaTab";
 import ConfigForm from "./config/ConfigForm";
 import PersonajesTab from "./config/PersonajesTab";
 import SistemaTab from "./config/SistemaTab";
@@ -40,6 +41,7 @@ const PESTANAS = [
   { id: "voz", label: "Voz", emoji: "🎙️" },
   { id: "personajes", label: "Personajes", emoji: "🎭" },
   { id: "ubicaciones", label: "Ubicaciones", emoji: "🗺️" },
+  { id: "auditoria", label: "Auditoría", emoji: "🧾" },
   { id: "sistema", label: "Sistema", emoji: "🛠️" },
 ] as const;
 
@@ -106,6 +108,7 @@ export default function Admin({ onCerrar }: Props) {
           )}
           {pestana === "personajes" && <PersonajesTab />}
           {pestana === "ubicaciones" && <UbicacionesTab />}
+          {pestana === "auditoria" && <AuditoriaTab />}
           {pestana === "sistema" && <SistemaTab onLogout={() => void cerrarSesion()} />}
         </>
       )}

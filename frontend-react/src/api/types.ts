@@ -81,5 +81,9 @@ export type FamiliaSignupResponse = Schemas["FamiliaSignupResponse"];
 export type FamiliaReenviarResponse = Schemas["FamiliaReenviarResponse"];
 export type FamiliasEstado = Schemas["FamiliasEstado"];
 
+// --- Auditoría de uso (informe para el adulto) ---
+export type AuditoriaEvento = Schemas["AuditoriaEvento"];
+export type AuditoriaLista = Schemas["AuditoriaLista"];
+
 // --- Salud ---
 export type HealthResponse = Schemas["HealthResponse"];

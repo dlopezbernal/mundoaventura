@@ -12,16 +12,44 @@ rag_service para el texto y voice_service para la voz):
 import json
 from collections.abc import Iterator
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 
 from backend import config
 from backend.ratelimit import limiter
 from backend.routers import errores
 from backend.schemas.conversacion import AskRequest, AskResponse
-from backend.services import chat_service
+from backend.services import auditoria_service, chat_service, familias_service
+from backend.services.auditoria_service import Evento
 
 router = APIRouter(prefix="/api", tags=["Conversación (RAG)"])
+
+# Familia opcional: el chat va abierto, pero si hay sesión atribuimos la pregunta.
+_familia_opt = Depends(familias_service.familia_opcional)
+
+
+def _auditar_pregunta(
+    familia: dict | None,
+    request: Request,
+    req: AskRequest,
+    origen: str | None,
+    respuesta: str,
+) -> None:
+    """Registra una PREGUNTA (best-effort). El texto (contenido) solo se guarda si
+    AUDITORIA_CONTENIDO está activo (lo decide auditoria_service.registrar)."""
+    auditoria_service.registrar(
+        Evento.PREGUNTA,
+        familia_id=familia["id"] if familia else None,
+        familia_nombre=familia["nombre_familia"] if familia else None,
+        nino=req.nombre_nino or None,
+        detalle={
+            "personaje_id": req.personaje_id,
+            "origen": origen,
+            "chars_pregunta": len(req.pregunta or ""),
+        },
+        contenido=f"P: {req.pregunta}\nR: {respuesta}" if respuesta else None,
+        ip=request.client.host if request.client else None,
+    )
 
 
 # `def` (no `async def`) A PROPÓSITO: chat_service.responder llama a SDKs SÍNCRONOS
@@ -35,7 +63,7 @@ router = APIRouter(prefix="/api", tags=["Conversación (RAG)"])
 # para que slowapi identifique al cliente.
 @router.post("/ask", response_model=AskResponse)
 @limiter.limit(lambda: config.RATE_LIMIT_ASK)
-def ask(request: Request, req: AskRequest):
+def ask(request: Request, req: AskRequest, familia: dict | None = _familia_opt):
     """Responde a la pregunta del niño como el personaje elegido (RAG + voz)."""
     try:
         result = chat_service.responder(
@@ -52,6 +80,7 @@ def ask(request: Request, req: AskRequest):
         # detalle real se registra en el servidor, no se filtra al cliente).
         raise errores.error_500(exc, "generar la respuesta del chat") from exc
 
+    _auditar_pregunta(familia, request, req, result.get("origen"), result.get("respuesta", ""))
     return result
 
 
@@ -69,14 +98,22 @@ def _sse(evento: dict) -> str:
 # el generador síncrono en el threadpool, así el event loop no se bloquea.
 @router.post("/ask/stream")
 @limiter.limit(lambda: config.RATE_LIMIT_ASK)
-def ask_stream(request: Request, req: AskRequest):
+def ask_stream(request: Request, req: AskRequest, familia: dict | None = _familia_opt):
     """Igual que /api/ask pero en STREAMING (SSE): texto por trozos + voz por frases."""
 
     def generar() -> Iterator[str]:
+        # Acumulamos el origen (evento "fuentes") y el texto final (evento "fin")
+        # para registrar la pregunta+respuesta al terminar el stream.
+        origen: str | None = None
+        respuesta = ""
         try:
             for evento in chat_service.responder_streaming(
                 req.personaje_id, req.pregunta, req.nombre_nino, req.sexo_nino
             ):
+                if evento["tipo"] == "fuentes":
+                    origen = evento.get("origen")
+                elif evento["tipo"] == "fin":
+                    respuesta = evento.get("respuesta", "")
                 yield _sse(evento)
         except ValueError as exc:
             # Personaje inexistente, falta de token o DeepL caído -> mensaje claro.
@@ -86,6 +123,8 @@ def ask_stream(request: Request, req: AskRequest):
             yield _sse(
                 {"tipo": "error", "mensaje": errores.mensaje_generico(exc, "chat en streaming")}
             )
+        finally:
+            _auditar_pregunta(familia, request, req, origen, respuesta)
 
     # text/event-stream + sin buffering intermedio (proxies/nginx) para que los
     # trozos lleguen en cuanto se emiten.

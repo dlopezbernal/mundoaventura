@@ -18,6 +18,7 @@ import type {
   ApiTestResult,
   AskRequest,
   AskResponse,
+  AuditoriaLista,
   ConfigExport,
   ConfigResponse,
   ConfigSaveResult,
@@ -966,6 +967,65 @@ export async function adminChangePin(pinActual: string, pinNuevo: string): Promi
 export async function adminExport(): Promise<ConfigExport> {
   const response = await fetchBackend("/api/admin/export", { method: "GET" }, TIMEOUT_CONFIG);
   return (await response.json()) as ConfigExport;
+}
+
+// ---------------------------------------------------------------------------
+// Auditoría de uso (informe para el adulto, tras el PIN de admin).
+// ---------------------------------------------------------------------------
+
+/** Construye la query de filtros común a listar/exportar auditoría. */
+function _auditoriaQuery(filtros: { tipo?: string; familiaId?: string }): string {
+  const p = new URLSearchParams();
+  if (filtros.tipo) p.set("tipo", filtros.tipo);
+  if (filtros.familiaId) p.set("familia_id", filtros.familiaId);
+  const s = p.toString();
+  return s ? `?${s}` : "";
+}
+
+/** Página de eventos de auditoría (con filtros opcionales). GET /api/auditoria. */
+export async function getAuditoria(
+  filtros: { tipo?: string; familiaId?: string; limite?: number } = {},
+): Promise<AuditoriaLista> {
+  const p = new URLSearchParams();
+  if (filtros.tipo) p.set("tipo", filtros.tipo);
+  if (filtros.familiaId) p.set("familia_id", filtros.familiaId);
+  if (filtros.limite) p.set("limite", String(filtros.limite));
+  const q = p.toString();
+  const response = await fetchBackend(
+    `/api/auditoria${q ? `?${q}` : ""}`,
+    { method: "GET" },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as AuditoriaLista;
+}
+
+/** Descarga el CSV de auditoría (respeta filtros) y lo ofrece como archivo. */
+export async function descargarAuditoriaCsv(
+  filtros: { tipo?: string; familiaId?: string } = {},
+): Promise<void> {
+  const response = await fetchBackend(
+    `/api/auditoria/export${_auditoriaQuery(filtros)}`,
+    { method: "GET" },
+    TIMEOUT_CONFIG,
+  );
+  const texto = await response.text();
+  const blob = new Blob([texto], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `auditoria-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Aplica la retención ahora (borra los registros antiguos). POST /api/auditoria/purgar. */
+export async function purgarAuditoria(): Promise<{ purgados: number }> {
+  const response = await fetchBackend(
+    "/api/auditoria/purgar",
+    { method: "POST" },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as { purgados: number };
 }
 
 /** Restaura una configuración (con copia de seguridad previa). POST /api/admin/import. */

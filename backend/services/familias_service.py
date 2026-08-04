@@ -508,6 +508,12 @@ def eliminar(familia_id: str) -> None:
             logger.info("Familia ELIMINADA (RGPD): %s (%s).", fam.nombre_familia, fam.email)
         sesion.commit()
 
+    # Purga también su auditoría (dato personal del menor). Import perezoso para no
+    # crear un ciclo (auditoria_service importa settings, no familias).
+    from backend.services import auditoria_service
+
+    auditoria_service.eliminar_familia(familia_id)
+
 
 # ---------------------------------------------------------------------------
 # Dependencia de FastAPI: exige una sesión de familia válida
@@ -524,3 +530,12 @@ def requiere_familia(x_family_token: str | None = Header(default=None)) -> dict:
             status_code=401, detail="Inicia sesión con tu familia para gestionar el perfil."
         )
     return familia
+
+
+def familia_opcional(x_family_token: str | None = Header(default=None)) -> dict | None:
+    """Como `requiere_familia` pero SIN exigir sesión: devuelve la familia o None.
+
+    Para los endpoints del flujo del niño (generar/chat), que van abiertos pero cuya
+    actividad queremos ATRIBUIR a la familia en la auditoría cuando hay sesión.
+    """
+    return validar_sesion(x_family_token)

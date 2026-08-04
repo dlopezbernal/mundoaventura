@@ -1007,3 +1007,46 @@
 .helpLink:hover {
   text-decoration: underline;
 }
+
+/* --- Tabla del informe de auditoría --- */
+.auditWrap {
+  overflow-x: auto;
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+}
+.auditTabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.auditTabla th,
+.auditTabla td {
+  text-align: left;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--edge);
+  vertical-align: top;
+}
+.auditTabla th {
+  font-family: var(--font-pixel);
+  font-size: 0.6rem;
+  letter-spacing: 0.06em;
+  color: var(--holo);
+  white-space: nowrap;
+}
+.auditTabla tr:last-child td {
+  border-bottom: none;
+}
+.auditFecha {
+  white-space: nowrap;
+  color: #8fa3e0;
+  font-variant-numeric: tabular-nums;
+}
+.auditContenido {
+  margin-top: 4px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--holo);
+  background: rgba(4, 8, 28, 0.5);
+  border-radius: 4px;
+  white-space: pre-wrap;
+  color: #cfe6ff;
+}
