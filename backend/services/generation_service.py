@@ -146,33 +146,24 @@ def generar_escena(personaje_id: str, ubicacion_id: str) -> dict:
     }
 
 
-def generar_avatar(personaje_id: str) -> bytes:
-    """Genera el AVATAR del carrusel de `personaje_id`: un PNG TRANSPARENTE.
+def _generar_png_recorte(descripcion: str, ajuste_prompt: str, etiqueta: str) -> bytes:
+    """Pipeline A1 compartido: FLUX sobre fondo liso + recorte → PNG TRANSPARENTE.
 
-    Enfoque A1 (dos pasos en Replicate, todo en la nube):
-      1) FLUX (REPLICATE_MODEL) dibuja un retrato del personaje sobre fondo LISO,
-         a partir de su `prompt_imagen` envuelto en AVATAR_PROMPT + STYLE_SUFFIX.
-      2) Un modelo de recorte (AVATAR_REMOVE_BG_MODEL) quita ese fondo y devuelve
-         un PNG con canal alfa, para que el personaje "flote" en la carta.
-
-    Devuelve los bytes del PNG transparente. Lanza ValueError (→ 400) si el
-    personaje no existe o falta el token de Replicate.
+    `descripcion` es el prompt del sujeto (personaje o ubicación); `ajuste_prompt` es
+    el nombre del ajuste con el encuadre (AVATAR_PROMPT / UBICACION_IMG_PROMPT). Dos
+    pasos en Replicate: (1) FLUX dibuja sobre fondo plano; (2) el modelo de recorte
+    (AVATAR_REMOVE_BG_MODEL) quita el fondo. Devuelve los bytes del PNG.
     """
-    ficha = personajes_service.obtener(personaje_id)
-    if ficha is None:
-        raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
     _exigir_token()
 
-    # Paso 1: retrato sobre fondo plano. Forzamos PNG (calidad sin pérdidas antes
-    # de recortar) y la proporción propia del avatar.
-    personaje = ficha["prompt_imagen"]
+    # Paso 1: imagen sobre fondo plano. PNG (sin pérdidas antes de recortar).
     prompt = (
-        f"{personaje}, {settings_service.get('AVATAR_PROMPT')}, "
+        f"{descripcion}, {settings_service.get(ajuste_prompt)}, "
         f"{settings_service.get('STYLE_SUFFIX')}"
     )
     _avisar_si_prompt_largo(prompt)
     modelo = settings_service.get("REPLICATE_MODEL")
-    debug_log.trazar_prompt(f"Replicate · avatar retrato ({modelo})", prompt=prompt)
+    debug_log.trazar_prompt(f"Replicate · {etiqueta} ({modelo})", prompt=prompt)
     salida = replicate_client.run(
         modelo,
         input={
@@ -182,19 +173,18 @@ def generar_avatar(personaje_id: str) -> bytes:
             "num_outputs": 1,
             "num_inference_steps": settings_service.get("IMG_NUM_STEPS"),
         },
-        etiqueta="Replicate · avatar retrato",
+        etiqueta=f"Replicate · {etiqueta}",
     )
-    retrato_bytes = _primer_fichero(salida).read()
+    base_bytes = _primer_fichero(salida).read()
 
-    # Paso 2: quitar el fondo → PNG transparente. La imagen se pasa como data URI
-    # (forma fiable de mandar bytes a Replicate), en el campo 'image'.
+    # Paso 2: quitar el fondo → PNG transparente. La imagen va como data URI en 'image'.
     modelo_bg = settings_service.get("AVATAR_REMOVE_BG_MODEL")
-    data_uri = f"data:image/png;base64,{base64.b64encode(retrato_bytes).decode('utf-8')}"
+    data_uri = f"data:image/png;base64,{base64.b64encode(base_bytes).decode('utf-8')}"
     try:
         salida_bg = replicate_client.run(
             modelo_bg,
             input={"image": data_uri},
-            etiqueta="Replicate · avatar recorte",
+            etiqueta=f"Replicate · {etiqueta} recorte",
         )
     except ReplicateError as exc:
         # Causa típica: un modelo de la comunidad indicado SIN versión → Replicate
@@ -206,6 +196,32 @@ def generar_avatar(personaje_id: str) -> bytes:
             "Admin → Imagen → AVATAR_REMOVE_BG_MODEL."
         ) from exc
     return _primer_fichero(salida_bg).read()
+
+
+def generar_avatar(personaje_id: str) -> bytes:
+    """Genera el AVATAR del carrusel de un personaje: un PNG TRANSPARENTE.
+
+    FLUX dibuja un retrato del personaje (su `prompt_imagen` + AVATAR_PROMPT + estilo)
+    sobre fondo liso y un modelo de recorte lo deja con transparencia. Lanza ValueError
+    (→ 400) si el personaje no existe o falta el token de Replicate.
+    """
+    ficha = personajes_service.obtener(personaje_id)
+    if ficha is None:
+        raise ValueError(f"Personaje desconocido: '{personaje_id}'.")
+    return _generar_png_recorte(ficha["prompt_imagen"], "AVATAR_PROMPT", "avatar retrato")
+
+
+def generar_avatar_ubicacion(ubicacion_id: str) -> bytes:
+    """Genera la IMAGEN del carrusel de una ubicación: un PNG TRANSPARENTE.
+
+    Igual que el avatar del personaje pero con el encuadre propio de un lugar
+    (UBICACION_IMG_PROMPT). Lanza ValueError (→ 400) si la ubicación no existe o
+    falta el token de Replicate.
+    """
+    ficha = ubicaciones_service.obtener(ubicacion_id)
+    if ficha is None:
+        raise ValueError(f"Ubicación desconocida: '{ubicacion_id}'.")
+    return _generar_png_recorte(ficha["prompt_imagen"], "UBICACION_IMG_PROMPT", "imagen ubicación")
 
 
 def generar_en_foto(

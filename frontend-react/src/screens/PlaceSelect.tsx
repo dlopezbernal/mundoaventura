@@ -14,6 +14,7 @@ import Console from "../components/Console/Console";
 import ConsentModal from "../components/ConsentModal";
 import Coverflow from "../components/Coverflow/Coverflow";
 import Roster from "../components/Roster/Roster";
+import { assetUrl } from "../api/client";
 import type { UbicacionDTO } from "../api/types";
 import { holoCard, type HoloCardData } from "../data/holo";
 import { FOTO_ID } from "../state/useFlow";
@@ -62,7 +63,13 @@ export default function PlaceSelect({
     );
     const cartasLugar = ubicaciones.map((u) =>
       holoCard(
-        { id: u.id, art: u.emoji ?? "🗺️", name: u.nombre.toUpperCase(), tag: "MUNDO" },
+        {
+          id: u.id,
+          // Imagen generada (transparente) si la hay; si no, el emoji de siempre.
+          art: u.avatar_url ? assetUrl(u.avatar_url) : (u.emoji ?? "🗺️"),
+          name: u.nombre.toUpperCase(),
+          tag: "MUNDO",
+        },
         "var(--holo)",
       ),
     );
@@ -95,8 +102,8 @@ export default function PlaceSelect({
   return (
     <section>
       <Coverflow
-        kicker="◇ CALIBRANDO COORDENADAS ◇"
-        title="SELECCIONA TU MUNDO"
+        kicker="Calibrando coordenadas"
+        title="Selecciona tu mundo"
         subtitle="Gira los destinos · o sube una foto de tu cuarto para viajar desde casa"
         items={cartas}
         index={index}

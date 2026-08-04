@@ -14,6 +14,7 @@ configuración. El control de acceso admin a la edición llega en el Hito 7.
 """
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import FileResponse
 
 from backend.schemas.respuestas import (
     OkResponse,
@@ -21,7 +22,7 @@ from backend.schemas.respuestas import (
     UbicacionMutacion,
 )
 from backend.schemas.ubicaciones import UbicacionCrear, UbicacionEditar
-from backend.services import admin_service, ubicaciones_service
+from backend.services import admin_service, generation_service, ubicaciones_service
 
 router = APIRouter(prefix="/api", tags=["Configuración · Ubicaciones"])
 
@@ -63,3 +64,41 @@ def borrar_ubicacion(ubicacion_id: str):
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True}
+
+
+@router.post(
+    "/ubicaciones/{ubicacion_id}/avatar", dependencies=_admin, response_model=UbicacionMutacion
+)
+def generar_avatar_ubicacion(ubicacion_id: str):
+    """Genera (bajo demanda, coste de Replicate) la imagen transparente del carrusel.
+
+    Dos llamadas a Replicate (imagen + recorte); es `def` → threadpool. 400 si la
+    ubicación no existe o falta el token.
+    """
+    try:
+        png = generation_service.generar_avatar_ubicacion(ubicacion_id)
+        ubicacion = ubicaciones_service.guardar_avatar(ubicacion_id, png)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "ubicacion": ubicacion}
+
+
+@router.delete(
+    "/ubicaciones/{ubicacion_id}/avatar", dependencies=_admin, response_model=UbicacionMutacion
+)
+def borrar_avatar_ubicacion(ubicacion_id: str):
+    """Quita la imagen (vuelve al emoji). 400 si la ubicación no existe."""
+    try:
+        ubicacion = ubicaciones_service.borrar_avatar(ubicacion_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"ok": True, "ubicacion": ubicacion}
+
+
+@router.get("/ubicaciones/{ubicacion_id}/avatar")
+def obtener_avatar_ubicacion(ubicacion_id: str):
+    """Sirve el PNG transparente (público: lo usa el carrusel del niño)."""
+    ruta = ubicaciones_service.ruta_avatar(ubicacion_id)
+    if ruta is None:
+        raise HTTPException(status_code=404, detail="Esta ubicación no tiene imagen.")
+    return FileResponse(ruta, media_type="image/png")

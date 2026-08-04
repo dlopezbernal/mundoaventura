@@ -770,6 +770,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ubicaciones/{ubicacion_id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Obtener Avatar Ubicacion
+         * @description Sirve el PNG transparente (público: lo usa el carrusel del niño).
+         */
+        get: operations["obtener_avatar_ubicacion_api_ubicaciones__ubicacion_id__avatar_get"];
+        put?: never;
+        /**
+         * Generar Avatar Ubicacion
+         * @description Genera (bajo demanda, coste de Replicate) la imagen transparente del carrusel.
+         *
+         *     Dos llamadas a Replicate (imagen + recorte); es `def` → threadpool. 400 si la
+         *     ubicación no existe o falta el token.
+         */
+        post: operations["generar_avatar_ubicacion_api_ubicaciones__ubicacion_id__avatar_post"];
+        /**
+         * Borrar Avatar Ubicacion
+         * @description Quita la imagen (vuelve al emoji). 400 si la ubicación no existe.
+         */
+        delete: operations["borrar_avatar_ubicacion_api_ubicaciones__ubicacion_id__avatar_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/familias/estado": {
         parameters: {
             query?: never;
@@ -2243,6 +2274,8 @@ export interface components {
             prompt_imagen: string;
             /** Activo */
             activo: boolean;
+            /** Avatar Url */
+            avatar_url?: string | null;
         };
         /**
          * UbicacionEditar
@@ -3843,6 +3876,103 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OkResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    obtener_avatar_ubicacion_api_ubicaciones__ubicacion_id__avatar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ubicacion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    generar_avatar_ubicacion_api_ubicaciones__ubicacion_id__avatar_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                ubicacion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UbicacionMutacion"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    borrar_avatar_ubicacion_api_ubicaciones__ubicacion_id__avatar_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                ubicacion_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UbicacionMutacion"];
                 };
             };
             /** @description Validation Error */

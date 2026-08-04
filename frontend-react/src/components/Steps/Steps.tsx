@@ -8,7 +8,7 @@
 
 import styles from "./Steps.module.css";
 
-const PASOS = ["1 · PERSONAJE", "2 · MUNDO", "3 · ¡JUGAR!"];
+const PASOS = ["Personaje", "Mundo", "¡A jugar!"];
 
 interface Props {
   /** Paso actual (1, 2 o 3). */

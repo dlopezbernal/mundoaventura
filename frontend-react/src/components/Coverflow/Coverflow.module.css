@@ -10,23 +10,22 @@
   margin: 10px 0 0;
 }
 .kicker {
-  font-family: var(--font-pixel);
-  font-size: 9px;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 12px;
   color: var(--pink);
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
 }
 .title {
   font-family: var(--font-disp);
-  font-weight: 900;
+  font-weight: 800;
   font-size: clamp(20px, 4vw, 30px);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
   color: #fff;
-  text-shadow:
-    0 0 12px rgba(62, 242, 255, 0.6),
-    3px 3px 0 rgba(255, 46, 151, 0.7);
+  text-shadow: 0 0 14px rgba(62, 242, 255, 0.4);
 }
 .subtitle {
-  color: #8fa3e0;
+  color: var(--muted);
   font-weight: 600;
   font-size: 12px;
   margin-top: 2px;

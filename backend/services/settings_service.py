@@ -204,13 +204,26 @@ _SPEC: dict[str, dict[str, Any]] = {
         "personaje y al estilo común). Debe pedir fondo LISO y uniforme: cuanto más "
         "limpio, mejor recorta el modelo de fondo. Va en inglés (como STYLE_SUFFIX/FRAMING).",
     },
+    "UBICACION_IMG_PROMPT": {
+        "categoria": CAT_IMAGEN,
+        "grupo": GRUPO_IMG_AVATAR,
+        "tipo": "str",
+        "multilinea": True,
+        "default": (
+            "cute isometric miniature diorama of this place, centered, "
+            "plain solid pale gray background, no people, no characters, soft studio lighting"
+        ),
+        "ayuda": "Encuadre de la IMAGEN de la ubicación para el carrusel (se antepone a la "
+        "descripción del lugar y al estilo común). Debe pedir fondo LISO y SIN personajes: "
+        "cuanto más limpio, mejor recorta el modelo de fondo. Va en inglés.",
+    },
     "AVATAR_ASPECT_RATIO": {
         "categoria": CAT_IMAGEN,
         "grupo": GRUPO_IMG_AVATAR,
         "tipo": "str",
         "default": "1:1",
         "opciones": ["1:1", "3:4", "4:3", "9:16", "16:9"],
-        "ayuda": "Proporción del avatar. 1:1 o 3:4 (retrato) suelen encajar mejor en la carta.",
+        "ayuda": "Proporción del avatar/imagen del carrusel. 1:1 o 3:4 suelen encajar mejor.",
     },
     "AVATAR_REMOVE_BG_MODEL": {
         "categoria": CAT_IMAGEN,
