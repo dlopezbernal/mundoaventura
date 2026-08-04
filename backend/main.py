@@ -37,6 +37,7 @@ from backend.services import (
     acceso_service,
     admin_service,
     auditoria_service,
+    familias_service,
     translation_service,
     voice_service,
 )
@@ -54,6 +55,12 @@ _admin = [Depends(admin_service.requiere_admin)]
 # Candado del túnel: código de acceso compartido para los endpoints del niño que
 # CUESTAN dinero (generación, chat, voz). Desactivado si ACCESS_CODE está vacío.
 _acceso = [Depends(acceso_service.requiere_codigo_acceso)]
+
+# Segunda barrera para esos mismos endpoints caros: sesión de familia válida. A
+# diferencia de ACCESS_CODE (secreto compartido, incrustado en el bundle de la SPA),
+# esto sí es autenticación. Desactivable con EXIGIR_SESION_FAMILIA=false para trastear
+# desde /docs o atacar la API por HTTP desde un banco de pruebas.
+_familia = [Depends(familias_service.requiere_familia_flujo_nino)]
 
 # En Windows la consola puede usar cp1252 y romper al emitir emojis (✅, ⚠️...) en
 # los logs de arranque. Forzamos UTF-8 en la salida para que ningún mensaje falle
@@ -166,14 +173,19 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # 3) Enchufar los routers (los endpoints de cada fase)
 # ---------------------------------------------------------------------------
-# Endpoints del niño que cuestan dinero (generación, chat, voz): van detrás del
-# candado del túnel (X-Access-Code). Los catálogos (GET) se dejan públicos aparte.
+# Endpoints del niño que cuestan dinero (generación, chat, voz): dos barreras.
+# 1) El candado del túnel (X-Access-Code), contra el escaneo automático.
+# 2) La sesión de familia (X-Family-Token), porque el candado viaja en el bundle de la
+#    SPA y por tanto es público de facto. Se activa con EXIGIR_SESION_FAMILIA (por
+#    defecto true); no añade fricción al niño —la app ya exige sesión para jugar— pero
+#    cierra la llamada directa por curl. Los catálogos (GET) se dejan públicos aparte.
+_caros = _acceso + _familia
 # Generación de la escena (ubicación + personaje) con Replicate.
-app.include_router(generation.router, dependencies=_acceso)
+app.include_router(generation.router, dependencies=_caros)
 # Conversación con el personaje (RAG: ChromaDB + LLM en Replicate).
-app.include_router(conversacion.router, dependencies=_acceso)
+app.include_router(conversacion.router, dependencies=_caros)
 # Transcripción de voz (STT): la pregunta hablada del niño → texto (ElevenLabs Scribe).
-app.include_router(transcription.router, dependencies=_acceso)
+app.include_router(transcription.router, dependencies=_caros)
 # Admin: acceso con contraseña de admin (+ 2FA opcional) + import/export (endpoints
 # públicos mínimos para arrancar; los sensibles se protegen dentro del propio router).
 app.include_router(admin_router.router)
