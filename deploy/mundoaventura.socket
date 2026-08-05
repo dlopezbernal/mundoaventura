@@ -1,0 +1,39 @@
+# =====================================================================
+#  Socket del BACKEND — despliegue sin 502
+# ---------------------------------------------------------------------
+#  Instalación en el servidor (junto a la unidad .service):
+#      cp deploy/mundoaventura.socket /etc/systemd/system/
+#      systemctl daemon-reload
+#      systemctl enable --now mundoaventura.socket
+#
+#  EL PROBLEMA QUE RESUELVE. Sin esto, `systemctl restart mundoaventura` cierra
+#  el puerto 8000 durante los segundos que uvicorn tarda en arrancar. Caddy
+#  intenta conectar, recibe "connection refused" y le devuelve un 502 al niño.
+#  En cada despliegue.
+#
+#  CÓMO. Es systemd —no uvicorn— quien abre y mantiene el socket a la escucha,
+#  y se lo pasa al proceso como descriptor de fichero 3 (de ahí el `--fd 3` de
+#  la unidad .service). Al reiniciar SOLO el servicio, el socket NUNCA se cierra:
+#  las conexiones que llegan mientras tanto se quedan encoladas en el kernel y
+#  se atienden en cuanto el proceso nuevo acepta. El cliente ve unos segundos de
+#  latencia en lugar de un error.
+#
+#  IMPORTANTE: esta unidad NO lleva `PartOf=mundoaventura.service`. Con esa
+#  directiva, reiniciar el servicio reiniciaría también el socket — cerrándolo y
+#  devolviéndonos justo al 502 que queremos evitar.
+# =====================================================================
+
+[Unit]
+Description=MundoAventura — socket del backend (activacion por socket)
+Documentation=https://github.com/dlopezbernal/mundoaventura
+
+[Socket]
+# Mismo destino que espera Caddy. Solo loopback: el backend no se expone.
+ListenStream=127.0.0.1:8000
+# Cola de conexiones pendientes de aceptar. Es el colchón que absorbe el
+# reinicio: con el backlog por defecto bastaría para este tráfico, pero un
+# margen amplio sale gratis (son entradas en una cola del kernel).
+Backlog=512
+
+[Install]
+WantedBy=sockets.target

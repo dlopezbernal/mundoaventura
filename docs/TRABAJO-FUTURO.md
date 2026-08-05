@@ -27,10 +27,12 @@ sabemos que falta y por qué no está.
   producto ([ADR-013](decisiones/ADR-013-tts-elevenlabs.md)). El TTS local (Kokoro) queda como
   **plan B "sin internet"** de la defensa, no como opción por defecto.
 
-## Lo que se haría en un despliegue en servidor (hoy fuera de alcance)
+## Lo que se haría en un despliegue en servidor
 
-El despliegue actual es un **túnel puntual** (Colab/ngrok) para pruebas y defensa, no un servidor
-permanente. Si el proyecto creciera a un servidor en la nube:
+Durante el desarrollo el despliegue fue un **túnel puntual** (Colab/ngrok). Desde el 2026-08-05 hay
+además un **servidor permanente** en `chatmundoaventura.com` (VPS, systemd + Caddy con TLS; el
+procedimiento completo está en [`DESPLIEGUE.md`](DESPLIEGUE.md)). Lo que sigue es lo que ese
+despliegue **todavía no** resuelve:
 
 - ✅ **Autenticación fuerte** en lugar del candado del túnel (`ACCESS_CODE` es una barrera ligera
   contra escaneo, no autenticación real — [ADR-001](decisiones/ADR-001-candado-tunel.md)).
@@ -48,6 +50,57 @@ permanente. Si el proyecto creciera a un servidor en la nube:
   (≥ 8 + 2FA, H9.2d); quedan por renombrar algunos **identificadores internos** heredados del
   Hito 7 (el componente `CambiarPin`, la función `adminChangePin`, la clave `admin_pin_hash`), sin
   impacto funcional ni visible. Refactor de limpieza para después de la entrega.
+
+## Fase 2 — el despliegue
+
+El despliegue inicial **funcionaba y estaba documentado**, pero se hizo optimizando para que una
+persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo automatizado.
+
+### Hecho
+
+- ✅ **Despliegue automático desde GitHub** (`.github/workflows/ci.yml`, job `deploy`): push a
+  `main` o botón *Run workflow*, con `needs: [backend, frontend]` para que **sea imposible
+  desplegar con el CI en rojo**, y `concurrency` para que dos merges seguidos no se pisen.
+  Runner alojado que entra por SSH; lo que hace aceptable guardar una clave del servidor en
+  GitHub es que va registrada con **comando forzado** (`command="…/desplegar.sh"`, sin pty) como
+  el usuario sin privilegios: esa clave no da una shell. Detalle en
+  [`DESPLIEGUE.md §5.1`](DESPLIEGUE.md).
+- ✅ **Vuelta atrás automática y comprobación de humo** en `deploy/desplegar.sh`: si `/health` no
+  responde tras el reinicio, vuelve al commit anterior, reconstruye, reinicia y sale con error.
+  La puerta es `status: ok` y **no** las banderas de los proveedores (un DeepL caído no es un
+  despliegue roto, y volver atrás no lo arreglaría).
+- ✅ **Despliegue sin corte**: activación por socket de systemd (`deploy/mundoaventura.socket` +
+  `uvicorn --fd 3`). Medido: de **10 % de peticiones con 502** durante el reinicio a **0 %**
+  ([`mediciones/F2-despliegue-sin-corte.md`](mediciones/F2-despliegue-sin-corte.md)).
+
+### Lo que sigue pendiente
+
+- **¿Es el enfoque correcto, o solo el que funcionó?** Queda por contrastar contra la práctica
+  habitual: instalación nativa con `uv` + systemd + Caddy, un único servidor sin réplica, SQLite
+  y ChromaDB en disco local. Cada decisión tiene una justificación de tamaño de proyecto, pero
+  ninguna se ha comparado con su alternativa profesional.
+- **Runner autoalojado** en el propio VPS como alternativa al alojado: haría *pull* sin que nadie
+  tenga que entrar por SSH, lo que permitiría cerrar el puerto 22 a internet (hoy tiene que
+  seguir abierto para que el runner de GitHub llegue). A cambio, un agente más que mantener.
+- **Reproducibilidad y entornos.** Un `Dockerfile` sigue pendiente (ver arriba). Con contenedor,
+  el despliegue pasa a ser "construye imagen, publica, arranca", y deja de depender de que el
+  servidor tenga la versión correcta de Node, `uv` y Python.
+- **Entorno de pruebas.** Hoy solo existe producción: lo que se despliega no se ha visto nunca
+  funcionando en un servidor antes de estar delante de los usuarios.
+- **Peticiones en vuelo.** El corte del despliegue está resuelto para conexiones nuevas, pero una
+  respuesta ya empezada (sobre todo el SSE del chat, que dura segundos) se corta igual al
+  reiniciar. Sin medir.
+- **Observabilidad y avisos.** `journalctl` es suficiente para depurar a mano, pero nadie se entera
+  si el servicio se cae de madrugada, si caduca un certificado o si se agota el saldo de un
+  proveedor. Un *healthcheck* externo con aviso es el mínimo.
+- **Copias de seguridad fuera del servidor.** Ya hay copia completa (`deploy/respaldar.sh`, un
+  `.tgz` con todo lo que no está en git), **automática** (antes de cada despliegue y cada noche
+  vía temporizador de systemd), con **retención de 15 días** y **restauración verificada**
+  (2026-08-05: `integrity_check` en `ok` y recuentos idénticos a la BBDD viva). Lo que falta es
+  lo más importante: **sacarlas del servidor**. Hoy viven en el mismo disco que protegen, así que
+  no cubren el escenario que más duele — perder la máquina. Un `rclone`/`restic` a
+  almacenamiento externo desde el mismo temporizador lo cerraría; conviene cifrarlas antes de
+  subirlas, porque el `.tgz` lleva el `.env` con todas las claves.
 
 ## Ideas de producto (más allá de la ingeniería)
 

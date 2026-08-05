@@ -48,6 +48,17 @@ chatmundoaventura.com {
 			# bufferizar. Imprescindible para /api/ask/stream (SSE del Hito 8):
 			# con el buffering por defecto el streaming se pierde.
 			flush_interval -1
+
+			# Segunda red de seguridad contra el 502 en los despliegues. La
+			# primera es la activación por socket de systemd, que ya evita el
+			# corte (deploy/mundoaventura.socket); esto cubre lo que aquella no
+			# puede: que el backend se caiga de verdad y systemd lo relance.
+			# En vez de devolverle un 502 al niño, Caddy reintenta la conexión
+			# durante 20 s (el arranque en frío del backend son ~5 s).
+			# Solo aplica a fallos al CONECTAR y antes de empezar a responder,
+			# así que no reintenta una respuesta a medias ni rompe el SSE.
+			lb_try_duration 20s
+			lb_try_interval 250ms
 			# El chat con voz puede tardar; el timeout corto por defecto de un
 			# proxy cortaría respuestas largas a mitad.
 			transport http {
