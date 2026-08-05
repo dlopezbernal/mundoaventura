@@ -46,8 +46,12 @@ export default function PrimerNino({ familia, onListo, onSaltar }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
+  // Tope de niños por familia (constante de despliegue, la manda el backend).
+  const lleno = ninos.length >= familia.max_ninos;
+
   function anadirNino() {
     const limpio = nuevoNino.trim();
+    if (lleno) return;
     if (limpio && !ninos.some((n) => n.nombre === limpio)) {
       setNinos([...ninos, { nombre: limpio, sexo: nuevoSexo }]);
     }
@@ -103,6 +107,12 @@ export default function PrimerNino({ familia, onListo, onSaltar }: Props) {
           </ul>
         )}
 
+        {lleno ? (
+          <p className={styles.obAyuda}>
+            Ya has añadido el máximo de {familia.max_ninos} niños. Puedes quitar alguno con
+            la ✕ si te has equivocado.
+          </p>
+        ) : (
         <div className={styles.obAlta}>
           <input
             className={`${styles.input} ${styles.campoTexto}`}
@@ -146,6 +156,7 @@ export default function PrimerNino({ familia, onListo, onSaltar }: Props) {
             </button>
           </div>
         </div>
+        )}
 
         {error && <p className={styles.testNo}>❌ {error}</p>}
 

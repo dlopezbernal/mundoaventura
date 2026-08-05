@@ -37,7 +37,8 @@ from backend.services import email_service, seguridad, settings_service
 logger = logging.getLogger(__name__)
 
 # Multi-perfil (Hito 9.2c): límites de la lista de niños y forma del PIN de familia.
-_MAX_NINOS = 8
+# El tope de niños vive en `config` (constante de despliegue, como MAX_PERSONAJES) y
+# se lee en cada uso, no al importar: así los tests pueden ajustarlo con monkeypatch.
 _MAX_LARGO_NOMBRE = 30
 _SEXOS_VALIDOS = {"chico", "chica"}  # además de '' (sin especificar)
 _RE_PIN_FAMILIA = re.compile(r"^\d{4}$")  # exactamente 4 dígitos
@@ -164,6 +165,9 @@ def _dto(fam: Familia) -> dict:
         "nombre_familia": fam.nombre_familia,
         "ninos": _ninos_lista(fam),
         "tiene_pin": bool(fam.pin_familia_hash),
+        # Tope global, no un dato de ESTA familia: viaja aquí porque la familia es lo
+        # único que el frontend recibe en todas las pantallas donde se editan niños.
+        "max_ninos": config.MAX_NINOS,
     }
 
 
@@ -439,8 +443,8 @@ def actualizar_perfil(
             fam.nombre_familia = limpio
         if ninos is not None:
             limpios = [nino for e in ninos if (nino := _sanear_nino(e)) is not None]
-            if len(limpios) > _MAX_NINOS:
-                raise ValueError(f"Como mucho {_MAX_NINOS} niños por familia.")
+            if len(limpios) > config.MAX_NINOS:
+                raise ValueError(f"Como mucho {config.MAX_NINOS} niños por familia.")
             fam.ninos = json.dumps(limpios, ensure_ascii=False)
         sesion.add(fam)
         sesion.commit()

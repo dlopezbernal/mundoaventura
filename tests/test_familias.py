@@ -318,11 +318,35 @@ def test_ninos_legacy_solo_nombre_se_normaliza():
 
 
 def test_actualizar_perfil_topa_numero_de_ninos():
+    """El tope es exacto: MAX_NINOS entra, uno más no.
+
+    Antes se comprobaba con un número holgado (9 contra un tope de 8), así que un
+    cambio del límite pasaba desapercibido. Se ata a `config` para que el test siga
+    valiendo si el tope se mueve desde el `.env`.
+    """
     familia, _ = _alta("muchos@ejemplo.com")
+    tope = config.MAX_NINOS
+
+    justo = familias_service.actualizar_perfil(
+        familia["id"], ninos=[{"nombre": f"N{i}"} for i in range(tope)]
+    )
+    assert len(justo["ninos"]) == tope
+
     with pytest.raises(ValueError):
         familias_service.actualizar_perfil(
-            familia["id"], ninos=[{"nombre": f"N{i}"} for i in range(9)]
+            familia["id"], ninos=[{"nombre": f"N{i}"} for i in range(tope + 1)]
         )
+
+
+def test_el_dto_publica_el_tope_para_que_la_ui_lo_respete():
+    """La UI deshabilita "Añadir" al llegar al tope, así que necesita conocerlo.
+
+    Viaja en la familia (y no en un envoltorio) porque es lo único que el frontend
+    recibe en TODAS las pantallas donde se editan niños: el gate de bienvenida y el
+    perfil de familia.
+    """
+    familia, _ = _alta("tope@ejemplo.com")
+    assert familia["max_ninos"] == config.MAX_NINOS
 
 
 def test_pin_familia_set_y_verificar():

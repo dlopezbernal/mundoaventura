@@ -40,8 +40,12 @@ export default function PerfilFamilia({ familia, onActualizado, onEliminada }: P
   const [ok, setOk] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
+  // Tope de niños por familia (constante de despliegue, la manda el backend).
+  const lleno = ninos.length >= familia.max_ninos;
+
   function anadirNino() {
     const limpio = nuevoNino.trim();
+    if (lleno) return;
     if (limpio && !ninos.some((n) => n.nombre === limpio)) {
       setNinos([...ninos, { nombre: limpio, sexo: nuevoSexo }]);
     }
@@ -145,35 +149,47 @@ export default function PerfilFamilia({ familia, onActualizado, onEliminada }: P
           <p className={styles.filaAyuda}>Aún no hay ningún niño. Añade al menos uno.</p>
         )}
 
-        <div className={styles.docsUrlFila}>
-          <input
-            className={styles.input}
-            type="text"
-            value={nuevoNino}
-            placeholder="Nombre del niño"
-            maxLength={30}
-            onChange={(e) => setNuevoNino(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                anadirNino();
-              }
-            }}
-          />
-          <select
-            className={styles.input}
-            value={nuevoSexo}
-            aria-label="Sexo del niño"
-            onChange={(e) => setNuevoSexo(e.target.value)}
-          >
-            <option value="">🧒 Sin especificar</option>
-            <option value="chico">👦 Chico</option>
-            <option value="chica">👧 Chica</option>
-          </select>
-          <button type="button" className={styles.testBtn} onClick={anadirNino} disabled={!nuevoNino.trim()}>
-            ＋ Añadir
-          </button>
-        </div>
+        {lleno ? (
+          <p className={styles.filaAyuda}>
+            Has alcanzado el máximo de {familia.max_ninos} niños por familia. Quita alguno
+            para añadir otro.
+          </p>
+        ) : (
+          <div className={styles.docsUrlFila}>
+            <input
+              className={styles.input}
+              type="text"
+              value={nuevoNino}
+              placeholder="Nombre del niño"
+              maxLength={30}
+              onChange={(e) => setNuevoNino(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  anadirNino();
+                }
+              }}
+            />
+            <select
+              className={styles.input}
+              value={nuevoSexo}
+              aria-label="Sexo del niño"
+              onChange={(e) => setNuevoSexo(e.target.value)}
+            >
+              <option value="">🧒 Sin especificar</option>
+              <option value="chico">👦 Chico</option>
+              <option value="chica">👧 Chica</option>
+            </select>
+            <button
+              type="button"
+              className={styles.testBtn}
+              onClick={anadirNino}
+              disabled={!nuevoNino.trim()}
+            >
+              ＋ Añadir
+            </button>
+          </div>
+        )}
 
         <div className={styles.footer}>
           <button
