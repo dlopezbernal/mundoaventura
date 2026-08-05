@@ -1,9 +1,8 @@
 <!DOCTYPE html>
-<html lang="es" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<html lang="es" xml:lang="es">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="color-scheme" content="dark light">
   <meta name="supported-color-schemes" content="dark light">
   <title>Tu código de MundoAventura</title>
@@ -12,39 +11,45 @@
   <![endif]-->
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&family=Press+Start+2P&family=Chakra+Petch:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    /* Solo lo que no se puede inline. Varios clientes lo ignoran: el email
-       se lee correcto solo con los estilos inline. */
-    body { margin:0; padding:0; width:100%; background-color:#040a1c; }
-    table { border-collapse:collapse; }
-    img { border:0; line-height:100%; outline:none; text-decoration:none; }
-    a { text-decoration:none; }
-    @media only screen and (max-width:620px) {
-      .container { width:100% !important; }
-      .px { padding-left:22px !important; padding-right:22px !important; }
-      .digit { width:44px !important; height:56px !important; font-size:26px !important; }
-      .digit-gap { width:6px !important; }
+    /* Aquí SOLO va lo que no se puede poner en línea (las consultas de medios).
+       Los reajustes de `body`/`table`/`img`/`a` se movieron al atributo `style` de
+       cada elemento, y no por gusto: Gmail detecta el idioma del correo SIN separar
+       el HTML del texto, y el contenido de ESTE bloque es de lo poco que sobrevive
+       a un borrado de etiquetas (los `style="…"` en línea, no: van dentro de la
+       etiqueta). Cuanto más CSS quede aquí, más "inglés" cree leer Gmail, y más
+       probable es que ofrezca traducir un correo que ya está en español. Las clases
+       van en español por el mismo motivo. */
+    @media (max-width:620px) {
+      .tarjeta { width:100% !important; }
+      .lados { padding-left:22px !important; padding-right:22px !important; }
+      .digito { width:44px !important; height:56px !important; font-size:26px !important; }
+      .hueco { width:6px !important; }
     }
   </style>
 </head>
-<body style="margin:0; padding:0; background-color:#040a1c;">
+<!-- El LIENZO del correo va en blanco a propósito: el degradado marino de la app
+     cargaba demasiado la vista en la bandeja de entrada. Todo el color de marca se
+     concentra en la tarjeta, que sigue siendo oscura y resalta más sobre el blanco. -->
+<body style="margin:0; padding:0; width:100%; background-color:#ffffff;">
   <div lang="es" xml:lang="es">
-  <!-- Preheader oculto (previsualización junto al asunto) -->
-  <span style="display:none !important; visibility:hidden; opacity:0; color:#040a1c; height:0; width:0; overflow:hidden; mso-hide:all;">Tu código para activar tu cuenta de MundoAventura. Caduca en {{ minutos }} minutos.</span>
+  <!-- Preheader oculto: es la previsualización junto al asunto Y el primer texto en
+       español del documento, lo que ayuda a que el correo se detecte como tal. -->
+  <span style="display:none !important; visibility:hidden; opacity:0; color:#ffffff; height:0; width:0; overflow:hidden; mso-hide:all;">Tu código para activar la cuenta de familia en MundoAventura. Escríbelo en la aplicación para terminar el registro; caduca en {{ minutos }} minutos. Si no has creado ninguna cuenta, puedes ignorar este mensaje sin hacer nada.</span>
 
-  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:#040a1c; background-image:linear-gradient(180deg,#0a1440,#040a1c 62%);">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse; background-color:#ffffff;">
     <tr>
       <td align="center" style="padding:32px 14px;">
 
         <!-- Tarjeta -->
-        <table role="presentation" class="container" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px; max-width:600px; background-color:#0b1338; border:1px solid #2bd8e6; border-radius:16px; overflow:hidden;">
+        <table role="presentation" class="tarjeta" cellpadding="0" cellspacing="0" border="0" width="600" style="border-collapse:collapse; width:600px; max-width:600px; background-color:#0b1338; border:1px solid #2bd8e6; border-radius:16px; overflow:hidden;">
 
           <!-- Barra superior de neón -->
           <tr><td style="height:4px; line-height:4px; font-size:0; background-color:#3ef2ff; background-image:linear-gradient(90deg,#3ef2ff,#8dffcf);">&nbsp;</td></tr>
 
           <!-- Cabecera: logo + marca -->
           <tr>
-            <td class="px" style="padding:30px 40px 22px; border-bottom:1px solid #17335f;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%">
+            <td class="lados" style="padding:30px 40px 22px; border-bottom:1px solid #17335f;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
                 <tr>
                   <td width="52" valign="middle" style="width:52px;">
                     <!-- LOGO:inicio -->
@@ -52,8 +57,8 @@
                     <!-- LOGO:fin -->
                   </td>
                   <td valign="middle" style="padding-left:14px;">
-                    <div style="font-family:'Orbitron',Tahoma,Verdana,sans-serif; font-weight:900; font-size:19px; letter-spacing:1px; color:#7fe9d8;">MUNDOAVENTURA</div>
-                    <div style="font-family:'Press Start 2P',Verdana,Tahoma,sans-serif; font-size:10px; letter-spacing:1px; color:#a9bcec; padding-top:7px;">&#9671; VERIFICACIÓN DE CUENTA &#9671;</div>
+                    <div lang="es" style="font-family:'Orbitron',Tahoma,Verdana,sans-serif; font-weight:900; font-size:19px; letter-spacing:1px; color:#7fe9d8;">MUNDOAVENTURA</div>
+                    <div lang="es" style="font-family:'Press Start 2P',Verdana,Tahoma,sans-serif; font-size:10px; letter-spacing:1px; color:#a9bcec; padding-top:7px;">&#9671; VERIFICACIÓN DE CUENTA &#9671;</div>
                   </td>
                 </tr>
               </table>
@@ -62,35 +67,35 @@
 
           <!-- Cuerpo -->
           <tr>
-            <td class="px" align="center" style="padding:28px 40px 10px;">
-              <div style="font-family:'Orbitron',Tahoma,Verdana,sans-serif; font-weight:800; font-size:22px; letter-spacing:0.5px; color:#e8f4ff;">¡Hola, {{ nombre_familia }}!</div>
-              <div style="font-family:'Chakra Petch',Arial,sans-serif; font-size:15px; line-height:1.6; color:#8fa3e0; padding:10px 6px 0;">Teclea este código en la app para activar tu cuenta de familia.</div>
+            <td class="lados" align="center" style="padding:28px 40px 10px;">
+              <div lang="es" style="font-family:'Orbitron',Tahoma,Verdana,sans-serif; font-weight:800; font-size:22px; letter-spacing:0.5px; color:#e8f4ff;">¡Hola, {{ nombre_familia }}!</div>
+              <div lang="es" style="font-family:'Chakra Petch',Arial,sans-serif; font-size:15px; line-height:1.6; color:#8fa3e0; padding:10px 6px 0;">Ya casi está. Teclea el código de abajo en la aplicación para activar la cuenta de tu familia y empezar la aventura.</div>
             </td>
           </tr>
 
           <!-- Etiqueta del código -->
           <tr>
             <td align="center" style="padding:24px 20px 14px;">
-              <div style="font-family:'Press Start 2P',Verdana,Tahoma,sans-serif; font-size:11px; letter-spacing:1.5px; color:#ffcf6b;">TU CÓDIGO DE ACCESO</div>
+              <div lang="es" style="font-family:'Press Start 2P',Verdana,Tahoma,sans-serif; font-size:11px; letter-spacing:1.5px; color:#ffcf6b;">TU CÓDIGO DE ACCESO</div>
             </td>
           </tr>
 
           <!-- Cajas de dígitos -->
           <tr>
             <td align="center" style="padding:0 16px 14px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                 <tr>
-                  <td class="digit" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d1 }}</td>
-                  <td class="digit-gap" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
-                  <td class="digit" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d2 }}</td>
-                  <td class="digit-gap" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
-                  <td class="digit" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d3 }}</td>
-                  <td class="digit-gap" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
-                  <td class="digit" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d4 }}</td>
-                  <td class="digit-gap" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
-                  <td class="digit" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d5 }}</td>
-                  <td class="digit-gap" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
-                  <td class="digit" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d6 }}</td>
+                  <td class="digito" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d1 }}</td>
+                  <td class="hueco" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
+                  <td class="digito" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d2 }}</td>
+                  <td class="hueco" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
+                  <td class="digito" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d3 }}</td>
+                  <td class="hueco" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
+                  <td class="digito" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d4 }}</td>
+                  <td class="hueco" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
+                  <td class="digito" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d5 }}</td>
+                  <td class="hueco" width="10" style="width:10px; font-size:0; line-height:0;">&nbsp;</td>
+                  <td class="digito" align="center" valign="middle" width="52" height="66" style="width:52px; height:66px; background-color:#071033; border:1px solid #2bd8e6; border-radius:10px; font-family:'Orbitron','Courier New',monospace; font-weight:900; font-size:32px; color:#3ef2ff; mso-line-height-rule:exactly;">{{ d6 }}</td>
                 </tr>
               </table>
             </td>
@@ -99,17 +104,17 @@
           <!-- Caducidad -->
           <tr>
             <td align="center" style="padding:2px 20px 26px;">
-              <div style="font-family:'Press Start 2P',Verdana,Tahoma,sans-serif; font-size:11px; letter-spacing:1.5px; color:#a9bcec;">&#9203; CADUCA EN {{ minutos }} MINUTOS</div>
+              <div lang="es" style="font-family:'Press Start 2P',Verdana,Tahoma,sans-serif; font-size:11px; letter-spacing:1.5px; color:#a9bcec;">&#9203; CADUCA EN {{ minutos }} MINUTOS</div>
             </td>
           </tr>
 
           <!-- CTA:inicio -->
           <tr>
             <td align="center" style="padding:0 40px 34px;">
-              <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                 <tr>
                   <td align="center" bgcolor="#3ef2ff" style="border-radius:12px; background-color:#3ef2ff; background-image:linear-gradient(90deg,#3ef2ff,#8dffcf);">
-                    <a href="{{ url_app }}" style="display:inline-block; font-family:'Orbitron',Tahoma,Verdana,sans-serif; font-weight:800; font-size:14px; letter-spacing:1px; color:#04121f; padding:15px 34px; border-radius:12px;">ABRIR MUNDOAVENTURA &#9654;</a>
+                    <a lang="es" href="{{ url_app }}" style="display:inline-block; text-decoration:none; font-family:'Orbitron',Tahoma,Verdana,sans-serif; font-weight:800; font-size:14px; letter-spacing:1px; color:#04121f; padding:15px 34px; border-radius:12px;">ABRIR MUNDOAVENTURA &#9654;</a>
                   </td>
                 </tr>
               </table>
@@ -120,18 +125,18 @@
 
           <!-- Nota de seguridad -->
           <tr>
-            <td class="px" style="padding:20px 40px 26px; border-top:1px solid #17335f; background-color:#070f2c;">
-              <div style="font-family:'Chakra Petch',Arial,sans-serif; font-size:12.5px; line-height:1.65; color:#7183c4;">🛡️ Este código es solo para el adulto de la familia. No lo compartas con nadie. Si no has creado esta cuenta, ignora este mensaje sin problema.</div>
-              <div style="font-family:'Press Start 2P',Verdana,Tahoma,sans-serif; font-size:10px; letter-spacing:1.2px; color:#8fa3e0; padding-top:16px;">SER. #MA-OTP · ¡DESCUBRE TU PRÓXIMA AVENTURA!</div>
+            <td class="lados" style="padding:20px 40px 26px; border-top:1px solid #17335f; background-color:#070f2c;">
+              <div lang="es" style="font-family:'Chakra Petch',Arial,sans-serif; font-size:12.5px; line-height:1.65; color:#7183c4;">🛡️ Este código es solo para el adulto de la familia. No lo compartas con nadie: quien lo tenga puede entrar en la cuenta. Si no has creado esta cuenta, ignora este mensaje sin problema.</div>
+              <div lang="es" style="font-family:'Press Start 2P',Verdana,Tahoma,sans-serif; font-size:10px; letter-spacing:1.2px; color:#8fa3e0; padding-top:16px;">SER. #MA-OTP &middot; ¡DESCUBRE TU PRÓXIMA AVENTURA!</div>
             </td>
           </tr>
         </table>
 
         <!-- Pie -->
-        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="width:600px; max-width:600px;">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="600" style="border-collapse:collapse; width:600px; max-width:600px;">
           <tr>
             <td align="center" style="padding:18px 30px 8px;">
-              <div style="font-family:'Chakra Petch',Arial,sans-serif; font-size:11px; line-height:1.6; color:#5a6bab;">Recibiste este correo porque se creó una cuenta de familia en MundoAventura con esta dirección.</div>
+              <div lang="es" style="font-family:'Chakra Petch',Arial,sans-serif; font-size:11px; line-height:1.6; color:#5a6bab;">Recibiste este correo porque se creó una cuenta de familia en MundoAventura con esta dirección. Si no has sido tú, no tienes que hacer nada: sin el código, la cuenta no llega a activarse.</div>
             </td>
           </tr>
         </table>

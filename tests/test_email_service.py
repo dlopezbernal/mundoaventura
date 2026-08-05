@@ -216,7 +216,7 @@ def test_el_html_lleva_cada_digito_en_su_caja(smtp_falso):
     # Los seis dígitos, cada uno dentro de su celda de dígito.
     import re
 
-    celdas = re.findall(r'class="digit"[^>]*>(\d)</td>', html)
+    celdas = re.findall(r'class="digito"[^>]*>(\d)</td>', html)
     assert celdas == ["4", "8", "2", "9", "1", "3"]
 
 
@@ -254,8 +254,40 @@ def test_declara_el_idioma_para_que_gmail_no_ofrezca_traducirlo(smtp_falso):
     email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
     msg = _mensaje(smtp_falso)
     assert msg["Content-Language"] == "es-ES"
+    # También en la subparte HTML: es la que el cliente renderiza de verdad.
+    partes = {p.get_content_type(): p for p in msg.iter_parts()}
+    assert partes["text/html"]["Content-Language"] == "es-ES"
     # Gmail descarta el <html lang="es">, así que el idioma se repite dentro.
     assert 'lang="es"' in _parte(msg, "html")
+
+
+def test_el_bloque_style_no_ahoga_al_espanol_del_correo(smtp_falso):
+    """La cabecera `Content-Language` NO basta con Gmail (verificado en producción).
+
+    Gmail detecta el idioma SIN separar el HTML del texto: los `style="…"` en línea
+    van dentro de la etiqueta y se pierden al borrarlas, pero el CONTENIDO de un
+    bloque `<style>` sobrevive como si fuera prosa. Con 675 caracteres de CSS inglés
+    contra 380 de español, decidía "inglés" pese a la cabecera. Por eso el bloque se
+    dejó al mínimo imprescindible (las consultas de medios) y el resto se puso en
+    línea; este test evita que vuelva a crecer sin darse cuenta.
+    """
+    import re
+
+    _config_smtp()
+    email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
+    html = _parte(_mensaje(smtp_falso), "html")
+
+    style = re.search(r"<style.*?</style>", html, re.S).group(0)
+    reglas = style.split("*/")[-1]  # sin el comentario, que va en español
+    assert "@media" in reglas, "las consultas de medios son lo único que no puede ir en línea"
+    assert len(reglas) < 400, "el <style> ha vuelto a crecer: Gmail lo leerá como inglés"
+    # Los reajustes globales van en línea, en cada elemento, no aquí. (Se busca el
+    # selector como ELEMENTO, al principio de una regla: "a" no debe casar con
+    # ".tarjeta {".)
+    for etiqueta in ("body", "table", "img", "a"):
+        assert not re.search(rf"(?m)^\s*{etiqueta}\s*\{{", reglas), (
+            f"'{etiqueta}' debe ir en línea, no en el <style>"
+        )
 
 
 def test_con_url_de_app_el_logo_es_la_imagen_servida(smtp_falso):

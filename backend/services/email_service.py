@@ -104,13 +104,19 @@ def enviar(destinatario: str, asunto: str, cuerpo: str, cuerpo_html: str | None 
     msg.set_content(cuerpo)  # respaldo en texto plano (se conserva siempre)
     if cuerpo_html:
         msg.add_alternative(cuerpo_html, subtype="html")
-    # Declara el idioma del mensaje. Sin esto, Gmail adivina por el contenido y con un
-    # texto corto lleno de mayúsculas y siglas se equivoca: enseña el aviso "parece que
-    # este mensaje está en inglés" y ofrece traducirlo, encima de un correo en español.
-    # Va DESPUÉS de componer el cuerpo a propósito: `add_alternative` reestructura el
-    # mensaje a multipart y se lleva las cabeceras `Content-*` a la subparte, así que
-    # puesto antes acabaría dentro del text/plain en vez de en el mensaje.
+    # Declara el idioma del mensaje. Sin esto, Gmail adivina por el contenido y se
+    # equivoca: enseña "parece que este mensaje está en inglés" sobre un correo en
+    # español. Va DESPUÉS de componer el cuerpo a propósito: `add_alternative`
+    # reestructura el mensaje a multipart y se lleva las cabeceras `Content-*` a la
+    # subparte, así que puesto antes acabaría dentro del text/plain, no en el mensaje.
     msg["Content-Language"] = "es-ES"
+    # Y también en la subparte HTML, que es la que el cliente renderiza de verdad.
+    # (La cabecera por sí sola NO basta con Gmail —lo comprobamos en producción, con
+    # ella puesta seguía ofreciendo traducir—; el trabajo de fondo está en que la
+    # plantilla tenga más prosa española que CSS. Ver verificacion_email.html.)
+    for parte in msg.iter_parts():
+        if parte.get_content_type() == "text/html":
+            parte["Content-Language"] = "es-ES"
     try:
         with smtplib.SMTP(host, int(settings_service.get("SMTP_PORT")), timeout=10) as servidor:
             if settings_service.get("SMTP_STARTTLS"):
@@ -151,8 +157,11 @@ def _html_verificacion(nombre_familia: str, codigo: str, minutos: int) -> str | 
         # Caddy junto a la SPA (frontend-react/public/logo-email.png).
         html = re.sub(
             r"<!-- LOGO:inicio -->.*?<!-- LOGO:fin -->",
+            # El `border:0; outline:none` iba en el `<style>` de la plantilla; ahora
+            # va en línea, porque ese bloque se dejó al mínimo (ver la plantilla).
             f'<img src="{html_lib.escape(url_app, quote=True)}/logo-email.png" width="46" '
-            f'height="46" alt="MundoAventura" style="display:block; border-radius:12px;">',
+            f'height="46" alt="MundoAventura" style="display:block; border:0; '
+            f'outline:none; border-radius:12px;">',
             html,
             flags=re.DOTALL,
         )
