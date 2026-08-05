@@ -1,17 +1,23 @@
 /**
- * Console — Consola inferior de la máquina
- * =========================================
+ * Console — Barra inferior de acciones del flujo
+ * ===============================================
  *
- * Dial decorativo + línea de estado ("OBJETIVO FIJADO: ...") + barra de
- * progreso del viaje + botón CTA para avanzar. Opcionalmente un botón "atrás".
- * El texto de estado se pasa como nodo para poder resaltar partes en <b>.
+ * Línea de estado (qué has elegido) + barra de progreso del viaje + botón para
+ * avanzar, y opcionalmente uno para retroceder. El estado se pasa como nodo para
+ * poder resaltar el nombre elegido en <b>.
+ *
+ * Nació como la "consola de la máquina", con un dial decorativo y rótulos tipo
+ * "PERSONAJE FIJADO: …". En móvil y tablet ocupaba demasiado para lo que dice, así
+ * que se quedó con la información y se fue la escenografía: el dial ya no está y el
+ * estado es solo el nombre elegido. Los botones también adelgazaron (sin el corte
+ * angulado ni el halo grande) para no dominar la pantalla.
  */
 
-import type { CSSProperties, ReactNode } from "react";
+import type { ReactNode } from "react";
 import styles from "./Console.module.css";
 
 interface Props {
-  /** Línea de estado (admite <b> para resaltar el objetivo). */
+  /** Línea de estado (admite <b> para resaltar lo elegido). */
   status: ReactNode;
   /** Progreso del viaje 0..1 (rellena la barra). */
   progress: number;
@@ -34,33 +40,27 @@ export default function Console({
   backLabel = "◀ ATRÁS",
 }: Props) {
   const pct = Math.max(0, Math.min(1, progress)) * 100;
-  // El dial apunta según el progreso (de -50° a +50°), guiño decorativo.
-  const dialRot = { "--dial-rot": `${-50 + progress * 100}deg` } as CSSProperties;
 
   return (
     <div className={styles.console}>
-      <div className={styles.dial} style={dialRot} aria-hidden="true" />
       <div className={styles.status}>
         <div className={styles.line}>{status}</div>
         <div className={styles.progress}>
           <i style={{ width: `${pct}%` }} />
         </div>
       </div>
-      {onBack ? (
-        <button type="button" className={styles.back} onClick={onBack}>
-          {backLabel}
+      {/* Los botones van juntos en su propia caja: así, cuando no hay "atrás", el
+          principal ocupa el ancho en móvil sin necesitar un hueco de relleno. */}
+      <div className={styles.acciones}>
+        {onBack && (
+          <button type="button" className={styles.back} onClick={onBack}>
+            {backLabel}
+          </button>
+        )}
+        <button type="button" className={styles.cta} onClick={onCta} disabled={ctaDisabled}>
+          {ctaLabel}
         </button>
-      ) : (
-        <span />
-      )}
-      <button
-        type="button"
-        className={styles.cta}
-        onClick={onCta}
-        disabled={ctaDisabled}
-      >
-        {ctaLabel}
-      </button>
+      </div>
     </div>
   );
 }

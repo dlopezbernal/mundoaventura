@@ -1,90 +1,90 @@
 /**
- * Console — Consola inferior: dial + estado + barra de progreso + botón CTA.
- * Es la "botonera" de la máquina para avanzar de paso.
+ * Console — Barra inferior: estado + barra de progreso + botones de avance.
+ *
+ * Deliberadamente contenida: en móvil y tablet esta barra competía con el propio
+ * carrusel. Fuera el dial decorativo, y los botones sin el corte angulado ni el
+ * halo grande de antes.
  */
 
 .console {
-  display: grid;
-  grid-template-columns: auto 1fr auto auto;
-  gap: 16px;
+  display: flex;
   align-items: center;
-  margin-top: 16px;
+  gap: 14px;
+  margin-top: 12px;
   border: 1px solid var(--edge);
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(14, 20, 64, 0.7), rgba(6, 12, 34, 0.7));
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.55), rgba(6, 12, 34, 0.65));
   backdrop-filter: blur(6px);
-  padding: 12px 16px;
+  padding: 10px 14px;
 }
 
-.dial {
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: 2px solid var(--edge);
-  position: relative;
-  background: radial-gradient(circle at 40% 35%, #0a2f42, #04141d);
+.status {
+  flex: 1;
+  min-width: 0; /* deja que la línea de estado se recorte en vez de desbordar */
 }
-.dial::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  width: 2px;
-  height: 21px;
-  background: var(--holo);
-  transform-origin: bottom;
-  transform: translateX(-50%) rotate(var(--dial-rot, 40deg));
-  box-shadow: 0 0 8px var(--holo);
-}
-
 .status .line {
-  font-size: 11px;
-  letter-spacing: 0.06em;
+  font-size: 12px;
+  letter-spacing: 0.03em;
   color: #8aa6cc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .status .line b {
   color: var(--lime);
+  font-weight: 700;
 }
 .progress {
-  height: 6px;
+  height: 4px;
   border-radius: 99px;
   background: #0a2333;
   overflow: hidden;
   border: 1px solid var(--edge);
-  margin-top: 6px;
+  margin-top: 7px;
 }
 .progress i {
   display: block;
   height: 100%;
   background: linear-gradient(90deg, var(--holo), var(--lime));
-  box-shadow: 0 0 10px var(--holo);
   transition: width 0.4s ease;
+}
+
+.acciones {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .back {
   font-family: var(--font-disp);
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0.04em;
   color: var(--holo);
-  background: rgba(4, 8, 28, 0.6);
+  background: rgba(4, 8, 28, 0.5);
   border: 1px solid var(--edge);
-  padding: 12px 18px;
-  border-radius: 12px;
+  padding: 9px 14px;
+  border-radius: 10px;
+}
+.back:hover {
+  background: rgba(62, 242, 255, 0.12);
 }
 
 .cta {
   font-family: var(--font-disp);
-  font-weight: 900;
-  font-size: 15px;
-  letter-spacing: 0.06em;
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.05em;
   color: #04121f;
   background: linear-gradient(90deg, var(--holo), var(--lime));
   border: none;
-  padding: 14px 28px;
-  border-radius: 12px;
-  clip-path: polygon(6% 0, 100% 0, 94% 100%, 0 100%);
-  box-shadow: 0 0 22px rgba(62, 242, 255, 0.4);
+  padding: 10px 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(62, 242, 255, 0.25);
+}
+.cta:hover:not(:disabled) {
+  filter: brightness(1.08);
 }
 .cta:disabled {
   filter: grayscale(0.7) brightness(0.7);
@@ -92,17 +92,26 @@
   box-shadow: none;
 }
 
+/* Móvil: el estado arriba a lo ancho y los botones debajo, repartidos. */
 @media (max-width: 640px) {
   .console {
-    grid-template-columns: 1fr 1fr;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 10px 12px;
   }
-  .dial {
-    display: none;
-  }
-  .status {
-    grid-column: 1 / -1;
-  }
-  .cta {
+  .acciones {
     width: 100%;
+  }
+  .back,
+  .cta {
+    flex: 1;
+    padding: 11px 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress i {
+    transition: none;
   }
 }
