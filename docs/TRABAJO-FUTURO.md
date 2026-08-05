@@ -51,34 +51,45 @@ despliegue **todavía no** resuelve:
   Hito 7 (el componente `CambiarPin`, la función `adminChangePin`, la clave `admin_pin_hash`), sin
   impacto funcional ni visible. Refactor de limpieza para después de la entrega.
 
-## Fase 2 — revisar el despliegue
+## Fase 2 — el despliegue
 
-El despliegue actual **funciona y está documentado paso a paso**, pero se hizo optimizando para
-que una persona pudiera montarlo y entenderlo entero, no para un equipo. Antes de darlo por bueno
-a largo plazo conviene contrastarlo con la práctica habitual del sector:
+El despliegue inicial **funcionaba y estaba documentado**, pero se hizo optimizando para que una
+persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo automatizado.
 
-- **¿Es el enfoque correcto, o solo el que funcionó?** Revisar el despliegue actual contra buenas
-  prácticas: instalación nativa con `uv` + systemd + Caddy, actualización manual con
-  `deploy/desplegar.sh`, un único servidor sin réplica, SQLite y ChromaDB en disco local. Cada una
-  de esas decisiones tiene una justificación de tamaño de proyecto, pero ninguna se ha contrastado
-  con la alternativa profesional.
-- **Automatizar el despliegue desde GitHub.** Hoy el ciclo es manual: merge a `main` y luego entrar
-  por SSH a lanzar el script. La alternativa es un *runner* de GitHub Actions que despliegue al
-  hacer merge. Dos variantes con implicaciones muy distintas:
-  - **Runner alojado** (`ubuntu-latest`) que entra por SSH con una clave guardada en los *secrets*
-    del repositorio. Sencillo, pero mete una credencial de escritura del servidor en GitHub.
-  - **Runner autoalojado** en el propio VPS, que hace *pull* y despliega sin abrir el SSH a nadie.
-    Encaja mejor con el modelo actual (deploy key de solo lectura, el servidor tira del repo), a
-    cambio de mantener un agente más en el servidor.
-- **Qué exigirle a ese despliegue automático** para que sea una mejora real y no solo un botón:
-  desplegar únicamente si el CI está verde, *smoke test* de `/health` después de reiniciar,
-  **vuelta atrás automática** si no responde, y un despliegue sin corte perceptible (hoy hay unos
-  segundos de 502 mientras systemd reinicia el servicio).
+### Hecho
+
+- ✅ **Despliegue automático desde GitHub** (`.github/workflows/ci.yml`, job `deploy`): push a
+  `main` o botón *Run workflow*, con `needs: [backend, frontend]` para que **sea imposible
+  desplegar con el CI en rojo**, y `concurrency` para que dos merges seguidos no se pisen.
+  Runner alojado que entra por SSH; lo que hace aceptable guardar una clave del servidor en
+  GitHub es que va registrada con **comando forzado** (`command="…/desplegar.sh"`, sin pty) como
+  el usuario sin privilegios: esa clave no da una shell. Detalle en
+  [`DESPLIEGUE.md §5.1`](DESPLIEGUE.md).
+- ✅ **Vuelta atrás automática y comprobación de humo** en `deploy/desplegar.sh`: si `/health` no
+  responde tras el reinicio, vuelve al commit anterior, reconstruye, reinicia y sale con error.
+  La puerta es `status: ok` y **no** las banderas de los proveedores (un DeepL caído no es un
+  despliegue roto, y volver atrás no lo arreglaría).
+- ✅ **Despliegue sin corte**: activación por socket de systemd (`deploy/mundoaventura.socket` +
+  `uvicorn --fd 3`). Medido: de **10 % de peticiones con 502** durante el reinicio a **0 %**
+  ([`mediciones/F2-despliegue-sin-corte.md`](mediciones/F2-despliegue-sin-corte.md)).
+
+### Lo que sigue pendiente
+
+- **¿Es el enfoque correcto, o solo el que funcionó?** Queda por contrastar contra la práctica
+  habitual: instalación nativa con `uv` + systemd + Caddy, un único servidor sin réplica, SQLite
+  y ChromaDB en disco local. Cada decisión tiene una justificación de tamaño de proyecto, pero
+  ninguna se ha comparado con su alternativa profesional.
+- **Runner autoalojado** en el propio VPS como alternativa al alojado: haría *pull* sin que nadie
+  tenga que entrar por SSH, lo que permitiría cerrar el puerto 22 a internet (hoy tiene que
+  seguir abierto para que el runner de GitHub llegue). A cambio, un agente más que mantener.
 - **Reproducibilidad y entornos.** Un `Dockerfile` sigue pendiente (ver arriba). Con contenedor,
   el despliegue pasa a ser "construye imagen, publica, arranca", y deja de depender de que el
   servidor tenga la versión correcta de Node, `uv` y Python.
 - **Entorno de pruebas.** Hoy solo existe producción: lo que se despliega no se ha visto nunca
   funcionando en un servidor antes de estar delante de los usuarios.
+- **Peticiones en vuelo.** El corte del despliegue está resuelto para conexiones nuevas, pero una
+  respuesta ya empezada (sobre todo el SSE del chat, que dura segundos) se corta igual al
+  reiniciar. Sin medir.
 - **Observabilidad y avisos.** `journalctl` es suficiente para depurar a mano, pero nadie se entera
   si el servicio se cae de madrugada, si caduca un certificado o si se agota el saldo de un
   proveedor. Un *healthcheck* externo con aviso es el mínimo.

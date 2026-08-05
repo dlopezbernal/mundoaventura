@@ -16,6 +16,10 @@ Documentation=https://github.com/dlopezbernal/mundoaventura
 # network-online (no solo network): el hook de arranque comprueba DeepL/ElevenLabs.
 After=network-online.target
 Wants=network-online.target
+# El socket lo abre systemd, no uvicorn (ver mundoaventura.socket): así un
+# reinicio no cierra el puerto y el despliegue no produce 502.
+Requires=mundoaventura.socket
+After=mundoaventura.socket
 
 [Service]
 Type=exec
@@ -28,7 +32,10 @@ WorkingDirectory=/opt/mundoaventura
 # adulto cambia una clave desde el menú. Con EnvironmentFile, systemd tendría una
 # copia congelada del arranque y las dos fuentes se desincronizarían.
 
-# --host 127.0.0.1  → el backend NO se expone directo: solo Caddy habla con él.
+# --fd 3            → NO abre el puerto: hereda de systemd el socket ya a la
+#                     escucha (mundoaventura.socket). systemd pasa los sockets a
+#                     partir del descriptor 3. Sustituye a --host/--port, y es lo
+#                     que permite reiniciar sin cortar (ver el .socket).
 # --workers 1       → OBLIGATORIO. Hay estado EN MEMORIA que no se comparte entre
 #                     procesos: sesiones de admin, contador de fuerza bruta por IP,
 #                     cubos de slowapi y la caché de settings_service. Con 2+ workers
@@ -39,8 +46,7 @@ WorkingDirectory=/opt/mundoaventura
 #   + forwarded-allow-ips  (la IP de Caddy) y el rate limit "por IP" sería un cubo
 #                     único global: un niño agotando su cupo bloquearía a los demás.
 ExecStart=/opt/mundoaventura/.venv/bin/uvicorn backend.main:app \
-    --host 127.0.0.1 \
-    --port 8000 \
+    --fd 3 \
     --workers 1 \
     --proxy-headers \
     --forwarded-allow-ips=127.0.0.1 \

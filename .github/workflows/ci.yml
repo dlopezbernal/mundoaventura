@@ -1,11 +1,14 @@
 name: CI
 
 # Corre en cada push y en cada pull request contra dev (y main).
+# `workflow_dispatch` añade el botón "Run workflow" de la interfaz de GitHub,
+# para poder redesplegar a mano sin inventarse un commit vacío.
 on:
   push:
     branches: [dev, main]
   pull_request:
     branches: [dev, main]
+  workflow_dispatch:
 
 jobs:
   backend:
@@ -57,3 +60,59 @@ jobs:
 
       - name: Build (tsc + vite)
         run: npm run build
+
+  deploy:
+    name: Desplegar a producción
+    # `needs` es la garantía de que NUNCA se despliega algo con el CI en rojo:
+    # este job ni siquiera empieza si backend o frontend fallan.
+    needs: [backend, frontend]
+    # Solo main = producción. Un push a dev pasa el CI pero no toca el servidor.
+    # Cubre a la vez el push a main y el "Run workflow" manual desde esa rama.
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    # Dos merges seguidos NO pueden desplegar a la vez: el segundo espera. Sin
+    # esto, dos `git pull` + `npm run build` simultáneos sobre el mismo
+    # directorio del servidor se pisarían a mitad.
+    # cancel-in-progress: false → nunca se aborta un despliegue ya empezado, que
+    # es justo cuando el servidor está en un estado intermedio.
+    concurrency:
+      group: deploy-produccion
+      cancel-in-progress: false
+    # Registra el despliegue en la pestaña Environments de GitHub (con su
+    # historial) y permite exigir aprobación manual añadiendo un revisor.
+    environment:
+      name: produccion
+      url: https://chatmundoaventura.com
+    steps:
+      - name: Preparar la clave SSH
+        # La clave se escribe en disco (no en la línea de órdenes) para que no
+        # aparezca en la lista de procesos del runner.
+        run: |
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          # known_hosts FIJADO a mano, nunca StrictHostKeyChecking=no: si no se
+          # verifica el servidor, cualquiera que logre interponerse recibe la
+          # clave privada de despliegue.
+          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Desplegar
+        # No se manda ninguna orden: la clave está registrada en el servidor con
+        # `command="…/desplegar.sh"`, así que sshd ejecuta ESE script y nada más,
+        # decida lo que decida quien tenga la clave (docs/DESPLIEGUE.md §5.1).
+        # El script vuelve atrás solo y sale con error si /health no responde,
+        # así que el resultado de este paso es el resultado real del despliegue.
+        run: |
+          ssh -i ~/.ssh/id_deploy \
+              -o BatchMode=yes \
+              -o ConnectTimeout=15 \
+              "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}"
+
+      - name: Comprobar el sitio público
+        # El script ya valida /health por dentro (127.0.0.1). Esto verifica lo
+        # otro: que Caddy, el certificado y el DNS siguen sirviendo la app a
+        # quien la usa de verdad, desde fuera del servidor.
+        run: |
+          curl -fsS --max-time 20 https://chatmundoaventura.com/health | tee /dev/stderr | grep -q '"status":"ok"'
+          curl -fsS --max-time 20 -o /dev/null https://chatmundoaventura.com/

@@ -351,18 +351,38 @@ minutos y necesita salida a internet.
 > colección real (esa la decide `EMBEDDING_BACKEND`). Para verificar de verdad qué se indexó:
 > `uv run python -c "from backend.services import vector_store as v; c=v.cliente(); print([(x.name, c.get_collection(x.name).count()) for x in c.list_collections()])"`
 
-### 3.9 Servicio systemd
+### 3.9 Servicio systemd (con socket, para desplegar sin cortes)
+
+Son **dos** unidades. El socket va primero: es quien abre el puerto 8000 y se lo pasa al
+proceso, de modo que reiniciar el backend no cierra la escucha y un despliegue no produce
+502 (medido: [`mediciones/F2-despliegue-sin-corte.md`](mediciones/F2-despliegue-sin-corte.md)).
 
 ```bash
+cp /opt/mundoaventura/deploy/mundoaventura.socket  /etc/systemd/system/
 cp /opt/mundoaventura/deploy/mundoaventura.service /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --now mundoaventura
+systemctl enable --now mundoaventura.socket    # abre 127.0.0.1:8000
+systemctl enable --now mundoaventura           # arranca uvicorn sobre ese socket
 systemctl status mundoaventura
+ss -tlnp | grep 8000        # debe verse "systemd", NO "uvicorn": es el socket de systemd
 curl -s http://127.0.0.1:8000/health
 ```
 
 `/health` debe devolver `token_configurado: true`, `deepl_ok: true` y `elevenlabs_ok: true`.
 Si alguno es `false`, revisa el `.env` (§3.4) antes de seguir.
+
+El backend arranca con `--fd 3` en vez de `--host`/`--port`: hereda de systemd el socket ya
+a la escucha (systemd pasa los suyos a partir del descriptor 3). Consecuencia práctica: los
+dos ficheros van **en pareja**. Si algún día vuelves a `--host/--port`, desactiva también el
+socket (`systemctl disable --now mundoaventura.socket`) o el arranque fallará con *address
+already in use*.
+
+> **Si vienes de una instalación anterior sin socket**, el servicio está ocupando el puerto y
+> hay que soltarlo antes de activar la nueva pareja:
+> ```bash
+> systemctl stop mundoaventura && systemctl daemon-reload
+> systemctl enable --now mundoaventura.socket && systemctl start mundoaventura
+> ```
 
 **Permiso mínimo para reiniciarse.** `deploy/desplegar.sh` corre como `mundoaventura`, que es
 un usuario de sistema sin `sudo`, y su último paso es reiniciar el servicio. En vez de darle
@@ -450,12 +470,8 @@ Si algo falla, el primer sitio donde mirar es `journalctl -u mundoaventura -n 10
 
 ## 5. Operación
 
-**No hay despliegue automático.** El CI de GitHub Actions solo pasa lint, tests y build; nada
-despliega. El servidor **tira** del repositorio cuando tú se lo pides (modelo *pull*), con una
-deploy key de **solo lectura**: GitHub no tiene credenciales para entrar en el VPS. El ciclo
-completo es commit → PR a `dev` → merge a `main` → ejecutar el script de abajo en el servidor.
-Si esto debería seguir siendo así es una pregunta abierta; ver
-[`TRABAJO-FUTURO.md`](TRABAJO-FUTURO.md).
+Un merge a `main` despliega solo (§5.1). Estos son los comandos de siempre, para cuando quieras
+hacerlo a mano o el despliegue automático no esté disponible:
 
 ```bash
 # Logs en vivo
@@ -467,6 +483,83 @@ sudo -u mundoaventura bash -lc 'cd /opt/mundoaventura && ./deploy/desplegar.sh'
 # …y además reconstruir el índice RAG (si cambiaron documentos, EMBEDDING_BACKEND o CHUNKING)
 sudo -u mundoaventura bash -lc 'cd /opt/mundoaventura && ./deploy/desplegar.sh --reindexar'
 ```
+
+**El script decide solo si el despliegue ha ido bien**, que es lo que permite automatizarlo:
+anota el commit actual antes del `pull` y, si `/health` no responde tras el reinicio,
+**vuelve atrás** a esa versión, reconstruye, reinicia y sale con error. Tres matices
+deliberados:
+
+- **La puerta es `status: ok`, no las banderas de los proveedores.** Un `deepl_ok:false`
+  casi siempre significa que DeepL está caído, no que este despliegue esté roto; volver
+  atrás no lo arreglaría. Esas banderas se avisan por pantalla, no deciden.
+- **La vuelta atrás revierte el código, no la BBDD.** Restaurarla borraría los ajustes que
+  el adulto haya cambiado desde el menú mientras tanto, y aquí no hay migraciones de esquema
+  que deshacer. La copia previa sigue en `/opt/copias/` por si hiciera falta a mano.
+- **Si falla la construcción, el servicio en marcha ni se toca**: aún no se ha reiniciado
+  nada, así que basta con dejar el árbol como estaba.
+
+### 5.1 Despliegue automático desde GitHub
+
+Un push a `main` (o el botón **Run workflow** de la pestaña Actions) lanza el job `deploy`
+de [`.github/workflows/ci.yml`](../.github/workflows/ci.yml): entra por SSH al VPS y ejecuta
+`desplegar.sh`. Va en el **mismo** workflow que los tests, con `needs: [backend, frontend]`,
+así que **no hay forma de desplegar con el CI en rojo**. `dev` pasa el CI pero no toca el
+servidor.
+
+Lo que hace falta configurar, una vez:
+
+**1. Una clave SSH exclusiva para el despliegue** (en tu PC, no en el servidor):
+
+```bash
+ssh-keygen -t ed25519 -N "" -C "github-actions-deploy" -f ./deploy_ci
+```
+
+**2. Registrarla en el servidor con COMANDO FORZADO.** Este es el punto que hace aceptable
+tener una clave del servidor guardada en GitHub: así **no da una shell**. Haga lo que haga
+quien la tenga, sshd ejecuta el script de despliegue y nada más.
+
+```bash
+# En el servidor, como root — OJO: el usuario es `mundoaventura`, NUNCA root.
+mkdir -p /opt/mundoaventura/.ssh && chmod 700 /opt/mundoaventura/.ssh
+cat >> /opt/mundoaventura/.ssh/authorized_keys <<'EOF'
+command="/opt/mundoaventura/deploy/desplegar.sh",no-pty,no-agent-forwarding,no-port-forwarding,no-X11-forwarding ssh-ed25519 AAAA…CONTENIDO_DE_deploy_ci.pub… github-actions-deploy
+EOF
+chown -R mundoaventura:mundoaventura /opt/mundoaventura/.ssh
+chmod 600 /opt/mundoaventura/.ssh/authorized_keys
+```
+
+Ese usuario ya tiene el `sudo` limitado a `systemctl restart|status mundoaventura` (§3.9), así
+que el daño posible si la clave se filtrara baja de "control del servidor" a "puede
+redesplegar". Compruébalo antes de seguir — debe ejecutar el despliegue y **no** darte prompt:
+
+```bash
+ssh -i ./deploy_ci mundoaventura@chatmundoaventura.com          # lanza el despliegue
+ssh -i ./deploy_ci mundoaventura@chatmundoaventura.com 'whoami' # IGNORA la orden: forzado
+```
+
+**3. Los tres secretos del repositorio** (Settings → Secrets and variables → Actions):
+
+| Secreto | Valor |
+|---|---|
+| `VPS_SSH_KEY` | Contenido de `deploy_ci` (la clave **privada**, entera, con sus líneas `BEGIN/END`) |
+| `VPS_HOST` | `chatmundoaventura.com` |
+| `VPS_USER` | `mundoaventura` |
+| `VPS_KNOWN_HOSTS` | Salida de `ssh-keyscan chatmundoaventura.com` |
+
+`VPS_KNOWN_HOSTS` **no es opcional**: sin fijar la clave del servidor habría que usar
+`StrictHostKeyChecking=no`, y entonces cualquiera capaz de interponerse en la conexión recibe
+la clave privada de despliegue. Borra `deploy_ci` de tu disco en cuanto lo pegues en GitHub.
+
+**4. (Opcional) Aprobación manual.** El job declara `environment: produccion`. Si en
+Settings → Environments le añades un *required reviewer*, cada despliegue se queda esperando
+tu visto bueno en la interfaz de GitHub.
+
+Lo que **no** hace el despliegue automático, a propósito:
+
+- **No reindexa** el RAG. Es una operación cara y rara vez necesaria; se hace a mano con
+  `--reindexar` cuando cambian los documentos, `EMBEDDING_BACKEND` o `CHUNKING`. Mantenerlo
+  fuera del comando forzado también lo mantiene simple y auditable.
+- **No migra la configuración** (§3.7): esa es una operación de instalación, no de cada día.
 
 **Qué hay que respaldar.** Todo lo importante que NO está en git:
 
@@ -575,3 +668,8 @@ tratamiento, cifrado del disco del VPS, y borrado de cuentas.
 | Todo deja de responder tras tocar el firewall del proveedor | La regla implícita de salida pasó a `DROP`. Ver §6.2 |
 | El código de alta nunca llega | El proveedor bloquea el SMTP saliente. Ver §6.2 |
 | Falla la generación de imagen con `500 Internal server error` | Suele ser Replicate, no tu servidor: comprueba `GET /v1/account` con tu token y su página de estado. Si el panel de Replicate no muestra ni siquiera predicciones **fallidas**, la petición murió antes de crearlas |
+| `address already in use` al arrancar el backend | El socket y el servicio se pisan: o `--fd 3` **con** `mundoaventura.socket`, o `--host/--port` **sin** él (§3.9) |
+| Siguen apareciendo 502 al desplegar | El `.socket` lleva `PartOf=`, o se reinició `mundoaventura.socket` en vez de solo el `.service` (§3.9) |
+| El job `deploy` falla con `Permission denied (publickey)` | La clave no está en `authorized_keys` de **`mundoaventura`** (no de root), o `VPS_SSH_KEY` se pegó incompleta (faltan las líneas `BEGIN/END`) |
+| El job `deploy` falla con `Host key verification failed` | `VPS_KNOWN_HOSTS` vacío o desfasado. Regenéralo con `ssh-keyscan` (§5.1) |
+| El despliegue automático dice `uv: command not found` | El comando forzado no es una shell de login. El script ya añade `~/.local/bin` al PATH: comprueba que el servidor tiene la versión nueva de `desplegar.sh` |
