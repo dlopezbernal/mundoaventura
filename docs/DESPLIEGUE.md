@@ -560,6 +560,19 @@ la clave privada de despliegue. Borra `deploy_ci` de tu disco en cuanto lo pegue
 Settings → Environments le añades un *required reviewer*, cada despliegue se queda esperando
 tu visto bueno en la interfaz de GitHub.
 
+**El primer despliegue automático puede fallar, y es normal.** Un comando forzado de SSH no
+es una shell de login: no lee `.bashrc`, así que `uv` (que vive en `~/.local/bin`) no está en
+el `PATH`. El script lo arregla él mismo… pero la primera vez, el script que corre en el
+servidor es todavía el **anterior**, que no lleva esa línea. La secuencia se resuelve sola:
+
+1. Primer intento → hace el `git pull` (que **ya trae el script corregido** al servidor) y
+   falla después, en `uv sync`. No ha reiniciado nada: la app sigue intacta.
+2. Pulsa **Re-run jobs** en Actions → ahora corre el script nuevo, con el `PATH` arreglado.
+
+Solo pasa al estrenar el despliegue automático (o al actualizar desde una versión anterior a
+este cambio). La alternativa es lanzar un despliegue manual desde una shell normal, que sí
+tiene `uv` en el `PATH`, y que deja el servidor listo para el siguiente automático.
+
 Lo que **no** hace el despliegue automático, a propósito:
 
 - **No reindexa** el RAG. Es una operación cara y rara vez necesaria; se hace a mano con
