@@ -133,6 +133,12 @@ modelos de `~/.cache`.
 ```bash
 adduser --system --group --home /opt/mundoaventura --shell /bin/bash mundoaventura
 chown -R mundoaventura:mundoaventura /opt/mundoaventura
+
+# Directorio de copias de seguridad, FUERA del árbol de git (para que un `git clean`
+# no se las lleve). Lo crea root porque /opt es suyo y el usuario de la app no puede
+# escribir ahí; si falta, `desplegar.sh` aborta en su primer paso. El 750 importa:
+# ahí dentro acaban copias del .env, que lleva las claves de los proveedores.
+install -d -o mundoaventura -g mundoaventura -m 750 /opt/copias
 ```
 
 ### 3.2 Paquetes base y swap
@@ -673,3 +679,4 @@ tratamiento, cifrado del disco del VPS, y borrado de cuentas.
 | El job `deploy` falla con `Permission denied (publickey)` | La clave no está en `authorized_keys` de **`mundoaventura`** (no de root), o `VPS_SSH_KEY` se pegó incompleta (faltan las líneas `BEGIN/END`) |
 | El job `deploy` falla con `Host key verification failed` | `VPS_KNOWN_HOSTS` vacío o desfasado. Regenéralo con `ssh-keyscan` (§5.1) |
 | El despliegue automático dice `uv: command not found` | El comando forzado no es una shell de login. El script ya añade `~/.local/bin` al PATH: comprueba que el servidor tiene la versión nueva de `desplegar.sh` |
+| `desplegar.sh` falla en el paso 1 con `Permission denied` en `../copias` | Falta el directorio de copias. `install -d -o mundoaventura -g mundoaventura -m 750 /opt/copias` (§3.1) |

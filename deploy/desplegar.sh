@@ -95,8 +95,16 @@ volver_atras() {
 echo "==> 1/7  Copia de seguridad de los datos (BBDD + .env)"
 # Antes de nada, por si una migración futura tocara el esquema. Se guardan
 # fuera del árbol de git para que un `git clean` no se las lleve por delante.
+# Ese "fuera" tiene un precio: /opt es de root, así que el directorio lo crea
+# la instalación (DESPLIEGUE.md §3.1), no este script. Si falta, el mkdir da un
+# "Permission denied" que no dice qué hacer; de ahí el mensaje explícito.
 COPIAS="${COPIAS:-$APP_DIR/../copias}"
-mkdir -p "$COPIAS"
+if ! mkdir -p "$COPIAS" 2>/dev/null; then
+	echo "ERROR: no se puede escribir en $COPIAS (su padre suele ser de root)." >&2
+	echo "Créalo una vez, como root:" >&2
+	echo "  install -d -o mundoaventura -g mundoaventura -m 750 $(cd "$APP_DIR/.." && pwd)/copias" >&2
+	exit 1
+fi
 SELLO="$(date +%Y%m%d-%H%M%S)"
 [ -f backend/config_db.sqlite3 ] && cp backend/config_db.sqlite3 "$COPIAS/config_db-$SELLO.sqlite3"
 [ -f .env ] && cp .env "$COPIAS/env-$SELLO.bak"
