@@ -27,10 +27,12 @@ sabemos que falta y por qué no está.
   producto ([ADR-013](decisiones/ADR-013-tts-elevenlabs.md)). El TTS local (Kokoro) queda como
   **plan B "sin internet"** de la defensa, no como opción por defecto.
 
-## Lo que se haría en un despliegue en servidor (hoy fuera de alcance)
+## Lo que se haría en un despliegue en servidor
 
-El despliegue actual es un **túnel puntual** (Colab/ngrok) para pruebas y defensa, no un servidor
-permanente. Si el proyecto creciera a un servidor en la nube:
+Durante el desarrollo el despliegue fue un **túnel puntual** (Colab/ngrok). Desde el 2026-08-05 hay
+además un **servidor permanente** en `chatmundoaventura.com` (VPS, systemd + Caddy con TLS; el
+procedimiento completo está en [`DESPLIEGUE.md`](DESPLIEGUE.md)). Lo que sigue es lo que ese
+despliegue **todavía no** resuelve:
 
 - ✅ **Autenticación fuerte** en lugar del candado del túnel (`ACCESS_CODE` es una barrera ligera
   contra escaneo, no autenticación real — [ADR-001](decisiones/ADR-001-candado-tunel.md)).
@@ -48,6 +50,41 @@ permanente. Si el proyecto creciera a un servidor en la nube:
   (≥ 8 + 2FA, H9.2d); quedan por renombrar algunos **identificadores internos** heredados del
   Hito 7 (el componente `CambiarPin`, la función `adminChangePin`, la clave `admin_pin_hash`), sin
   impacto funcional ni visible. Refactor de limpieza para después de la entrega.
+
+## Fase 2 — revisar el despliegue
+
+El despliegue actual **funciona y está documentado paso a paso**, pero se hizo optimizando para
+que una persona pudiera montarlo y entenderlo entero, no para un equipo. Antes de darlo por bueno
+a largo plazo conviene contrastarlo con la práctica habitual del sector:
+
+- **¿Es el enfoque correcto, o solo el que funcionó?** Revisar el despliegue actual contra buenas
+  prácticas: instalación nativa con `uv` + systemd + Caddy, actualización manual con
+  `deploy/desplegar.sh`, un único servidor sin réplica, SQLite y ChromaDB en disco local. Cada una
+  de esas decisiones tiene una justificación de tamaño de proyecto, pero ninguna se ha contrastado
+  con la alternativa profesional.
+- **Automatizar el despliegue desde GitHub.** Hoy el ciclo es manual: merge a `main` y luego entrar
+  por SSH a lanzar el script. La alternativa es un *runner* de GitHub Actions que despliegue al
+  hacer merge. Dos variantes con implicaciones muy distintas:
+  - **Runner alojado** (`ubuntu-latest`) que entra por SSH con una clave guardada en los *secrets*
+    del repositorio. Sencillo, pero mete una credencial de escritura del servidor en GitHub.
+  - **Runner autoalojado** en el propio VPS, que hace *pull* y despliega sin abrir el SSH a nadie.
+    Encaja mejor con el modelo actual (deploy key de solo lectura, el servidor tira del repo), a
+    cambio de mantener un agente más en el servidor.
+- **Qué exigirle a ese despliegue automático** para que sea una mejora real y no solo un botón:
+  desplegar únicamente si el CI está verde, *smoke test* de `/health` después de reiniciar,
+  **vuelta atrás automática** si no responde, y un despliegue sin corte perceptible (hoy hay unos
+  segundos de 502 mientras systemd reinicia el servicio).
+- **Reproducibilidad y entornos.** Un `Dockerfile` sigue pendiente (ver arriba). Con contenedor,
+  el despliegue pasa a ser "construye imagen, publica, arranca", y deja de depender de que el
+  servidor tenga la versión correcta de Node, `uv` y Python.
+- **Entorno de pruebas.** Hoy solo existe producción: lo que se despliega no se ha visto nunca
+  funcionando en un servidor antes de estar delante de los usuarios.
+- **Observabilidad y avisos.** `journalctl` es suficiente para depurar a mano, pero nadie se entera
+  si el servicio se cae de madrugada, si caduca un certificado o si se agota el saldo de un
+  proveedor. Un *healthcheck* externo con aviso es el mínimo.
+- **Copias de seguridad automáticas y probadas.** `desplegar.sh` copia `.env` y la BBDD antes de
+  cada actualización, pero no hay copia periódica, ni fuera del servidor, ni **restauración
+  probada** — una copia que no se ha restaurado nunca no se sabe si sirve.
 
 ## Ideas de producto (más allá de la ingeniería)
 

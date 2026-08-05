@@ -65,7 +65,7 @@ fi
 
 echo "==> 6/6  Reiniciar el servicio y comprobar salud"
 # El usuario de la app no tiene sudo general: /etc/sudoers.d/mundoaventura le
-# concede EXACTAMENTE `systemctl restart|status mundoaventura` (ver DESPLIEGUE.md §3.8).
+# concede EXACTAMENTE `systemctl restart|status mundoaventura` (ver DESPLIEGUE.md §3.9).
 sudo systemctl restart "$SERVICIO"
 
 # El arranque toca red (comprueba DeepL/ElevenLabs), así que damos margen y
