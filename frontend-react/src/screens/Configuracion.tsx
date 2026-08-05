@@ -104,12 +104,6 @@ export default function Configuracion({
           onEliminada={onCuentaEliminada}
         />
       )}
-
-      <footer className={styles.footer}>
-        <button type="button" className="btn btn-secundario" onClick={onCerrar}>
-          Volver
-        </button>
-      </footer>
     </section>
   );
 }

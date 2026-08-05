@@ -24,6 +24,7 @@ import Admin from "./screens/Admin";
 import Configuracion from "./screens/Configuracion";
 import LoginFamilia from "./screens/LoginFamilia";
 import Manual from "./screens/Manual";
+import PrimerNino from "./screens/PrimerNino";
 import QuienJuega from "./screens/QuienJuega";
 import {
   BackendError,
@@ -41,6 +42,25 @@ function guardarNinoActivo(nino: string | null) {
   try {
     if (nino) localStorage.setItem(NINO_KEY, nino);
     else localStorage.removeItem(NINO_KEY);
+  } catch {
+    /* localStorage puede no estar disponible */
+  }
+}
+
+// Gate de bienvenida (PrimerNino): el "lo haré luego" se recuerda POR FAMILIA en el
+// dispositivo, para no volver a interrumpir en cada carga. Añadir un niño no necesita
+// esta marca: con la lista ya no vacía, el gate deja de cumplirse solo.
+const OB_KEY = "mdt_onboarding_saltado";
+function onboardingYaSaltado(familiaId: string): boolean {
+  try {
+    return localStorage.getItem(`${OB_KEY}_${familiaId}`) === "1";
+  } catch {
+    return false;
+  }
+}
+function recordarOnboardingSaltado(familiaId: string) {
+  try {
+    localStorage.setItem(`${OB_KEY}_${familiaId}`, "1");
   } catch {
     /* localStorage puede no estar disponible */
   }
@@ -64,6 +84,10 @@ export default function App() {
   // leerlo antes de dar el correo y crear la cuenta), así que vive aquí, fuera de
   // las dos ramas de render.
   const [mostrarManual, setMostrarManual] = useState(false);
+  // Gate de bienvenida saltado en esta sesión. La marca persistente está en
+  // localStorage y se lee en el propio render (no en un efecto) para que el gate no
+  // llegue a parpadear cuando la familia ya lo saltó en una visita anterior.
+  const [onboardingSaltado, setOnboardingSaltado] = useState(false);
 
   const cargarCatalogos = useCallback(async () => {
     setErrorCarga(null);
@@ -122,11 +146,18 @@ export default function App() {
     void cargarCatalogos();
   }
 
+  /** "Lo haré luego" del gate de bienvenida: entra sin perfil y no vuelve a salir. */
+  function saltarOnboarding() {
+    if (familia) recordarOnboardingSaltado(familia.id);
+    setOnboardingSaltado(true);
+  }
+
   /** Limpia el estado y vuelve a la pantalla de login (sin tocar el backend). */
   function volverAlLogin() {
     setMostrarAdmin(false);
     setMostrarConfig(false);
     setMostrarManual(false);
+    setOnboardingSaltado(false);
     setPersonajes(null);
     setUbicaciones(null);
     elegirNino(null);
@@ -158,8 +189,10 @@ export default function App() {
   }
 
   // Sin sesión de familia: puerta de entrada (login / alta), sin HUD ni flujo.
-  // El manual sí es accesible desde aquí: el adulto debe poder saber qué es la app
-  // ANTES de registrar su correo.
+  // Dos pantallas SÍ son accesibles desde aquí, porque no dependen de tener cuenta:
+  // el manual (el adulto debe poder saber qué es la app ANTES de registrar su correo)
+  // y la administración (va detrás de su PROPIA credencial, no de la de familia:
+  // obligar a crear una cuenta de familia para administrar la instalación sobraba).
   if (familia === null) {
     return (
       <>
@@ -167,8 +200,20 @@ export default function App() {
         <main className="holo-wrap">
           {mostrarManual ? (
             <Manual onCerrar={() => setMostrarManual(false)} />
+          ) : mostrarAdmin ? (
+            <Admin onCerrar={() => setMostrarAdmin(false)} />
           ) : (
-            <LoginFamilia onListo={setFamilia} onAbrirManual={() => setMostrarManual(true)} />
+            <LoginFamilia
+              onListo={setFamilia}
+              onAbrirManual={() => {
+                setMostrarAdmin(false);
+                setMostrarManual(true);
+              }}
+              onAbrirAdmin={() => {
+                setMostrarManual(false);
+                setMostrarAdmin(true);
+              }}
+            />
           )}
           <div className="crt-scan" aria-hidden="true" />
         </main>
@@ -215,6 +260,12 @@ export default function App() {
             onCuentaEliminada={volverAlLogin}
             onCerrar={() => setMostrarConfig(false)}
           />
+        ) : familia.ninos.length === 0 &&
+          !onboardingSaltado &&
+          !onboardingYaSaltado(familia.id) ? (
+          // Familia recién creada (0 niños): dar de alta el primer perfil aquí mismo,
+          // en vez de dejar al adulto buscándolo en ☰ → ⚙️ Configuración.
+          <PrimerNino familia={familia} onListo={setFamilia} onSaltar={saltarOnboarding} />
         ) : familia.ninos.length > 1 && ninoActivo === null ? (
           <QuienJuega
             nombreFamilia={familia.nombre_familia}

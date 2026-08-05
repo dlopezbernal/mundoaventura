@@ -11,12 +11,22 @@
   gap: 16px;
 }
 
-/* --- Cabecera de la página --- */
+/* --- Cabecera de la página ---
+   Pegajosa: es el ÚNICO sitio desde el que se sale de Admin/Configuración (antes
+   había además un "Volver" al pie, redundante). Al quedar siempre a la vista, el
+   botón de salida se alcanza sin subir del todo aunque la pestaña sea larga. */
 .head {
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 12px;
+  padding: 10px 4px;
+  margin: -10px -4px 0;
+  backdrop-filter: blur(8px);
+  background: linear-gradient(180deg, rgba(4, 10, 28, 0.9), rgba(4, 10, 28, 0.4));
 }
 .kicker {
   font-family: var(--font-pixel);
@@ -592,6 +602,172 @@
   font-family: var(--font-body);
   font-size: 0.8rem;
   color: var(--muted);
+}
+
+/* ===========================================================================
+ * Gate de bienvenida (PrimerNino) — alta del primer niño tras activar la cuenta
+ *
+ * Reutiliza el chasis de "¿Quién juega?" (.gate/.gateCard) y solo añade lo que el
+ * mockup pide y no existía: filas de niño ANCHAS (en vez de los chips en píldora
+ * del editor de perfil, que aquí quedan pequeños para el momento de bienvenida) y
+ * un control SEGMENTADO de sexo (en vez del <select>, para que las tres opciones
+ * se vean de un vistazo sin desplegar nada).
+ * ======================================================================== */
+.obKicker {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--lime);
+  margin: 0 0 12px;
+}
+
+/* Lista de niños ya añadidos (aún sin guardar). */
+.obLista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+}
+.obNino {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  background: rgba(4, 8, 28, 0.6);
+  border: 1px solid var(--edge);
+  border-radius: 12px;
+}
+.obNinoAvatar {
+  font-size: 24px;
+  line-height: 1;
+}
+.obNinoNombre {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--txt);
+  word-break: break-word;
+}
+.obNinoQuitar {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 46, 151, 0.4);
+  background: none;
+  color: var(--pink);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+}
+.obNinoQuitar:hover {
+  background: rgba(255, 46, 151, 0.16);
+}
+
+/* Caja de alta: borde discontinuo = "aquí se añade", no un dato ya guardado. */
+.obAlta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  margin-bottom: 22px;
+  background: rgba(4, 8, 28, 0.4);
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+}
+.obAltaFila {
+  display: flex;
+  gap: 8px;
+}
+/* Segmentado de sexo: 🧒 sin especificar / 👦 chico / 👧 chica. */
+.obSexo {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+}
+.obSexoBtn {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: none;
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+.obSexoBtn:hover {
+  border-color: var(--edge);
+}
+.obSexoOn {
+  border-color: var(--edge);
+  background: rgba(62, 242, 255, 0.14);
+  color: var(--holo);
+}
+.obAnadir {
+  flex-shrink: 0;
+  padding: 9px 16px;
+  border-radius: 9px;
+  border: 1px solid var(--edge);
+  background: none;
+  color: var(--holo);
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+.obAnadir:hover:not(:disabled) {
+  background: rgba(62, 242, 255, 0.12);
+}
+.obAnadir:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.obCta {
+  width: 100%;
+  margin-bottom: 16px;
+}
+.obAyuda {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--muted);
+  opacity: 0.8;
+  margin: 10px 0 0;
+}
+.obAyuda strong {
+  color: var(--holo);
+  font-weight: 700;
+}
+
+/* Acceso a la Administración desde el login, DEBAJO de la tarjeta y en pequeño:
+   la administración no depende de tener cuenta de familia (tiene su propia
+   credencial), así que debe alcanzarse sin loguearse — pero es zona de instalación,
+   no de familia, y no debe competir visualmente con "Entrar". */
+.adminAcceso {
+  width: 100%;
+  max-width: 380px;
+  margin-top: 14px;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  color: var(--muted);
+  background: none;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+}
+.adminAcceso:hover {
+  color: var(--holo);
+  text-decoration: underline;
 }
 
 /* ===========================================================================
