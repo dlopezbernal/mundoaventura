@@ -29,6 +29,11 @@ dependencies = [
     "python-multipart>=0.0.20,<0.1",
     "pydantic>=2.13,<3",
     "python-dotenv>=1.0,<2",
+    # `services/resiliencia.py` captura httpx.TransportError para decidir qué
+    # errores merecen reintento. Es una dependencia de PRODUCCIÓN, aunque los
+    # tres SDKs (replicate, elevenlabs, openai) ya la arrastren: apoyarse en una
+    # dependencia transitiva es apoyarse en que nadie la cambie nunca.
+    "httpx>=0.28,<0.29",
     "slowapi>=0.1.10",
     "lingua-language-detector>=2.2.0",
     "pyphen>=0.17.2",
@@ -49,15 +54,23 @@ stt-local = [
 ]
 
 [dependency-groups]
-# Herramientas de desarrollo (no van al despliegue). Se instalan con `uv sync`
-# (uv incluye los dependency-groups por defecto) y quedan disponibles con
-# `uv run ruff ...`, `uv run pytest ...`.
+# Herramientas de desarrollo. Se instalan con `uv sync` (uv incluye los
+# dependency-groups por defecto) y quedan disponibles con `uv run ruff ...`,
+# `uv run pytest ...`. OJO: el despliegue usa `uv sync --frozen` sin `--no-dev`,
+# así que HOY también acaban en el servidor. Es inofensivo (son unos MB) y
+# deliberado por ahora: mantiene el .venv del VPS idéntico al de desarrollo, y
+# permite lanzar la suite allí si hace falta diagnosticar algo.
 dev = [
     "pytest>=8.0,<9",
     "pytest-cov>=6.0,<8",
     "ruff>=0.14,<0.15",
     "pre-commit>=4.0,<5",
-    "httpx>=0.28,<0.29",  # para fastapi.testclient (TestClient)
+    # TestClient de starlette. Desde starlette 1.3 intenta importar `httpx2` y,
+    # si no está, cae a `httpx` con un StarletteDeprecationWarning; en una
+    # versión futura dejará de caer. `httpx2` es un paquete APARTE (no una
+    # actualización de httpx), así que convive con el `httpx` de producción y
+    # de los SDKs sin forzar a nadie a subir de versión.
+    "httpx2>=2.9,<3",
 ]
 
 [tool.uv]
