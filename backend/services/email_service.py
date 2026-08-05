@@ -104,6 +104,13 @@ def enviar(destinatario: str, asunto: str, cuerpo: str, cuerpo_html: str | None 
     msg.set_content(cuerpo)  # respaldo en texto plano (se conserva siempre)
     if cuerpo_html:
         msg.add_alternative(cuerpo_html, subtype="html")
+    # Declara el idioma del mensaje. Sin esto, Gmail adivina por el contenido y con un
+    # texto corto lleno de mayúsculas y siglas se equivoca: enseña el aviso "parece que
+    # este mensaje está en inglés" y ofrece traducirlo, encima de un correo en español.
+    # Va DESPUÉS de componer el cuerpo a propósito: `add_alternative` reestructura el
+    # mensaje a multipart y se lleva las cabeceras `Content-*` a la subparte, así que
+    # puesto antes acabaría dentro del text/plain en vez de en el mensaje.
+    msg["Content-Language"] = "es-ES"
     try:
         with smtplib.SMTP(host, int(settings_service.get("SMTP_PORT")), timeout=10) as servidor:
             if settings_service.get("SMTP_STARTTLS"):
@@ -135,13 +142,24 @@ def _html_verificacion(nombre_familia: str, codigo: str, minutos: int) -> str | 
         )
         return None
 
-    url_app = str(settings_service.get("APP_URL") or "").strip()
+    url_app = str(settings_service.get("APP_URL") or "").strip().rstrip("/")
     html = _PLANTILLA_VERIFICACION
     if url_app:
         html = html.replace("{{ url_app }}", html_lib.escape(url_app, quote=True))
+        # El logo real solo puede ponerse si sabemos desde dónde servirlo: un correo
+        # NO carga ficheros del proyecto, necesita una URL pública. La imagen la sirve
+        # Caddy junto a la SPA (frontend-react/public/logo-email.png).
+        html = re.sub(
+            r"<!-- LOGO:inicio -->.*?<!-- LOGO:fin -->",
+            f'<img src="{html_lib.escape(url_app, quote=True)}/logo-email.png" width="46" '
+            f'height="46" alt="MundoAventura" style="display:block; border-radius:12px;">',
+            html,
+            flags=re.DOTALL,
+        )
     else:
         # Sin URL configurada no dejamos un botón que no lleva a ninguna parte: se
-        # recorta el bloque entero entre sus marcadores.
+        # recorta el bloque entero entre sus marcadores. El logo se queda como el
+        # emoji de la plantilla, que no depende de ningún servidor.
         html = re.sub(r"<!-- CTA:inicio -->.*?<!-- CTA:fin -->", "", html, flags=re.DOTALL)
 
     # El nombre de familia lo escribe el adulto: se ESCAPA antes de meterlo en el HTML.

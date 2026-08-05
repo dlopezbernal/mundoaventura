@@ -247,6 +247,37 @@ def test_el_nombre_de_familia_se_escapa(smtp_falso):
     assert "&lt;script&gt;" in html
 
 
+def test_declara_el_idioma_para_que_gmail_no_ofrezca_traducirlo(smtp_falso):
+    """Sin marca de idioma, Gmail adivina por el contenido y con texto corto en
+    mayúsculas se equivoca: enseña 'parece que este mensaje está en inglés'."""
+    _config_smtp()
+    email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
+    msg = _mensaje(smtp_falso)
+    assert msg["Content-Language"] == "es-ES"
+    # Gmail descarta el <html lang="es">, así que el idioma se repite dentro.
+    assert 'lang="es"' in _parte(msg, "html")
+
+
+def test_con_url_de_app_el_logo_es_la_imagen_servida(smtp_falso):
+    """Un correo no carga ficheros del proyecto: el logo necesita una URL pública."""
+    _config_smtp()
+    settings_service.set_many({"APP_URL": "https://chatmundoaventura.com/"})
+    email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
+    html = _parte(_mensaje(smtp_falso), "html")
+    assert 'src="https://chatmundoaventura.com/logo-email.png"' in html  # sin doble barra
+    assert "🌀" not in html
+
+
+def test_sin_url_de_app_el_logo_sigue_siendo_el_emoji(smtp_falso):
+    """Sin servidor conocido no hay imagen que enlazar; el emoji no depende de nadie."""
+    _config_smtp()
+    settings_service.set_many({"APP_URL": ""})
+    email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
+    html = _parte(_mensaje(smtp_falso), "html")
+    assert "🌀" in html
+    assert "logo-email.png" not in html
+
+
 def test_un_codigo_de_otra_longitud_cae_a_texto_plano(smtp_falso):
     """Mejor un correo feo que uno con `{{ d5 }}` a la vista del usuario."""
     _config_smtp()
