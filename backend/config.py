@@ -408,16 +408,31 @@ EMAIL_VERIFICACION: bool = _leer_bool("EMAIL_VERIFICACION", "false")
 # no debe poder desactivarse desde el menú de configuración.
 EXIGIR_SESION_FAMILIA: bool = _leer_bool("EXIGIR_SESION_FAMILIA", "true")
 
-# Envío de correo (SMTP). Si SMTP_HOST está vacío —o con DEBUG activo— el código NO
-# se envía: se ESCRIBE EN EL LOG del backend (fallback de consola), para poder probar
-# el flujo completo sin un servidor de correo real. Con SMTP configurado, se envía de
-# verdad. Credenciales de despliegue (van en el .env, nunca en la BBDD ni en export).
+# Envío de correo por SMTP (`email_service`). Si SMTP_HOST está vacío —o con DEBUG
+# activo— el código NO se envía: se ESCRIBE EN EL LOG del backend (fallback de consola),
+# para poder probar el flujo completo sin un servidor de correo real.
+#
+# En producción se usa **Brevo** como servicio transaccional (`smtp-relay.brevo.com`),
+# enviando desde el propio dominio de la app. Dos cosas que hay que tener en cuenta y
+# que no se ven en el código:
+#   · Muchos proveedores de VPS (netcup, Hetzner, OVH…) BLOQUEAN el SMTP saliente de
+#     serie; el síntoma es un `timed out` que no delata su causa. Ver docs/DESPLIEGUE.md.
+#   · Brevo permite restringir el acceso POR IP: hay que dar de alta la del servidor.
+# Credenciales de despliegue (van en el .env, nunca en la BBDD ni en el export).
 SMTP_HOST: str = os.getenv("SMTP_HOST", "").strip()
 SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER: str = os.getenv("SMTP_USER", "").strip()
 SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")  # sin strip: puede acabar en espacio
 SMTP_FROM: str = os.getenv("SMTP_FROM", "").strip()  # remitente; si vacío, se usa SMTP_USER
 SMTP_STARTTLS: bool = _leer_bool("SMTP_STARTTLS", "true")
+
+# Nombre visible del remitente ("MundoAventura <no-reply@…>"); vacío = solo la dirección.
+EMAIL_FROM_NAME: str = os.getenv("EMAIL_FROM_NAME", "MundoAventura").strip()
+
+# URL pública de la app, para el botón "Abrir MundoAventura" del correo de verificación.
+# Vacía = el correo se envía SIN ese botón (no dejamos un enlace muerto). No se puede
+# deducir del backend: este solo escucha en 127.0.0.1 y quien conoce el dominio es Caddy.
+APP_URL: str = os.getenv("APP_URL", "").strip()
 
 
 def describe() -> dict:
@@ -441,6 +456,9 @@ def describe() -> dict:
         "evaluator_umbral_alto": EVALUATOR_UMBRAL_ALTO,
         "deepl_configurado": bool(DEEPL_API_KEY),
         "email_verificacion": EMAIL_VERIFICACION,
+        # Ojo: esto refleja el .env de ARRANQUE. SMTP_HOST es un ajuste editable en
+        # caliente, así que la verdad vigente la da `email_service.smtp_configurado()`;
+        # aquí solo se informa del punto de partida.
         "smtp_configurado": bool(SMTP_HOST),
         "debug": DEBUG,
     }
