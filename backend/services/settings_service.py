@@ -679,8 +679,9 @@ _SPEC: dict[str, dict[str, Any]] = {
         "tipo": "str",
         "default": config.SMTP_HOST,
         "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
-        "ayuda": "Servidor SMTP de salida (p. ej. smtp.gmail.com). Vacío = sin envío real: "
-        "el código cae a la consola del backend. La CONTRASEÑA SMTP se pone en la pestaña APIs.",
+        "ayuda": "Servidor SMTP de salida. En producción, el relé de Brevo: "
+        "smtp-relay.brevo.com. Vacío = sin envío real: el código cae a la consola del "
+        "backend. La CONTRASEÑA SMTP se pone en la pestaña APIs.",
     },
     "SMTP_PORT": {
         "categoria": CAT_CORREO,
@@ -689,22 +690,33 @@ _SPEC: dict[str, dict[str, Any]] = {
         "min": 1,
         "max": 65535,
         "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
-        "ayuda": "Puerto SMTP. 587 para STARTTLS (lo habitual), 25 sin cifrar.",
+        "ayuda": "Puerto SMTP. 587 para STARTTLS (lo habitual). Si tu proveedor de hosting "
+        "bloquea el 587, el 2525 suele estar abierto y Brevo también lo acepta.",
     },
     "SMTP_USER": {
         "categoria": CAT_CORREO,
         "tipo": "str",
         "default": config.SMTP_USER,
         "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
-        "ayuda": "Usuario de la cuenta SMTP (normalmente la dirección de correo). Si va "
-        "vacío, no se hace login (servidor abierto/relay local).",
+        "ayuda": "Usuario del relé SMTP. En Brevo NO es tu correo: es el login que te da "
+        "en SMTP & API (algo como xxxxxxx@smtp-brevo.com). Vacío = no se hace login.",
     },
     "SMTP_FROM": {
         "categoria": CAT_CORREO,
         "tipo": "str",
         "default": config.SMTP_FROM,
         "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
-        "ayuda": "Dirección remitente del correo (From). Si va vacía, se usa SMTP_USER.",
+        "ayuda": "Dirección remitente del correo (From), la que ve la familia. Debe ser de "
+        "un dominio VERIFICADO en Brevo (con SPF y DKIM); si no, el envío se rechaza o el "
+        "correo acaba en spam. Si va vacía, se usa SMTP_USER.",
+    },
+    "EMAIL_FROM_NAME": {
+        "categoria": CAT_CORREO,
+        "tipo": "str",
+        "default": config.EMAIL_FROM_NAME,
+        "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
+        "ayuda": "Nombre visible del remitente, el que ve la familia en su bandeja "
+        "(p. ej. 'MundoAventura'). Vacío = solo se muestra la dirección.",
     },
     "SMTP_STARTTLS": {
         "categoria": CAT_CORREO,
