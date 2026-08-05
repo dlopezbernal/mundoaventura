@@ -1,0 +1,29 @@
+# =====================================================================
+#  Copia de seguridad nocturna — el CALENDARIO
+# ---------------------------------------------------------------------
+#  Se instala junto a mundoaventura-backup.service:
+#      systemctl enable --now mundoaventura-backup.timer
+#      systemctl list-timers mundoaventura-backup   # cuándo toca la próxima
+# =====================================================================
+
+[Unit]
+Description=MundoAventura — copia de seguridad diaria (03:30)
+Documentation=https://github.com/dlopezbernal/mundoaventura
+
+[Timer]
+# De madrugada: la app es para niños, a esa hora no hay nadie jugando. La copia
+# no bloquea el servicio (SQLite se copia en caliente), pero comprimir consume
+# CPU y este servidor tiene 2 vCPU.
+OnCalendar=*-*-* 03:30:00
+
+# Si el servidor estaba apagado a las 03:30, la copia se hace nada más arrancar.
+# Es LA razón de usar un timer en vez de cron: no perder la copia justo el día
+# en que algo fue mal.
+Persistent=true
+
+# Reparte el arranque en una ventana de 15 min. En un VPS compartido, media
+# internet lanza sus tareas a las 03:30 en punto.
+RandomizedDelaySec=900
+
+[Install]
+WantedBy=timers.target

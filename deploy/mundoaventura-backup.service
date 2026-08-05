@@ -1,0 +1,49 @@
+# =====================================================================
+#  Copia de seguridad nocturna — el TRABAJO (lo lanza el .timer)
+# ---------------------------------------------------------------------
+#  Instalación en el servidor:
+#      cp deploy/mundoaventura-backup.{service,timer} /etc/systemd/system/
+#      systemctl daemon-reload
+#      systemctl enable --now mundoaventura-backup.timer
+#
+#      systemctl start mundoaventura-backup.service   # probarla ahora mismo
+#      journalctl -u mundoaventura-backup -n 30       # ver cómo fue
+#
+#  POR QUÉ UN TEMPORIZADOR DE SYSTEMD Y NO CRON. Tres motivos concretos:
+#    · Persistent=true (en el .timer): si el servidor estaba apagado a la hora
+#      señalada, la copia se hace al arrancar. Cron simplemente se la salta, y
+#      te quedas sin copia justo el día que hubo un problema.
+#    · Los logs van al journal, igual que el resto del sistema: se miran con el
+#      mismo `journalctl -u ...` que el backend o Caddy, y un fallo queda
+#      registrado en vez de perderse en un correo local que nadie lee.
+#    · Cron ejecuta con un entorno mínimo y un PATH corto; aquí el entorno lo
+#      declara la unidad, sin sorpresas.
+# =====================================================================
+
+[Unit]
+Description=MundoAventura — copia de seguridad de datos y configuracion
+Documentation=https://github.com/dlopezbernal/mundoaventura
+
+[Service]
+Type=oneshot
+User=mundoaventura
+Group=mundoaventura
+WorkingDirectory=/opt/mundoaventura
+ExecStart=/opt/mundoaventura/deploy/respaldar.sh nocturno
+
+# --- Endurecimiento ------------------------------------------------------
+# Solo necesita LEER la app y ESCRIBIR en el directorio de copias.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/opt/copias
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mundoaventura-backup

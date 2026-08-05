@@ -152,6 +152,15 @@ npm run preview    # lo sirve en local para probar
 **orígenes distintos**, limita los permitidos con `CORS_ORIGINS` en el `.env` del backend y
 compila con `VITE_BACKEND_URL` apuntando al backend.
 
+### Despliegue en un servidor propio
+
+La app corre en producción en **[chatmundoaventura.com](https://chatmundoaventura.com)** sobre un
+VPS: `uv sync --frozen` + systemd para el backend y **Caddy** (TLS automático de Let's Encrypt)
+sirviendo la SPA y haciendo de proxy de `/api` y `/health`, de modo que SPA y API comparten origen
+y no hay CORS que configurar. El procedimiento completo —instalación desde cero, migración de la
+configuración, operación, copias y problemas frecuentes— está en
+[`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md).
+
 ---
 
 ## 📚 Preparar la base de conocimiento
