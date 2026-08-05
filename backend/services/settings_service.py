@@ -718,6 +718,15 @@ _SPEC: dict[str, dict[str, Any]] = {
         "ayuda": "Nombre visible del remitente, el que ve la familia en su bandeja "
         "(p. ej. 'MundoAventura'). Vacío = solo se muestra la dirección.",
     },
+    "APP_URL": {
+        "categoria": CAT_CORREO,
+        "tipo": "str",
+        "default": config.APP_URL,
+        "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
+        "ayuda": "Dirección pública de la app (p. ej. https://chatmundoaventura.com), para "
+        "el botón 'Abrir MundoAventura' del correo de verificación. Si va vacía, el correo "
+        "se envía sin ese botón — mejor eso que un enlace que no lleva a ninguna parte.",
+    },
     "SMTP_STARTTLS": {
         "categoria": CAT_CORREO,
         "tipo": "bool",

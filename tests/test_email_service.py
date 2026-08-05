@@ -70,7 +70,17 @@ class _SMTPFalso:
         _SMTPFalso.registro.append(("login", usuario, clave))
 
     def send_message(self, msg):
-        _SMTPFalso.registro.append(("mensaje", msg["From"], msg["To"], msg.get_content()))
+        # Con multipart, `get_content()` falla: se guarda el mensaje entero y cada
+        # test mira la parte que le interesa (ver los ayudantes de abajo).
+        _SMTPFalso.registro.append(("mensaje", msg["From"], msg["To"], msg))
+
+
+def _parte(msg, subtipo):
+    """Devuelve el texto de la parte `text/<subtipo>` del mensaje (o None)."""
+    for parte in msg.walk():
+        if parte.get_content_type() == f"text/{subtipo}":
+            return parte.get_content()
+    return None
 
 
 @pytest.fixture
@@ -171,11 +181,76 @@ def test_un_rechazo_de_credenciales_tambien_se_envuelve(smtp_falso):
 # ---------------------------------------------------------------------------
 # El correo del OTP
 # ---------------------------------------------------------------------------
+def _mensaje(smtp_falso):
+    return [e for e in smtp_falso.registro if e[0] == "mensaje"][0][3]
+
+
 def test_el_codigo_otp_va_en_el_cuerpo(smtp_falso):
     """El OTP tiene que verse en el correo: si no, la familia no puede darse de alta."""
     _config_smtp()
     email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
-    cuerpo = [e for e in smtp_falso.registro if e[0] == "mensaje"][0][3]
+    cuerpo = _parte(_mensaje(smtp_falso), "plain")
     assert "482913" in cuerpo
     assert "Los Pérez" in cuerpo
     assert "15 minutos" in cuerpo
+
+
+def test_el_correo_va_en_multipart_con_html_y_texto(smtp_falso):
+    """El texto plano NO se pierde: es el respaldo de quien no renderiza HTML, y los
+    filtros antispam penalizan los correos que van solo en HTML."""
+    _config_smtp()
+    email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
+    msg = _mensaje(smtp_falso)
+    assert msg.get_content_type() == "multipart/alternative"
+    assert _parte(msg, "plain") is not None
+    assert _parte(msg, "html") is not None
+
+
+def test_el_html_lleva_cada_digito_en_su_caja(smtp_falso):
+    _config_smtp()
+    email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
+    html = _parte(_mensaje(smtp_falso), "html")
+    assert "{{" not in html  # ningún placeholder sin sustituir
+    assert "Los Pérez" in html
+    assert "CADUCA EN 15 MINUTOS" in html
+    # Los seis dígitos, cada uno dentro de su celda de dígito.
+    import re
+
+    celdas = re.findall(r'class="digit"[^>]*>(\d)</td>', html)
+    assert celdas == ["4", "8", "2", "9", "1", "3"]
+
+
+def test_sin_url_de_app_no_se_manda_un_boton_muerto(smtp_falso):
+    _config_smtp()
+    settings_service.set_many({"APP_URL": ""})
+    email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
+    html = _parte(_mensaje(smtp_falso), "html")
+    assert "ABRIR MUNDOAVENTURA" not in html
+    assert "{{ url_app }}" not in html
+
+
+def test_con_url_de_app_aparece_el_boton(smtp_falso):
+    _config_smtp()
+    settings_service.set_many({"APP_URL": "https://chatmundoaventura.com"})
+    email_service.enviar_codigo("a@b.com", "Los Pérez", "482913", 15)
+    html = _parte(_mensaje(smtp_falso), "html")
+    assert 'href="https://chatmundoaventura.com"' in html
+    assert "ABRIR MUNDOAVENTURA" in html
+
+
+def test_el_nombre_de_familia_se_escapa(smtp_falso):
+    """Lo escribe el adulto: sin escapar, un `<` le rompería la maquetación al correo."""
+    _config_smtp()
+    email_service.enviar_codigo("a@b.com", "<script>x</script>", "482913", 15)
+    html = _parte(_mensaje(smtp_falso), "html")
+    assert "<script>" not in html
+    assert "&lt;script&gt;" in html
+
+
+def test_un_codigo_de_otra_longitud_cae_a_texto_plano(smtp_falso):
+    """Mejor un correo feo que uno con `{{ d5 }}` a la vista del usuario."""
+    _config_smtp()
+    email_service.enviar_codigo("a@b.com", "Los Pérez", "1234", 15)
+    msg = _mensaje(smtp_falso)
+    assert msg.get_content_type() == "text/plain"
+    assert "1234" in _parte(msg, "plain")

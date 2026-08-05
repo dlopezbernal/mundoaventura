@@ -24,15 +24,25 @@ Dos cosas que no se ven en el código y hacen fallar el envío en un servidor:
 Ambas están documentadas en `docs/DESPLIEGUE.md`.
 """
 
+import html as html_lib
 import logging
+import re
 import smtplib
 from email.headerregistry import Address
 from email.message import EmailMessage
+from pathlib import Path
 
 from backend import config
 from backend.services import settings_service
 
 logger = logging.getLogger(__name__)
+
+# Plantilla del correo de verificación (diseño arcade del producto). Se lee UNA vez al
+# importar: es un fichero pequeño que no cambia en caliente, y así un fallo de ruta
+# aparece al arrancar y no en mitad de un alta de familia.
+_PLANTILLA_VERIFICACION = (
+    Path(__file__).resolve().parent.parent / "templates" / "verificacion_email.html"
+).read_text(encoding="utf-8")
 
 
 class EmailError(Exception):
@@ -52,8 +62,13 @@ def _remitente() -> tuple[str, str]:
     return direccion, str(settings_service.get("EMAIL_FROM_NAME") or "").strip()
 
 
-def enviar(destinatario: str, asunto: str, cuerpo: str) -> str:
+def enviar(destinatario: str, asunto: str, cuerpo: str, cuerpo_html: str | None = None) -> str:
     """Envía un correo. Devuelve el canal usado: ``"email"`` o ``"consola"``.
+
+    Con `cuerpo_html` se manda un **multipart/alternative**: el cliente de correo elige
+    la versión HTML y el `cuerpo` de texto queda como respaldo para quien no la renderiza
+    (lectores de texto, previsualizaciones, filtros antispam — que además penalizan a los
+    correos que van SOLO en HTML).
 
     Los ajustes SMTP se editan en caliente desde Admin → Correo (host, puerto, usuario,
     remitente, nombre visible, STARTTLS); la CLAVE es un secreto del `.env` (pestaña
@@ -86,7 +101,9 @@ def enviar(destinatario: str, asunto: str, cuerpo: str) -> str:
     else:
         msg["From"] = direccion
     msg["To"] = destinatario
-    msg.set_content(cuerpo)
+    msg.set_content(cuerpo)  # respaldo en texto plano (se conserva siempre)
+    if cuerpo_html:
+        msg.add_alternative(cuerpo_html, subtype="html")
     try:
         with smtplib.SMTP(host, int(settings_service.get("SMTP_PORT")), timeout=10) as servidor:
             if settings_service.get("SMTP_STARTTLS"):
@@ -103,8 +120,46 @@ def enviar(destinatario: str, asunto: str, cuerpo: str) -> str:
     return "email"
 
 
+def _html_verificacion(nombre_familia: str, codigo: str, minutos: int) -> str | None:
+    """Rellena la plantilla del correo de verificación. None si el código no encaja.
+
+    La plantilla tiene SEIS cajas de dígito, una por carácter del código. Si algún día
+    cambia la longitud del OTP, devolver None hace que el correo salga en texto plano
+    —feo pero correcto— en vez de mandar un HTML con placeholders `{{ d5 }}` a la vista.
+    """
+    if len(codigo) != 6:
+        logger.warning(
+            "El código de verificación tiene %s dígitos y la plantilla espera 6: "
+            "se envía solo en texto plano.",
+            len(codigo),
+        )
+        return None
+
+    url_app = str(settings_service.get("APP_URL") or "").strip()
+    html = _PLANTILLA_VERIFICACION
+    if url_app:
+        html = html.replace("{{ url_app }}", html_lib.escape(url_app, quote=True))
+    else:
+        # Sin URL configurada no dejamos un botón que no lleva a ninguna parte: se
+        # recorta el bloque entero entre sus marcadores.
+        html = re.sub(r"<!-- CTA:inicio -->.*?<!-- CTA:fin -->", "", html, flags=re.DOTALL)
+
+    # El nombre de familia lo escribe el adulto: se ESCAPA antes de meterlo en el HTML.
+    # Sin esto, un nombre con `<` o comillas rompería la maquetación del correo.
+    html = html.replace("{{ nombre_familia }}", html_lib.escape(nombre_familia))
+    html = html.replace("{{ minutos }}", str(minutos))
+    for i, digito in enumerate(codigo, start=1):
+        html = html.replace(f"{{{{ d{i} }}}}", digito)
+    return html
+
+
 def enviar_codigo(destinatario: str, nombre_familia: str, codigo: str, minutos: int) -> str:
-    """Envía el código de verificación (OTP) de una familia. Devuelve el canal usado."""
+    """Envía el código de verificación (OTP) de una familia. Devuelve el canal usado.
+
+    Va en multipart: la versión HTML lleva el diseño del producto (cajas de neón con el
+    código) y el texto plano se conserva como respaldo. El fallback de consola (DEBUG o
+    sin SMTP) registra SOLO el texto: en el log el HTML sería ruido ilegible.
+    """
     asunto = "Tu código de MundoAventura"
     cuerpo = (
         f"¡Hola, {nombre_familia}!\n\n"
@@ -114,4 +169,9 @@ def enviar_codigo(destinatario: str, nombre_familia: str, codigo: str, minutos: 
         f"Caduca en {minutos} minutos.\n\n"
         f"Si no has sido tú, puedes ignorar este mensaje."
     )
-    return enviar(destinatario, asunto, cuerpo)
+    return enviar(
+        destinatario,
+        asunto,
+        cuerpo,
+        cuerpo_html=_html_verificacion(nombre_familia, codigo, minutos),
+    )

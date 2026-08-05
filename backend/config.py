@@ -429,6 +429,11 @@ SMTP_STARTTLS: bool = _leer_bool("SMTP_STARTTLS", "true")
 # Nombre visible del remitente ("MundoAventura <no-reply@…>"); vacío = solo la dirección.
 EMAIL_FROM_NAME: str = os.getenv("EMAIL_FROM_NAME", "MundoAventura").strip()
 
+# URL pública de la app, para el botón "Abrir MundoAventura" del correo de verificación.
+# Vacía = el correo se envía SIN ese botón (no dejamos un enlace muerto). No se puede
+# deducir del backend: este solo escucha en 127.0.0.1 y quien conoce el dominio es Caddy.
+APP_URL: str = os.getenv("APP_URL", "").strip()
+
 
 def describe() -> dict:
     """Devuelve la configuración actual en forma de diccionario.
