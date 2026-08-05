@@ -237,7 +237,7 @@ Claves y valores que **cambian respecto al desarrollo local**:
 | `LOG_LEVEL` | `INFO` | `DEBUG` llena el journal |
 | `STT_PROVIDER` | `elevenlabs` o `groq` | El VPS no tiene GPU (§2) |
 | `MAX_IMAGENES_DIA` | ajústalo a tu presupuesto | Techo duro de gasto en Replicate |
-| `EMAIL_VERIFICACION` | `true` + SMTP real | Ver §6 |
+| `EMAIL_VERIFICACION` | `true` + SMTP de Brevo | Ver §6.3 |
 | `ACCESS_CODE` | ver §6 | |
 
 Permisos: el `.env` lleva secretos y además **lo reescribe la propia app** cuando el adulto
@@ -699,27 +699,73 @@ cuenta creada para abusar— que se pase de vueltas.
 
 **2. `EMAIL_VERIFICACION`.** Por defecto está en `false` (cómodo para la demo). En un
 servidor abierto significa que cualquiera puede crear cuentas con correos inventados.
-Ponlo en `true` y configura SMTP real (Brevo, Resend, Mailgun…) en el `.env`.
+Ponlo en `true` y elige un proveedor de envío real (§6.3).
 
-> **Cuidado: muchos proveedores de VPS bloquean el SMTP saliente.** Es una medida antispam
-> estándar (netcup, Hetzner, OVH, DigitalOcean…): las conexiones a los puertos 25, 465 y 587
-> se descartan, y el envío del código falla con un `timed out` que **no** delata su causa. El
-> síntoma en el log es `Fallo al enviar correo a …: timed out`. Compruébalo antes de sospechar
-> de tus credenciales:
->
-> ```bash
-> for p in 25 465 587 2525; do printf "%s: " $p
->   timeout 8 bash -c "exec 3<>/dev/tcp/smtp-relay.brevo.com/$p; head -1 <&3" || echo BLOQUEADO
-> done
-> ```
->
-> Tres salidas, de menos a más trabajo: **(a)** usar un relé que escuche en **2525**, que casi
-> nadie bloquea (Brevo, Mailgun y SendGrid lo ofrecen); **(b)** desbloquear el puerto en el
-> panel del proveedor, si deja; **(c)** dejar `EMAIL_VERIFICACION=false`, que es justo para lo
-> que existe el toggle. Y si el alta se quedó a medias por un fallo de envío, no hay que tocar
-> la base de datos: `familias_service.signup` **reactiva** una cuenta pendiente cuando se repite
-> el alta con el mismo correo.
->
+### 6.3 Envío de correo: Brevo desde el dominio propio
+
+El correo del OTP sale por **SMTP** contra un servicio transaccional, **Brevo**, y desde
+una dirección **del dominio de la app** (`no-reply@chatmundoaventura.com`). Enviar desde
+una cuenta personal de correo tiene dos problemas: da una imagen pobre a la familia que
+recibe el mensaje, y los proveedores de correo gratuito limitan y penalizan el envío
+automatizado desde un servidor.
+
+La configuración vive en **Admin → Correo** (editable en caliente) y en el `.env`:
+
+| Ajuste | Valor de producción |
+|---|---|
+| `SMTP_HOST` | `smtp-relay.brevo.com` |
+| `SMTP_PORT` / `SMTP_STARTTLS` | `587` / `true` |
+| `SMTP_USER` | El login de Brevo (**no** tu correo): algo como `xxxxxxx@smtp-brevo.com` |
+| `SMTP_PASSWORD` | La **clave SMTP** de Brevo (no la contraseña de la cuenta) → Admin → APIs |
+| `SMTP_FROM` | `no-reply@chatmundoaventura.com` |
+| `EMAIL_FROM_NAME` | `MundoAventura` — lo que ve la familia en el remitente |
+
+**Tres cosas hacen fallar el envío con credenciales perfectamente válidas.** Ninguna se
+ve en el código, y las tres dan errores que no explican su causa:
+
+**1. El proveedor del VPS bloquea el SMTP saliente.** Es una medida antispam estándar
+(netcup, Hetzner, OVH, DigitalOcean…): las conexiones a los puertos 25, 465 y 587 se
+descartan y el envío falla con `timed out`. Compruébalo **desde el servidor** antes de
+sospechar de tus credenciales:
+
+```bash
+for p in 25 465 587 2525; do printf "%s: " $p
+  timeout 8 bash -c "exec 3<>/dev/tcp/smtp-relay.brevo.com/$p; head -1 <&3" || echo BLOQUEADO
+done
+```
+
+Si el 587 está cerrado: ábrelo en el panel del proveedor (ojo con la regla implícita, ver
+el aviso de abajo), o usa el **2525**, que casi nadie bloquea y Brevo acepta.
+
+**2. Brevo restringe el acceso por IP.** Si activas esa opción, da de alta la IP del
+servidor —y la tuya, si vas a probar desde tu PC—. Con la IP fuera de la lista, unas
+credenciales correctas se rechazan igualmente.
+
+**3. El dominio remitente no está verificado.** Enviar desde una dirección de un dominio
+que Brevo no reconoce se rechaza. La verificación se hace en *Senders, Domains &
+Dedicated IPs → Domains*, publicando en el DNS el TXT `brevo-code:…` que ellos indican.
+
+> **Sobre SPF y DKIM.** Con el dominio verificado, la autenticación del correo la
+> gestiona **Brevo** (el DMARC del dominio delega en ellos: `rua=mailto:rua@dmarc.brevo.com`),
+> así que no hace falta publicar SPF ni DKIM propios para que el correo llegue a la
+> bandeja de entrada — comprobado en este despliegue. Publicarlos sigue siendo lo
+> recomendable si algún día envías desde varios servicios a la vez o quieres subir el
+> DMARC a `p=quarantine`, pero **no** es un requisito para empezar.
+
+Registros del dominio, para comprobar el estado:
+
+```bash
+nslookup -type=TXT chatmundoaventura.com 8.8.8.8          # debe salir el brevo-code:…
+nslookup -type=TXT _dmarc.chatmundoaventura.com 8.8.8.8   # DMARC
+```
+
+Con todo puesto, **Admin → APIs → "Probar conexión"** en SMTP conecta, autentica y te
+recuerda desde qué dirección se enviará.
+
+Si el alta de una familia se quedó a medias por un fallo de envío, no hay que tocar la base
+de datos: `familias_service.signup` **reactiva** una cuenta pendiente cuando se repite el
+alta con el mismo correo.
+
 > **Si tocas el cortafuegos del proveedor, revisa la regla implícita final.** En netcup, en
 > cuanto defines una política de salida propia, la regla implícita pasa de `ACCEPT OUTGOING` a
 > **`DROP OUTGOING`**: se cae *todo* el tráfico saliente y con él DeepL, el LLM, Replicate y
@@ -751,8 +797,11 @@ tratamiento, cifrado del disco del VPS, y borrado de cuentas.
 | Caddy no arranca: `permission denied` en su log | `caddy validate` creó el fichero como root. `chown -R caddy:caddy /var/log/caddy` (§3.10) |
 | Caddy devuelve 403 al servir la SPA | `caddy` no puede atravesar `/opt/mundoaventura` (750). Métele en el grupo de la app (§3.10) |
 | Sin certificado pese a que el registro A es correcto | Hay un AAAA apuntando a una IPv6 que el servidor no tiene configurada (§3.10) |
-| Todo deja de responder tras tocar el firewall del proveedor | La regla implícita de salida pasó a `DROP`. Ver §6.2 |
-| El código de alta nunca llega | El proveedor bloquea el SMTP saliente. Ver §6.2 |
+| Todo deja de responder tras tocar el firewall del proveedor | La regla implícita de salida pasó a `DROP`. Ver §6.3 |
+| El código de alta nunca llega (`timed out`) | El proveedor del VPS bloquea el SMTP saliente, o Brevo restringe por IP (§6.3) |
+| El código llega pero cae en spam | El dominio remitente no está verificado en Brevo (§6.3) |
+| El relé rechaza las credenciales (535) | En Brevo el usuario NO es tu correo: es el login `xxx@smtp-brevo.com` (§6.3) |
+| El correo se rechaza por el remitente | El dominio de `SMTP_FROM` no está verificado en Brevo (§6.3) |
 | Falla la generación de imagen con `500 Internal server error` | Suele ser Replicate, no tu servidor: comprueba `GET /v1/account` con tu token y su página de estado. Si el panel de Replicate no muestra ni siquiera predicciones **fallidas**, la petición murió antes de crearlas |
 | `address already in use` al arrancar el backend | El socket y el servicio se pisan: o `--fd 3` **con** `mundoaventura.socket`, o `--host/--port` **sin** él (§3.9) |
 | Siguen apareciendo 502 al desplegar | El `.socket` lleva `PartOf=`, o se reinició `mundoaventura.socket` en vez de solo el `.service` (§3.9) |

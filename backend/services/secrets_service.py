@@ -63,13 +63,14 @@ _PROVEEDORES: dict[str, dict[str, str]] = {
         "nombre": "Groq (transcripción Whisper)",
         "ayuda_url": "https://console.groq.com/keys",
     },
-    # Contraseña del SMTP para enviar el código de verificación de las familias
-    # (Hito 9.2). Es un secreto: va en el .env, nunca en settings_service/export. El
-    # resto de ajustes SMTP (host/puerto/usuario…) están en la pestaña "Correo".
+    # Clave del relé SMTP con el que se envía el código de verificación de las familias
+    # (Hito 9.2; en producción, Brevo). Es un secreto: va en el .env, nunca en
+    # settings_service/export. El resto de ajustes SMTP (host/puerto/usuario/remitente)
+    # están en la pestaña "Correo".
     "smtp": {
         "variable": "SMTP_PASSWORD",
-        "nombre": "SMTP (contraseña del correo de verificación)",
-        "ayuda_url": "https://support.google.com/mail/answer/185833",
+        "nombre": "SMTP (clave del correo de verificación)",
+        "ayuda_url": "https://app.brevo.com/settings/keys/smtp",
     },
 }
 
@@ -225,7 +226,12 @@ def _probar_replicate() -> dict:
 
 
 def _probar_smtp() -> dict:
-    """Intenta conectar y autenticarse en el SMTP con los ajustes de la pestaña Correo."""
+    """Intenta conectar y autenticarse en el SMTP con los ajustes de la pestaña Correo.
+
+    Los mensajes de error apuntan a las DOS causas que más se dan con un relé
+    transaccional y que el error crudo no explica: el puerto bloqueado por el
+    proveedor de hosting y el acceso restringido por IP en el propio relé.
+    """
     import smtplib
 
     from backend.services import settings_service
@@ -233,16 +239,48 @@ def _probar_smtp() -> dict:
     host = str(settings_service.get("SMTP_HOST")).strip()
     if not host:
         return {"ok": False, "mensaje": "Falta el servidor SMTP (pestaña Correo)."}
+    puerto = int(settings_service.get("SMTP_PORT"))
     try:
-        with smtplib.SMTP(host, int(settings_service.get("SMTP_PORT")), timeout=10) as servidor:
+        with smtplib.SMTP(host, puerto, timeout=10) as servidor:
             if settings_service.get("SMTP_STARTTLS"):
                 servidor.starttls()
             usuario = str(settings_service.get("SMTP_USER")).strip()
             if usuario:
                 servidor.login(usuario, _valor("smtp"))
-        return {"ok": True, "mensaje": "Conexión SMTP correcta."}
+    # ORDEN IMPORTANTE: `smtplib.SMTPException` HEREDA de OSError, así que el except de
+    # las credenciales tiene que ir ANTES; al revés, un rechazo de login se reportaría
+    # como "puerto bloqueado" y mandaría a mirar donde no es.
+    except smtplib.SMTPAuthenticationError as exc:
+        return {
+            "ok": False,
+            "mensaje": (
+                f"El servidor rechazó las credenciales ({exc.smtp_code}). Con Brevo, el "
+                "usuario NO es tu correo: es el login de SMTP & API (xxx@smtp-brevo.com)."
+            ),
+        }
+    except OSError as exc:
+        # Familia de fallos de red (timeout, conexión rechazada, DNS). Un timeout al
+        # CONECTAR casi nunca son las credenciales: es el puerto cerrado.
+        return {
+            "ok": False,
+            "mensaje": (
+                f"No se pudo conectar con {host}:{puerto} ({exc}). Suele ser el proveedor "
+                "del servidor bloqueando el SMTP saliente, o el relé restringiendo por IP."
+            ),
+        }
     except Exception as exc:  # noqa: BLE001
         return {"ok": False, "mensaje": f"No se pudo conectar por SMTP: {exc}"}
+
+    remitente = str(settings_service.get("SMTP_FROM")).strip()
+    if not remitente:
+        return {"ok": True, "mensaje": "Conexión SMTP correcta. Falta el remitente (SMTP_FROM)."}
+    return {
+        "ok": True,
+        "mensaje": (
+            f"Conexión SMTP correcta. Se enviará desde {remitente}: su dominio debe estar "
+            "verificado en el relé, o el envío se rechaza."
+        ),
+    }
 
 
 def probar(proveedor: str) -> dict:

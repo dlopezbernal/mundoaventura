@@ -69,8 +69,10 @@ _SECCIONES_EXCLUIDAS = frozenset(
     }
 )
 
-# User-Agent obligatorio por la política de la API de Wikipedia.
-_USER_AGENT = "MaquinaDelTiempoApp/1.0 (dlopezbernal@gmail.com)"
+# User-Agent obligatorio por la política de la API de Wikipedia: exige identificar la
+# aplicación y una forma de contacto. Se usa el dominio del proyecto en lugar de un
+# correo personal — cumple igual y no publica un dato personal en cada petición.
+_USER_AGENT = "MundoAventura/1.0 (https://chatmundoaventura.com)"
 
 
 # ---------------------------------------------------------------------------
