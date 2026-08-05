@@ -14,6 +14,9 @@
  *
  * La contraseña solo viaja al backend (que la guarda hasheada); aquí guardamos el
  * TOKEN de sesión que devuelve, en localStorage, para no volver a pedir login.
+ *
+ * Dos accesos escapan a esta puerta, porque no dependen de tener cuenta de familia:
+ * el MANUAL (leerlo antes de dar el correo) y la ADMINISTRACIÓN (credencial propia).
  */
 
 import { useEffect, useState } from "react";
@@ -34,11 +37,13 @@ interface Props {
   onListo: (familia: FamiliaDTO) => void;
   /** Abre el manual de usuario SIN salir de la puerta de entrada (aún no hay sesión). */
   onAbrirManual: () => void;
+  /** Abre la Administración SIN sesión de familia (tiene su propia credencial). */
+  onAbrirAdmin: () => void;
 }
 
 type Modo = "cargando" | "login" | "signup" | "verificar";
 
-export default function LoginFamilia({ onListo, onAbrirManual }: Props) {
+export default function LoginFamilia({ onListo, onAbrirManual, onAbrirAdmin }: Props) {
   const [modo, setModo] = useState<Modo>("cargando");
   const [nombreFamilia, setNombreFamilia] = useState("");
   const [email, setEmail] = useState("");
@@ -328,6 +333,13 @@ export default function LoginFamilia({ onListo, onAbrirManual }: Props) {
           </a>
         </p>
       </div>
+
+      {/* La Administración NO cuelga de la sesión de familia: va detrás de su propia
+          contraseña (+ 2FA opcional), así que el administrador de la instalación
+          tiene que poder entrar sin crear ni usar una cuenta de familia. */}
+      <button type="button" className={styles.adminAcceso} onClick={onAbrirAdmin}>
+        🛡️ Administración de la aplicación
+      </button>
     </div>
   );
 }

@@ -119,12 +119,6 @@ export default function Admin({ onCerrar }: Props) {
           {pestana === "sistema" && <SistemaTab onLogout={() => void cerrarSesion()} />}
         </>
       )}
-
-      <footer className={styles.footer}>
-        <button type="button" className="btn btn-secundario" onClick={onCerrar}>
-          Volver
-        </button>
-      </footer>
     </section>
   );
 }
