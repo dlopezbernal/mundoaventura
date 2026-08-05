@@ -584,22 +584,82 @@ Lo que **no** hace el despliegue automático, a propósito:
 
 | Ruta | Contiene | ¿Se regenera? |
 |---|---|---|
-| `.env` | Claves de los proveedores | No — **respáldalo** |
+| `.env` | Claves de los proveedores y SMTP | No — **respáldalo** |
+| `frontend-react/.env` | Configuración de compilación de la SPA | Trivial, pero se respalda igual |
 | `backend/config_db.sqlite3` | Ajustes, catálogos, familias, PIN/2FA, auditoría | No — **respáldalo** |
 | `backend/documentos/` | Documentos del RAG subidos desde la UI | Los del repo sí; los subidos **no** |
-| `backend/chroma_db/` | Índice vectorial | Sí (`backend.ingest`) |
+| `backend/avatares/` | Avatares del carrusel | Sí, pero cada uno cuesta 2 llamadas a Replicate |
+| `backend/chroma_db/` | Índice vectorial | Sí (`backend.ingest`, ~1 min) |
 | `backend/.cache/` | Audio TTS ya sintetizado, modelos ONNX | Sí |
-| `backend/avatares/` | Avatares del carrusel | Sí |
 
-Una copia diaria basta con esto (por ejemplo desde el `cron` del usuario):
+Las cinco primeras filas son exactamente lo que empaqueta
+[`deploy/respaldar.sh`](../deploy/respaldar.sh): **un `.tgz` por copia** (~7 MB), con las rutas
+relativas a la raíz de la app, para que restaurar sea un `tar x -C` directo y la copia se pueda
+llevar entera a otro servidor.
+
+Dos decisiones del contenido que conviene entender:
+
+- **El índice de ChromaDB no va dentro** aunque no esté en git. Es 100 % derivado de
+  `backend/documentos/` y del ajuste `EMBEDDING_BACKEND`, que **sí** se respaldan; restaurar un
+  índice viejo sobre unos ajustes nuevos daría malas respuestas **en silencio**, que es peor que
+  tardar un minuto en reconstruirlo.
+- **`.ssh/` tampoco**, pese a contener la deploy key. Este archivo está pensado para *moverse* a
+  otra máquina, y no quieres credenciales de acceso al servidor viajando dentro. Recrearlas son
+  dos comandos (§3.3 y §5.1), y al cambiar de servidor conviene rotarlas de todos modos.
+
+El reparto general es: **el `.tgz` restaura los datos; este documento reconstruye el sistema**.
+La configuración de systemd, Caddy, ufw o fail2ban no se respalda porque ya está en el
+repositorio y en §3.
+
+### 5.2 Copias: cuándo se hacen y cuánto duran
+
+Se disparan desde dos sitios, con la **misma** implementación (para que no haya dos ideas
+distintas de qué respaldar, que se desincronicen con el tiempo):
+
+| Cuándo | Etiqueta en el nombre | Para qué |
+|---|---|---|
+| Antes de cada despliegue | `predespliegue` | Deshacer una actualización que salga mal |
+| Cada noche a las 03:30 | `nocturno` | Tener siempre una copia reciente aunque no despliegues |
+
+Sin la nocturna, la copia más reciente sería la del último despliegue: si pasas dos meses sin
+tocar el código, pierdes dos meses de cuentas de familia y documentos.
 
 ```bash
-tar czf /opt/copias/mundoaventura-$(date +\%F).tgz \
-  -C /opt/mundoaventura .env backend/config_db.sqlite3 backend/documentos
+cp /opt/mundoaventura/deploy/mundoaventura-backup.{service,timer} /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now mundoaventura-backup.timer
+
+systemctl list-timers mundoaventura-backup     # cuándo toca la próxima
+systemctl start mundoaventura-backup.service   # forzar una ahora
+journalctl -u mundoaventura-backup -n 30       # cómo fue la última
+./deploy/respaldar.sh manual                   # a mano, como el usuario de la app
 ```
 
-`deploy/desplegar.sh` ya hace una copia del `.env` y de la BBDD antes de cada actualización,
-en `/opt/copias/`.
+**Por qué un temporizador de systemd y no `cron`.** Sobre todo por `Persistent=true`: si el
+servidor estaba apagado a las 03:30, la copia se hace al arrancar; `cron` simplemente se la
+salta, y te quedas sin copia justo el día que hubo un problema. Además los fallos quedan en el
+journal (mismo `journalctl -u …` que el resto) en lugar de en un correo local que nadie lee.
+
+**Retención: 15 días.** Cada ejecución borra los `.tgz` más antiguos, así que la carpeta se
+estabiliza en ~105 MB en vez de crecer sin fin. El borrado se acota al patrón
+`mundoaventura-*.tgz`: si dejas ahí un fichero tuyo, no se lo lleva por delante.
+
+### 5.3 Restaurar
+
+Sobre una instalación ya montada según §3 (cada `.tgz` lleva dentro un `INVENTARIO.txt` con
+estos mismos pasos, la fecha y el commit con el que se hizo):
+
+```bash
+systemctl stop mundoaventura
+sudo -u mundoaventura tar xzf /opt/copias/mundoaventura-AAAAMMDD-HHMMSS-nocturno.tgz \
+  -C /opt/mundoaventura
+sudo -u mundoaventura bash -lc 'cd /opt/mundoaventura && uv run python -m backend.ingest'
+systemctl start mundoaventura
+```
+
+El `ingest` es el paso que no se puede saltar: reconstruye el índice vectorial, que no viaja en
+la copia. Comprobado el 2026-08-05 con una restauración real: `PRAGMA integrity_check` en `ok` y
+todos los recuentos de tablas idénticos a la BBDD viva.
 
 > **Nunca ejecutes `git clean -fd` en `/opt/mundoaventura`.** El *home* del usuario de la app
 > **es** el directorio del repositorio, así que `git status` lista como no rastreados sus

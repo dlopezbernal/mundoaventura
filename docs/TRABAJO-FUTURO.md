@@ -93,9 +93,14 @@ persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo auto
 - **Observabilidad y avisos.** `journalctl` es suficiente para depurar a mano, pero nadie se entera
   si el servicio se cae de madrugada, si caduca un certificado o si se agota el saldo de un
   proveedor. Un *healthcheck* externo con aviso es el mínimo.
-- **Copias de seguridad automáticas y probadas.** `desplegar.sh` copia `.env` y la BBDD antes de
-  cada actualización, pero no hay copia periódica, ni fuera del servidor, ni **restauración
-  probada** — una copia que no se ha restaurado nunca no se sabe si sirve.
+- **Copias de seguridad fuera del servidor.** Ya hay copia completa (`deploy/respaldar.sh`, un
+  `.tgz` con todo lo que no está en git), **automática** (antes de cada despliegue y cada noche
+  vía temporizador de systemd), con **retención de 15 días** y **restauración verificada**
+  (2026-08-05: `integrity_check` en `ok` y recuentos idénticos a la BBDD viva). Lo que falta es
+  lo más importante: **sacarlas del servidor**. Hoy viven en el mismo disco que protegen, así que
+  no cubren el escenario que más duele — perder la máquina. Un `rclone`/`restic` a
+  almacenamiento externo desde el mismo temporizador lo cerraría; conviene cifrarlas antes de
+  subirlas, porque el `.tgz` lleva el `.env` con todas las claves.
 
 ## Ideas de producto (más allá de la ingeniería)
 

@@ -73,7 +73,7 @@ construir() {
 # Solo revierte el CÓDIGO: la BBDD se deja como está a propósito. Restaurarla
 # borraría los ajustes que el adulto haya cambiado desde el menú mientras tanto,
 # y este proyecto no tiene migraciones de esquema que deshacer. La copia previa
-# sigue en $COPIAS por si hiciera falta a mano.
+# sigue en /opt/copias por si hiciera falta a mano.
 volver_atras() {
 	local commit="$1"
 	echo "==> ⏪ VUELTA ATRÁS a $commit"
@@ -92,22 +92,11 @@ volver_atras() {
 #  Despliegue
 # ---------------------------------------------------------------------
 
-echo "==> 1/7  Copia de seguridad de los datos (BBDD + .env)"
-# Antes de nada, por si una migración futura tocara el esquema. Se guardan
-# fuera del árbol de git para que un `git clean` no se las lleve por delante.
-# Ese "fuera" tiene un precio: /opt es de root, así que el directorio lo crea
-# la instalación (DESPLIEGUE.md §3.1), no este script. Si falta, el mkdir da un
-# "Permission denied" que no dice qué hacer; de ahí el mensaje explícito.
-COPIAS="${COPIAS:-$APP_DIR/../copias}"
-if ! mkdir -p "$COPIAS" 2>/dev/null; then
-	echo "ERROR: no se puede escribir en $COPIAS (su padre suele ser de root)." >&2
-	echo "Créalo una vez, como root:" >&2
-	echo "  install -d -o mundoaventura -g mundoaventura -m 750 $(cd "$APP_DIR/.." && pwd)/copias" >&2
-	exit 1
-fi
-SELLO="$(date +%Y%m%d-%H%M%S)"
-[ -f backend/config_db.sqlite3 ] && cp backend/config_db.sqlite3 "$COPIAS/config_db-$SELLO.sqlite3"
-[ -f .env ] && cp .env "$COPIAS/env-$SELLO.bak"
+echo "==> 1/7  Copia de seguridad previa"
+# Una sola implementación de la copia, compartida con la nocturna: así no hay
+# dos ideas distintas de "qué hay que respaldar" que se desincronicen.
+# Se etiqueta como "predespliegue" para distinguirla de las diarias.
+"$APP_DIR/deploy/respaldar.sh" predespliegue
 
 echo "==> 2/7  Anotar la versión actual (por si hay que volver)"
 COMMIT_ANTERIOR="$(git rev-parse HEAD)"
