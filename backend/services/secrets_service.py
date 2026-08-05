@@ -277,8 +277,8 @@ def _probar_smtp() -> dict:
     return {
         "ok": True,
         "mensaje": (
-            f"Conexión SMTP correcta. Se enviará desde {remitente}: comprueba que su dominio "
-            "esté verificado en el relé, con SPF y DKIM, o los correos irán a spam."
+            f"Conexión SMTP correcta. Se enviará desde {remitente}: su dominio debe estar "
+            "verificado en el relé, o el envío se rechaza."
         ),
     }
 

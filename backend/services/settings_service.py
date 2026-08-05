@@ -707,8 +707,8 @@ _SPEC: dict[str, dict[str, Any]] = {
         "default": config.SMTP_FROM,
         "activo_si": {"clave": "EMAIL_VERIFICACION", "igual_a": "true"},
         "ayuda": "Dirección remitente del correo (From), la que ve la familia. Debe ser de "
-        "un dominio VERIFICADO en Brevo (con SPF y DKIM); si no, el envío se rechaza o el "
-        "correo acaba en spam. Si va vacía, se usa SMTP_USER.",
+        "un dominio VERIFICADO en Brevo; si no, el envío se rechaza. Si va vacía, se usa "
+        "SMTP_USER.",
     },
     "EMAIL_FROM_NAME": {
         "categoria": CAT_CORREO,

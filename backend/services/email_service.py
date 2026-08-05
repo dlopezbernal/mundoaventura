@@ -18,9 +18,9 @@ tu correo" o, en modo desarrollo, "mira la consola del backend".
 Dos cosas que no se ven en el código y hacen fallar el envío en un servidor:
   · Muchos proveedores de VPS BLOQUEAN el SMTP saliente (25/465/587) de serie, y el
     síntoma es un `timed out` que no delata su causa.
-  · Que el envío funcione no garantiza que el correo LLEGUE a la bandeja de entrada:
-    el dominio remitente necesita SPF y DKIM publicados en su DNS o los grandes
-    proveedores de correo lo mandan a spam.
+  · El dominio del remitente tiene que estar VERIFICADO en el relé; si no, el envío se
+    rechaza. Con el dominio verificado, Brevo se encarga de la autenticación (SPF/DKIM)
+    y el correo llega a la bandeja de entrada sin publicar registros propios.
 Ambas están documentadas en `docs/DESPLIEGUE.md`.
 """
 

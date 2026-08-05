@@ -741,15 +741,22 @@ el aviso de abajo), o usa el **2525**, que casi nadie bloquea y Brevo acepta.
 servidor —y la tuya, si vas a probar desde tu PC—. Con la IP fuera de la lista, unas
 credenciales correctas se rechazan igualmente.
 
-**3. Falta SPF o DKIM en el DNS del dominio remitente.** Esto no lo detecta ninguna
-prueba de conexión: el correo **sale igual**, pero los grandes proveedores lo mandan a
-spam. Brevo te da los valores exactos en *Senders, Domains & Dedicated IPs → Domains*.
-Verifica que los tres registros resuelven:
+**3. El dominio remitente no está verificado.** Enviar desde una dirección de un dominio
+que Brevo no reconoce se rechaza. La verificación se hace en *Senders, Domains &
+Dedicated IPs → Domains*, publicando en el DNS el TXT `brevo-code:…` que ellos indican.
+
+> **Sobre SPF y DKIM.** Con el dominio verificado, la autenticación del correo la
+> gestiona **Brevo** (el DMARC del dominio delega en ellos: `rua=mailto:rua@dmarc.brevo.com`),
+> así que no hace falta publicar SPF ni DKIM propios para que el correo llegue a la
+> bandeja de entrada — comprobado en este despliegue. Publicarlos sigue siendo lo
+> recomendable si algún día envías desde varios servicios a la vez o quieres subir el
+> DMARC a `p=quarantine`, pero **no** es un requisito para empezar.
+
+Registros del dominio, para comprobar el estado:
 
 ```bash
-nslookup -type=TXT chatmundoaventura.com 8.8.8.8                    # v=spf1 … include:spf.brevo.com
-nslookup -type=TXT brevo._domainkey.chatmundoaventura.com 8.8.8.8   # DKIM
-nslookup -type=TXT _dmarc.chatmundoaventura.com 8.8.8.8             # DMARC
+nslookup -type=TXT chatmundoaventura.com 8.8.8.8          # debe salir el brevo-code:…
+nslookup -type=TXT _dmarc.chatmundoaventura.com 8.8.8.8   # DMARC
 ```
 
 Con todo puesto, **Admin → APIs → "Probar conexión"** en SMTP conecta, autentica y te
@@ -792,7 +799,7 @@ tratamiento, cifrado del disco del VPS, y borrado de cuentas.
 | Sin certificado pese a que el registro A es correcto | Hay un AAAA apuntando a una IPv6 que el servidor no tiene configurada (§3.10) |
 | Todo deja de responder tras tocar el firewall del proveedor | La regla implícita de salida pasó a `DROP`. Ver §6.3 |
 | El código de alta nunca llega (`timed out`) | El proveedor del VPS bloquea el SMTP saliente, o Brevo restringe por IP (§6.3) |
-| El código llega pero cae en spam | Faltan SPF y DKIM en el DNS del dominio remitente (§6.3) |
+| El código llega pero cae en spam | El dominio remitente no está verificado en Brevo (§6.3) |
 | El relé rechaza las credenciales (535) | En Brevo el usuario NO es tu correo: es el login `xxx@smtp-brevo.com` (§6.3) |
 | El correo se rechaza por el remitente | El dominio de `SMTP_FROM` no está verificado en Brevo (§6.3) |
 | Falla la generación de imagen con `500 Internal server error` | Suele ser Replicate, no tu servidor: comprueba `GET /v1/account` con tu token y su página de estado. Si el panel de Replicate no muestra ni siquiera predicciones **fallidas**, la petición murió antes de crearlas |
