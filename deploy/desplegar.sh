@@ -96,7 +96,16 @@ echo "==> 1/7  Copia de seguridad previa"
 # Una sola implementación de la copia, compartida con la nocturna: así no hay
 # dos ideas distintas de "qué hay que respaldar" que se desincronicen.
 # Se etiqueta como "predespliegue" para distinguirla de las diarias.
-"$APP_DIR/deploy/respaldar.sh" predespliegue
+#
+# Se invoca con `bash …` en lugar de ejecutarlo directamente, a propósito. Este
+# paso va ANTES del `git pull` (la copia tiene que preceder a cualquier cambio),
+# así que todo lo que falle aquí deja el despliegue SIN PODER REPARARSE SOLO:
+# muere antes de traerse la corrección y hay que entrar por SSH. Pasó de verdad,
+# con este fichero subido desde Windows sin bit de ejecución. Llamarlo por el
+# intérprete elimina esa dependencia del camino crítico. (systemd sí necesita el
+# bit para la copia nocturna, pero allí el peor caso es saltarse una copia, no
+# quedarse sin poder desplegar.)
+bash "$APP_DIR/deploy/respaldar.sh" predespliegue
 
 echo "==> 2/7  Anotar la versión actual (por si hay que volver)"
 COMMIT_ANTERIOR="$(git rev-parse HEAD)"
