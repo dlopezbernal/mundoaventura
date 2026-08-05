@@ -753,3 +753,5 @@ tratamiento, cifrado del disco del VPS, y borrado de cuentas.
 | El job `deploy` falla con `Host key verification failed` | `VPS_KNOWN_HOSTS` vacío o desfasado. Regenéralo con `ssh-keyscan` (§5.1) |
 | El despliegue automático dice `uv: command not found` | El comando forzado no es una shell de login. El script ya añade `~/.local/bin` al PATH: comprueba que el servidor tiene la versión nueva de `desplegar.sh` |
 | `desplegar.sh` falla en el paso 1 con `Permission denied` en `../copias` | Falta el directorio de copias. `install -d -o mundoaventura -g mundoaventura -m 750 /opt/copias` (§3.1) |
+| `Permission denied` al ejecutar un `.sh` del repositorio | Se subió desde Windows sin bit de ejecución. Se arregla **en git**, no en el servidor: `git update-index --chmod=+x deploy/loquesea.sh` (un `chmod` en el servidor crea un cambio local que luego bloquea el `git pull`) |
+| `git pull` aborta: *untracked working tree files would be overwritten* | Alguien dejó a mano en el servidor un fichero que después pasó a estar en git. Comprueba que el contenido coincide (`sha256sum`) y bórralo: git lo restaurará |
