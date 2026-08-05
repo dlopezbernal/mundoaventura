@@ -503,6 +503,13 @@ deliberados:
   que deshacer. La copia previa sigue en `/opt/copias/` por si hiciera falta a mano.
 - **Si falla la construcción, el servicio en marcha ni se toca**: aún no se ha reiniciado
   nada, así que basta con dejar el árbol como estaba.
+- **Todo lo anterior al `git pull` usa solo binarios del sistema** (`git`, `python3`, `tar`).
+  No es casualidad: lo que se ejecuta antes de traerse los cambios no puede arreglarse *con*
+  esos cambios, así que un fallo ahí deja el despliegue automático incapaz de repararse solo y
+  obliga a entrar por SSH. Por eso la copia previa se invoca como `bash …/respaldar.sh` en vez
+  de ejecutarla directamente (un bit de ejecución perdido bastó una vez para bloquearlo todo),
+  y por eso `uv` y `npm` no aparecen hasta después del `pull`. **Si añades pasos al principio
+  del script, mantén esa propiedad.**
 
 ### 5.1 Despliegue automático desde GitHub
 
