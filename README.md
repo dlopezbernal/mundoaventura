@@ -261,7 +261,9 @@ No es solo CI, es **CI/CD**. El flujo de GitHub Actions (`.github/workflows/ci.y
 cada push y cada PR contra **`dev` y `main`** dos trabajos de verificación —lint + formato +
 pytest (backend) y oxlint + build (frontend)— y un tercero, **`deploy`**, que solo se activa en
 `main` y que, si los dos anteriores pasan, **publica en producción por SSH y comprueba después
-el `/health` del sitio**. Es decir: un merge a `main` despliega solo. El procedimiento está en
+el `/health` del sitio**. Es decir: un merge a `main` despliega solo. Cada commit se verifica
+**una sola vez**: el PR de `dev` a `main` se salta los dos primeros trabajos porque ese commit
+ya los pasó al empujarlo a `dev`. El procedimiento está en
 [`DESPLIEGUE.md`](docs/DESPLIEGUE.md).
 
 El **banco de pruebas** (`evals/`) mide la calidad del RAG con números; su metodología y

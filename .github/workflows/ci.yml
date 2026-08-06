@@ -10,10 +10,26 @@ on:
     branches: [dev, main]
   workflow_dispatch:
 
+# SIN TRABAJO DUPLICADO. Con los dos disparadores de arriba, un PR de `dev` a
+# `main` verificaba dos veces el MISMO commit: una al empujarlo a `dev` (evento
+# push) y otra entera como PR. Se nota sobre todo cuando GitHub va lento —checks
+# "pendientes" en el PR que ya estaban en verde en el otro run— y gasta el doble
+# de minutos.
+#
+# De ahí el `if` que llevan los dos trabajos de verificación: se saltan SOLO
+# cuando el PR viene de `dev` o `main`, que son las ramas que ya disparan el CI
+# por push. Un PR desde cualquier otra rama (`feat/…`, `fix/…`) sigue
+# verificándose —ahí el PR es la única red que hay— y un push directo a `dev` o
+# `main` también.
+#
+# Va repetido en los dos trabajos a propósito: `jobs.<id>.if` NO puede leer el
+# contexto `env`, así que no hay forma de declarar la condición una sola vez.
+# Si la quitas de uno solo, ese trabajo vuelve a duplicarse en silencio.
 jobs:
   backend:
     name: Backend (ruff + pytest)
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !contains(fromJSON('["dev", "main"]'), github.head_ref)
     steps:
       - uses: actions/checkout@v5
 
@@ -39,6 +55,8 @@ jobs:
   frontend:
     name: Frontend (oxlint + build)
     runs-on: ubuntu-latest
+    # Mismo `if` que en `backend`: ver la nota de arriba (no se puede factorizar).
+    if: github.event_name != 'pull_request' || !contains(fromJSON('["dev", "main"]'), github.head_ref)
     defaults:
       run:
         working-directory: frontend-react
