@@ -4,10 +4,18 @@
  * cian), input y micrófono en clave consola. Respeta prefers-reduced-motion.
  */
 
+/* El chat se queda TODA la altura sobrante de su contenedor: en móvil eso es
+   casi la pantalla entera (app de mensajería), en PC la altura de su columna.
+   `flex` cubre el caso de columna flex (móvil/tablet) y `height:100%` el de
+   celda de rejilla (PC); `min-height:0` es lo que permite que sea el
+   HISTORIAL el que scrollee, en vez de estirar el panel y echar el input
+   fuera de la pantalla. */
 .chat {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
   height: 100%;
   padding: 14px;
   border: 1px solid var(--edge);
@@ -26,13 +34,15 @@
   text-shadow: 0 0 10px rgba(62, 242, 255, 0.5);
 }
 
+/* Sin `max-height` en vh: la altura la reparte el flex del panel, así el
+   historial ocupa lo que sobra y el input queda SIEMPRE abajo, a la vista.
+   El `min-height` es solo un suelo para que no colapse en pantallas muy bajas. */
 .historial {
   display: flex;
   flex-direction: column;
   gap: 8px;
   flex: 1 1 auto;
-  min-height: 260px;
-  max-height: 46vh;
+  min-height: 120px;
   overflow-y: auto;
   padding-right: 4px;
 }
@@ -143,6 +153,7 @@
 .input {
   flex: 1 1 auto;
   min-width: 0;
+  height: 46px; /* toque cómodo en táctil (≥ 44px), igual que mic y enviar */
   padding: 12px 14px;
   border: 1px solid var(--edge);
   border-radius: 12px;
@@ -160,8 +171,8 @@
 
 .mic {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border: 1px solid var(--holo);
   border-radius: 50%;
   background: rgba(4, 8, 28, 0.6);
@@ -194,8 +205,8 @@
 
 .cancelar {
   flex: 0 0 auto;
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border: 1px solid var(--line);
   border-radius: 50%;
   background: rgba(4, 8, 28, 0.6);
@@ -208,7 +219,8 @@
 
 .enviar {
   flex: 0 0 auto;
-  padding: 12px 18px;
+  height: 46px;
+  padding: 0 16px;
   border: none;
   border-radius: 12px;
   background: linear-gradient(90deg, var(--holo), var(--lime));
@@ -223,6 +235,27 @@
   filter: grayscale(0.6) brightness(0.7);
   cursor: not-allowed;
   box-shadow: none;
+}
+/* En móvil el botón es SOLO el icono ➤: con el texto "Preguntar" el input se
+   quedaba sin sitio. A partir de tablet vuelve la palabra. */
+.enviarIco {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.enviarTexto {
+  display: none;
+}
+
+@media (min-width: 641px) {
+  .enviarIco {
+    display: none;
+  }
+  .enviarTexto {
+    display: inline;
+  }
+  .historial {
+    min-height: 220px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

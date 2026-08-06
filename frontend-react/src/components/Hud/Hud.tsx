@@ -16,9 +16,14 @@
  * para que el niño no los vea salvo que un adulto los despliegue. El manual va en
  * el mismo grupo: la barra se mantiene con un único punto de entrada (☰) y el niño
  * ve una pantalla limpia.
+ *
+ * El interruptor de sonido 🔊/🔇 queda FUERA del plegado: es un control del niño
+ * (silenciar los efectos de la interfaz), no un acceso de adulto, y tiene que
+ * poder apagarse de un toque sin abrir ningún menú.
  */
 
 import { useState } from "react";
+import { activarSonido, sfx, sonidoActivo } from "../../audio/sfx";
 import Marca from "../Marca/Marca";
 import styles from "./Hud.module.css";
 
@@ -49,8 +54,18 @@ export default function Hud({
   onSalir,
 }: Props) {
   const [abierto, setAbierto] = useState(false);
+  // La preferencia vive en el módulo de sonido (y en localStorage); aquí solo se
+  // refleja para repintar el icono.
+  const [sonido, setSonido] = useState(sonidoActivo);
+
+  function alternarSonido() {
+    const encendido = !sonido;
+    activarSonido(encendido); // al encender suena la confirmación
+    setSonido(encendido);
+  }
+
   return (
-    <header className={styles.hud}>
+    <header className={`${styles.hud}${abierto ? ` ${styles.menuAbierto}` : ""}`}>
       <span className={styles.logo}>
         <Marca size={26} className={styles.logoMark} />
         <span className={styles.logoTexto}>MundoAventura</span>
@@ -70,32 +85,58 @@ export default function Hud({
             </button>
           )}
         </span>
+        {/* data-no-sfx: sería absurdo que el botón de silenciar hiciera clic. */}
+        <button
+          type="button"
+          data-no-sfx
+          className={`${styles.iconBtn} ${styles.sonido}`}
+          data-tip={sonido ? "Silenciar los sonidos" : "Activar los sonidos"}
+          aria-label={sonido ? "Silenciar los sonidos" : "Activar los sonidos"}
+          aria-pressed={!sonido}
+          onClick={alternarSonido}
+        >
+          {sonido ? "🔊" : "🔇"}
+        </button>
         {abierto && (
+          // data-no-sfx en los tres: abrir un panel suena con "open", que ya es
+          // el matiz de esa acción; el "click" genérico encima sobraba.
           <>
             <button
               type="button"
+              data-no-sfx
               className={styles.iconBtn}
               data-tip="Manual de usuario"
               aria-label="Manual de usuario"
-              onClick={onAbrirManual}
+              onClick={() => {
+                sfx("open");
+                onAbrirManual();
+              }}
             >
               📖
             </button>
             <button
               type="button"
+              data-no-sfx
               className={styles.iconBtn}
               data-tip="Configuración"
               aria-label="Configuración"
-              onClick={onAbrirConfig}
+              onClick={() => {
+                sfx("open");
+                onAbrirConfig();
+              }}
             >
               ⚙️
             </button>
             <button
               type="button"
+              data-no-sfx
               className={styles.iconBtn}
               data-tip="Admin"
               aria-label="Admin"
-              onClick={onAbrirAdmin}
+              onClick={() => {
+                sfx("open");
+                onAbrirAdmin();
+              }}
             >
               🛡️
             </button>

@@ -367,6 +367,7 @@
  * Puerta de adulto (AdminGate) — crear/introducir la contraseña de administración
  * ======================================================================== */
 .gate {
+  width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -405,9 +406,11 @@
   font-size: 0.95rem;
   color: var(--lime);
 }
+/* Ancho de la tarjeta por breakpoint (440 → 520 → 560, ver el bloque responsive
+   del final): en móvil ocupa todo el ancho disponible. */
 .gateCard {
   width: 100%;
-  max-width: 380px;
+  max-width: 440px;
   text-align: center;
   border: 1px solid var(--holo);
   border-radius: 18px;
@@ -1277,4 +1280,121 @@
   border-radius: 4px;
   white-space: pre-wrap;
   color: #cfe6ff;
+}
+
+/* ===========================================================================
+ * Responsive de la zona de adulto (Configuración / Admin / pantallas puerta)
+ * ---------------------------------------------------------------------------
+ * Se escribe al final y con `@media` (el patrón del repo). La regla de fondo:
+ * en móvil TODO va a una columna y a ancho completo, y lo que no cabe en una
+ * línea (la barra de pestañas) scrollea en horizontal en vez de romperse.
+ * ======================================================================== */
+
+@media (max-width: 640px) {
+  .page {
+    margin-top: 10px;
+    gap: 12px;
+  }
+  .head {
+    align-items: center;
+  }
+  .title {
+    font-size: 1.3rem;
+  }
+
+  /* Las pestañas de Admin no caben: una sola fila deslizable, para que no
+     ocupen media pantalla partidas en tres líneas. */
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .tab {
+    flex: 0 0 auto;
+  }
+
+  /* Formularios a UNA columna: etiqueta arriba, control debajo y a lo ancho. */
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .fila {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .filaControl {
+    width: 100%;
+  }
+  .cfgCabecera {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .input,
+  .select {
+    width: 100%;
+    max-width: none;
+  }
+  .slider {
+    flex: 1 1 auto;
+    width: auto;
+    max-width: none;
+  }
+  .pjFila2 {
+    grid-template-columns: 1fr;
+  }
+  .pjLabel .select {
+    width: 100%;
+  }
+  /* El pie de acciones deja de empujarse a la derecha: botones a lo ancho. */
+  .footer > * {
+    flex: 1 1 auto;
+  }
+
+  /* Tarjetas CRUD (personajes, ubicaciones): el emoji y el nombre arriba y los
+     botones debajo, en vez de apretujarlo todo en una fila. */
+  .pjCard {
+    flex-wrap: wrap;
+  }
+  .pjAcciones {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .pjAvatar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pjFilaControlBtn {
+    flex-wrap: wrap;
+  }
+
+  /* Claves de API: el ojo debajo del campo antes que estrujarlo. */
+  .keyRow {
+    flex-wrap: wrap;
+  }
+  .keyInput {
+    flex: 1 1 100%;
+  }
+
+  /* La tabla de auditoría ya scrollea en horizontal (.auditWrap), pero se
+     compacta para que quepan más columnas antes de tener que deslizar. */
+  .auditTabla {
+    font-size: 0.72rem;
+  }
+  .auditTabla th,
+  .auditTabla td {
+    padding: 6px 8px;
+  }
+}
+
+/* La tarjeta de las pantallas puerta crece con el ancho disponible. */
+@media (min-width: 641px) {
+  .gateCard {
+    max-width: 520px;
+  }
+}
+@media (min-width: 960px) {
+  .gateCard {
+    max-width: 560px;
+  }
 }

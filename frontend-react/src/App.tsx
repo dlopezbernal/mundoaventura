@@ -33,6 +33,7 @@ import {
   getPersonajes,
   getUbicaciones,
 } from "./api/client";
+import { sfx } from "./audio/sfx";
 import type { FamiliaDTO, NinoDTO, PersonajeDTO, UbicacionDTO } from "./api/types";
 import { useFlow } from "./state/useFlow";
 
@@ -98,6 +99,20 @@ export default function App() {
     } catch (exc) {
       setErrorCarga(exc instanceof BackendError ? exc.message : String(exc));
     }
+  }, []);
+
+  // Clic de botón: un solo listener DELEGADO en captura para toda la app, en vez
+  // de un onClick por botón. Los controles que tienen su propio sonido (o que no
+  // deben sonar, como el propio interruptor) se marcan con `data-no-sfx`.
+  // Este listener es además el primer gesto del usuario, que es lo que despierta
+  // el AudioContext (política de autoplay del navegador).
+  useEffect(() => {
+    function alPulsar(evento: MouseEvent) {
+      const boton = (evento.target as HTMLElement | null)?.closest?.("button");
+      if (boton && !boton.closest("[data-no-sfx]")) sfx("click");
+    }
+    document.addEventListener("click", alPulsar, true);
+    return () => document.removeEventListener("click", alPulsar, true);
   }, []);
 
   // Al arrancar comprobamos si hay una sesión de familia persistida en el dispositivo.

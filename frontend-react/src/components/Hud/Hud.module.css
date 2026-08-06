@@ -108,6 +108,13 @@
   border-radius: 8px;
 }
 
+/* Interruptor de sonido: apagado se ve atenuado, para que el estado se lea de un
+   vistazo sin depender solo del emoji (🔊 vs 🔇). aria-pressed=true = silenciado. */
+.sonido[aria-pressed="true"] {
+  color: var(--muted);
+  opacity: 0.6;
+}
+
 /* El icono de "Salir" tira a rojo suave para diferenciar la acción destructiva. */
 .salir:hover {
   background: rgba(255, 92, 122, 0.18);
@@ -156,6 +163,20 @@
 @media (max-width: 640px) {
   /* En móvil ocultamos el saludo para que la barra no se rompa. */
   .saludo {
+    display: none;
+  }
+  .hud {
+    gap: 8px;
+    padding: 10px 12px;
+  }
+  .readout {
+    gap: 6px;
+  }
+  /* Con el menú de adultos desplegado son CINCO iconos (📖⚙️🛡️🚪 + ✕) y ya no
+     caben junto a la marca en una pantalla estrecha: el último ("Salir") se
+     salía de la barra. Mientras está abierto, el nombre de la app cede el sitio
+     (queda el isotipo, que sigue identificando la marca). */
+  .menuAbierto .logoTexto {
     display: none;
   }
 }

@@ -15,6 +15,7 @@
  */
 
 import { useEffect } from "react";
+import { sfx } from "../audio/sfx";
 import Marca from "../components/Marca/Marca";
 import Steps from "../components/Steps/Steps";
 import styles from "./Manual.module.css";
@@ -42,7 +43,15 @@ export default function Manual({ onCerrar }: Props) {
         <span className={styles.navRotulo}>
           <span aria-hidden="true">📖</span> MANUAL DE USUARIO
         </span>
-        <button type="button" className={styles.cerrar} onClick={onCerrar}>
+        <button
+          type="button"
+          data-no-sfx
+          className={styles.cerrar}
+          onClick={() => {
+            sfx("back");
+            onCerrar();
+          }}
+        >
           ✕ Cerrar
         </button>
       </div>
@@ -337,7 +346,15 @@ export default function Manual({ onCerrar }: Props) {
       </footer>
 
       <p className={styles.volver}>
-        <button type="button" className="btn btn-secundario" onClick={onCerrar}>
+        <button
+          type="button"
+          data-no-sfx
+          className="btn btn-secundario"
+          onClick={() => {
+            sfx("back");
+            onCerrar();
+          }}
+        >
           Volver
         </button>
       </p>
