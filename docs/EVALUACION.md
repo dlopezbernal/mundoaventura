@@ -286,6 +286,10 @@ declarado **antes** de medir. Viven en [`mediciones/`](mediciones/):
 | **STT en GPU** | La GPU falla por una DLL de cuBLAS ausente; **el fallback automático a la nube se verificó en vivo** | [H7](mediciones/H7-stt-gpu.md) |
 | **Latencia del streaming** | TTFT p50 **0,92 s**, p95 1,18 s; voz p50 2,30 s (n=15) | [H8](mediciones/H8-latencia-streaming.md) |
 | **Despliegue sin corte** | **10 % de peticiones con 502 → 0 %** con activación por socket de systemd | [F2](mediciones/F2-despliegue-sin-corte.md) |
+| **Drenado en vuelo** | **Sin medir.** Instrumental y criterio listos; no se ejecutó para no reiniciar producción durante la entrega | [F3](mediciones/F3-drenado-en-vuelo.md) |
+
+> Ojo con la lectura de F2: mide que un despliegue no rechaza conexiones **nuevas**. Lo que le
+> pasa a una respuesta **ya empezada** es F3, y eso no está medido.
 
 ## 11.c Configuración final entregada
 
