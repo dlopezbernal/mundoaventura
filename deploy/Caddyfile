@@ -80,11 +80,25 @@ chatmundoaventura.com {
 	# --- SPA React (ficheros estáticos) ------------------------------
 	# try_files … /index.html = enrutado del lado del cliente: cualquier ruta
 	# desconocida devuelve el index y decide React, no un 404 de Caddy.
+	#
+	# OJO con ese try_files y el APK (docs/APK-ANDROID.md): la verificación de
+	# Digital Asset Links pide /.well-known/assetlinks.json, y si el fichero NO
+	# existiera en dist/, Caddy devolvería el index.html con 200 y la
+	# verificación fallaría en silencio (el APK abriría con barra de
+	# direcciones). El fichero se versiona en frontend-react/public/.well-known/
+	# y `npm run build` lo copia, así que existe; no lo quites de ahí.
 	handle {
 		root * /opt/mundoaventura/frontend-react/dist
 		try_files {path} /index.html
 		file_server
 	}
+
+	# Go (y por tanto Caddy) no trae el tipo MIME de .webmanifest en su tabla
+	# interna: lo saca de /etc/mime.types, que según la imagen del VPS puede no
+	# estar. Chrome se traga el manifest igualmente, pero los validadores de PWA
+	# (PWABuilder) lo marcan como error, así que se declara explícitamente.
+	@webmanifest path /manifest.webmanifest
+	header @webmanifest Content-Type "application/manifest+json"
 
 	# --- Cabeceras de seguridad --------------------------------------
 	header {

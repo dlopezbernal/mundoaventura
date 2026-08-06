@@ -6,6 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="MundoAventura — ¡Descubre tu próxima aventura! Habla con personajes de la historia y la ficción." />
     <title>MundoAventura</title>
+
+    <!-- App instalable (PWA) y, a partir de ella, el APK de Android (TWA).
+         Sin manifest + iconos + service worker, Bubblewrap/PWABuilder no
+         generan nada: la PWA es LA ENTRADA del empaquetado, no un paso previo
+         opcional. Ver docs/APK-ANDROID.md.
+         El viewport se deja SIN `user-scalable=no`: bloquear el zoom da un
+         punto más de "sensación de app" a costa de la accesibilidad, y aquí
+         pesa más poder ampliar. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#040a1c" />
+    <!-- iOS no lee el manifest: la pantalla de inicio del iPad/iPhone se
+         configura con estas cuatro. `apple-mobile-web-app-capable` está
+         obsoleta pero sigue siendo la única que entienden las versiones
+         antiguas, así que van las dos. -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="MundoAventura" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
