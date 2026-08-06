@@ -123,7 +123,11 @@ jobs:
     # verificación siguen en los runners de GitHub A PROPÓSITO: son 2 vCPU y 4 GB
     # compartidos con la app en producción, y no conviene que un `npm run build`
     # de un PR compita por la memoria con el backend que está sirviendo a un niño.
-    runs-on: [self-hosted, linux, despliegue]
+    # Etiquetas copiadas TAL CUAL las reporta el agente
+    # (`gh api repos/…/actions/runners`): GitHub las compara sin distinguir
+    # mayúsculas, pero si un día no encaja, el job se queda encolado para siempre
+    # sin decir por qué — y eso se diagnostica fatal. Mejor que coincidan a la vista.
+    runs-on: [self-hosted, Linux, despliegue]
     # Dos merges seguidos NO pueden desplegar a la vez: el segundo espera. Sin
     # esto, dos `git pull` + `npm run build` simultáneos sobre el mismo
     # directorio del servidor se pisarían a mitad.
