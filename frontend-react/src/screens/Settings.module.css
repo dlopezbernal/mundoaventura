@@ -607,6 +607,44 @@
   color: var(--muted);
 }
 
+/* Instalar la app (PWA) desde el login, como LÍNEA DE DISPONIBILIDAD bajo el
+   eslogan: rótulo pequeño + una pastilla. No es una tarjeta como el manual a
+   propósito — instalar no es "otra sección" que visitar, es una nota sobre el
+   producto, y con cuerpo de tarjeta competía con el formulario de entrar.
+   En lima, para separarlo del cian del manual. */
+.instalarLinea {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 16px;
+}
+.instalarRotulo {
+  font-family: var(--font-pixel);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.instalarChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px; /* toque cómodo en táctil */
+  padding: 9px 20px;
+  border: 1px solid rgba(141, 255, 207, 0.5);
+  border-radius: 99px;
+  background: linear-gradient(180deg, rgba(141, 255, 207, 0.12), rgba(6, 12, 34, 0.6));
+  color: var(--lime);
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.9rem;
+  letter-spacing: 0.03em;
+}
+.instalarChip:hover {
+  background: linear-gradient(180deg, rgba(141, 255, 207, 0.22), rgba(6, 12, 34, 0.6));
+  box-shadow: 0 0 14px rgba(141, 255, 207, 0.32);
+}
+
 /* ===========================================================================
  * Gate de bienvenida (PrimerNino) — alta del primer niño tras activar la cuenta
  *

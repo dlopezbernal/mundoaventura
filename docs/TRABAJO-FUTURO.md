@@ -102,6 +102,35 @@ persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo auto
   almacenamiento externo desde el mismo temporizador lo cerraría; conviene cifrarlas antes de
   subirlas, porque el `.tgz` lleva el `.env` con todas las claves.
 
+## Fase 3 — la app en el móvil
+
+### Hecho
+
+- ✅ **Rediseño responsive** (móvil · tablet · PC). El problema real no era estético: en pantalla
+  estrecha el chat estiraba la página y **el campo de escribir la pregunta quedaba fuera de la
+  vista**. Ahora la escena se recoge en una barra mini con visor, y el historial hace su propio
+  scroll con el input siempre abajo.
+- ✅ **PWA instalable**: manifest, iconos (con variante *maskable*) y un service worker mínimo
+  escrito a mano. Desde el login se ofrece **"Instalar en Android"**, y la app se abre con su
+  icono y sin barra del navegador. En iOS, lo mismo desde *Añadir a pantalla de inicio*.
+
+### Lo que sigue pendiente
+
+- **El APK (TWA) no está generado.** El procedimiento completo está escrito y verificado hasta
+  donde se puede sin firmar ([`APK-ANDROID.md`](APK-ANDROID.md)), y la PWA —que es su requisito
+  de entrada— ya está en producción. Falta solo el tramo que depende de una **credencial**: crear
+  el keystore, empaquetar con PWABuilder y publicar la huella SHA-256 en
+  `/.well-known/assetlinks.json` (hoy tiene un valor de ejemplo). Se aparcó a propósito: **la
+  apariencia instalada desde el navegador es la misma que tendría el APK**, así que el APK solo
+  añade poder distribuirlo como fichero o por Play Store, no una experiencia distinta.
+- **Plugins nativos**, si algún día se quieren (háptica al girar el carrusel, notificaciones,
+  grabación nativa): eso ya no es TWA sino **Capacitor**, y entonces habría que resolver el CORS
+  —la app pasaría a servirse desde `https://localhost`— y el permiso de micrófono en el WebView,
+  que hoy funciona gratis porque el motor es el Chrome del dispositivo.
+- **Sin conexión no hay app**, y no es un defecto del empaquetado: la imagen la genera Replicate,
+  el chat es un LLM en la nube y la voz es ElevenLabs. Un modo offline real exigiría modelos
+  locales, que es otro proyecto.
+
 ## Ideas de producto (más allá de la ingeniería)
 
 - Enrutar la vía GENERAL a una **búsqueda web** segura cuando las fichas no cubren la pregunta

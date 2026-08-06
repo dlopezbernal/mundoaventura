@@ -19,7 +19,7 @@
  * el MANUAL (leerlo antes de dar el correo) y la ADMINISTRACIÓN (credencial propia).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   BackendError,
   familiaEstado,
@@ -30,7 +30,43 @@ import {
 } from "../api/client";
 import type { FamiliaDTO } from "../api/types";
 import Marca from "../components/Marca/Marca";
+import { instalar, sePuedeInstalar, suscribirInstalacion } from "../pwa/instalar";
 import styles from "./Settings.module.css";
+
+/** ¿Es un Android? Solo cambia el rótulo y el icono de instalar, no el comportamiento. */
+function esAndroid(): boolean {
+  return typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
+}
+
+/**
+ * El robot de Android, dibujado a mano en SVG (cúpula con dos ojos recortados por
+ * `evenodd`, más las dos antenas). Sin librería de iconos ni fichero de imagen:
+ * es el único icono de marca ajena que usa la app y no compensa nada de eso.
+ * Decorativo — el texto de al lado ya dice "Android".
+ */
+function IconoAndroid({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="currentColor"
+      stroke="currentColor"
+      aria-hidden="true"
+      focusable="false"
+      style={{ display: "block" }}
+    >
+      <path
+        fillRule="evenodd"
+        d="M4 13a8 8 0 0 1 16 0z
+           M8.6 9a1.1 1.1 0 1 0 2.2 0a1.1 1.1 0 1 0 -2.2 0
+           M13.2 9a1.1 1.1 0 1 0 2.2 0a1.1 1.1 0 1 0 -2.2 0"
+      />
+      <line x1="7.6" y1="3.2" x2="9.3" y2="6.2" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="16.4" y1="3.2" x2="14.7" y2="6.2" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
 
 interface Props {
   /** Se llama con la familia una vez autenticada (alta, login o verificación correctos). */
@@ -53,6 +89,13 @@ export default function LoginFamilia({ onListo, onAbrirManual, onAbrirAdmin }: P
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  // ¿Puede el navegador instalar la app ahora mismo? Lo decide Chrome (ver
+  // pwa/instalar.ts); en Safari y Firefox esto es siempre false y no hay botón.
+  const puedeInstalar = useSyncExternalStore(
+    suscribirInstalacion,
+    sePuedeInstalar,
+    () => false, // en servidor no hay navegador que pueda instalar
+  );
 
   // Al arrancar: si no hay ninguna familia aún, empezamos por el alta; si ya
   // las hay, por el login. (La sesión existente se comprueba en App, no aquí.)
@@ -224,6 +267,25 @@ export default function LoginFamilia({ onListo, onAbrirManual, onAbrirAdmin }: P
         <h1 className={styles.marcaTitulo}>MundoAventura</h1>
         <p className={styles.marcaEslogan}>¡Descubre tu próxima aventura!</p>
       </div>
+
+      {/* Instalar la app, como LÍNEA DE DISPONIBILIDAD justo bajo el eslogan.
+          Instalar no es una acción administrativa, es parte de la presentación del
+          producto ("esto puede vivir en tu móvil"): al pie, junto al acceso de
+          Administración, se leía como un residuo. Aquí se ve nada más entrar y no
+          compite con el formulario, que es a lo que viene el adulto.
+          Solo se pinta si el navegador dice que se puede instalar (ver
+          pwa/instalar.ts); si no, no hay nada, que es mejor que un botón muerto. */}
+      {puedeInstalar && (
+        <div className={styles.instalarLinea}>
+          <span className={styles.instalarRotulo}>◇ INSTÁLALA EN TU DISPOSITIVO ◇</span>
+          <button type="button" className={styles.instalarChip} onClick={() => void instalar()}>
+            {/* El robot solo en Android: el evento de Chrome también salta en un PC,
+                y ahí un icono de Android sería sencillamente falso. */}
+            {esAndroid() ? <IconoAndroid /> : <span aria-hidden="true">📲</span>}
+            {esAndroid() ? "Instalar en Android" : "Instalar la app"}
+          </button>
+        </div>
+      )}
 
       {/* El manual, ANTES del formulario: para decidir si registras tu correo, primero
           hay que poder ver qué hace la app y cómo trata los datos. */}
