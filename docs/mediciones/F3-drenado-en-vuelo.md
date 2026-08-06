@@ -1,8 +1,14 @@
 # Medición F3 — Drenado de peticiones en vuelo al desplegar
 
-> **Estado: arnés listo, medición pendiente de ejecutar en el servidor.**
-> No depende de escribir código: depende de reiniciar el servicio real, y eso
-> solo se puede hacer en el VPS.
+> **Estado: NO EJECUTADA.** El instrumental está listo y el criterio de
+> aceptación declarado, pero la medición **no se hizo antes de congelar el
+> proyecto**: exige reiniciar el servicio real cinco veces y se decidió no tocar
+> producción en vivo durante la preparación de la entrega.
+>
+> Se entrega así a propósito, declarado como el hueco de medición que queda en
+> la Fase 2 (ver [`TRABAJO-FUTURO.md`](../TRABAJO-FUTURO.md)). Es media hora de
+> trabajo el día que se quiera cerrar. **Este documento describe cómo hacerlo,
+> no lo que salió.**
 
 ## Qué queda por responder
 
@@ -66,9 +72,22 @@ es exactamente el que hace falta; no hay que abrir nada nuevo.
 
 ## Resultados
 
-_Pendiente._ Cuando se ejecute, pegar aquí la salida del bench y la fecha.
+**No hay.** Cuando se ejecute, pegar aquí la salida del bench y la fecha, y
+actualizar el estado de la cabecera y el punto correspondiente de
+`TRABAJO-FUTURO.md`.
 
 | Modo | Corridas | Sobreviven | % |
 |---|---|---|---|
 | Control (sin reinicio) | — | — | — |
 | Con reinicio | — | — | — |
+
+## Qué NO se puede concluir mientras esto siga vacío
+
+Conviene ser preciso, porque es fácil sobrevender lo que sí está medido:
+
+- **Sí** se puede afirmar que un despliegue no rechaza conexiones nuevas: eso es
+  [F2](F2-despliegue-sin-corte.md), medido, 10 % → 0 %.
+- **No** se puede afirmar que "el despliegue no interrumpe a nadie". Un niño con
+  una respuesta a medias podría estar viéndola cortarse, y no lo sabemos.
+
+La diferencia entre las dos frases es exactamente esta medición.

@@ -111,14 +111,24 @@ persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo auto
   servidor tenga la versión correcta de Node, `uv` y Python.
 - **Entorno de pruebas.** Hoy solo existe producción: lo que se despliega no se ha visto nunca
   funcionando en un servidor antes de estar delante de los usuarios.
-- **Peticiones en vuelo: implementado, arnés listo, medición pendiente.** El corte para
-  conexiones nuevas está resuelto por el socket de systemd. Para las respuestas ya empezadas
-  (el SSE del chat, que dura segundos) el servicio usa `KillSignal=SIGINT` +
-  `TimeoutStopSec=30`. Desde el 2026-08-06 existe además `scripts/bench_drenado.py`, que abre
-  un stream, reinicia el servicio a mitad y comprueba si la respuesta llega a su final, con el
-  criterio de aceptación declarado en
-  [`mediciones/F3-drenado-en-vuelo.md`](mediciones/F3-drenado-en-vuelo.md). **Solo falta
-  ejecutarlo en el VPS**, porque requiere reiniciar el servicio real.
+- **Peticiones en vuelo: implementado, instrumentado y SIN MEDIR.** Es el hueco de medición que
+  queda en la Fase 2, y se entrega declarado como tal.
+
+  El corte para conexiones **nuevas** sí está resuelto y medido (socket de systemd, 10 % → 0 %,
+  ver [F2](mediciones/F2-despliegue-sin-corte.md)). Lo que no está comprobado es qué le pasa a
+  una respuesta **ya empezada**: el chat responde por SSE y dura segundos, así que un reinicio
+  puede pillarla a medias. El mecanismo para que sobreviva existe —`KillSignal=SIGINT` +
+  `TimeoutStopSec=30` en la unidad, que le pide a uvicorn un apagado ordenado y le da margen—,
+  pero **nadie ha verificado que funcione**.
+
+  Lo que sí está hecho es el instrumental: `scripts/bench_drenado.py` abre un stream, espera a
+  que la respuesta esté en curso, reinicia el servicio y comprueba si llega al evento `fin`; y
+  [`mediciones/F3-drenado-en-vuelo.md`](mediciones/F3-drenado-en-vuelo.md) declara el criterio
+  de aceptación **antes** de medir (≥ 4 de 5, con una corrida de control previa).
+
+  **Por qué no se ejecutó:** exige reiniciar el servicio real cinco veces, y se decidió no
+  tocar producción en vivo mientras se preparaba la entrega. Es media hora de trabajo el día
+  que se quiera cerrar, y no cambia ninguna otra conclusión del proyecto.
 - **Observabilidad y avisos.** `journalctl` es suficiente para depurar a mano, pero nadie se entera
   si el servicio se cae de madrugada, si caduca un certificado o si se agota el saldo de un
   proveedor. Un *healthcheck* externo con aviso es el mínimo.
