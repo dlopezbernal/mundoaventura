@@ -19,7 +19,7 @@ por HTTP/REST con un backend **FastAPI**. Toda la IA pesada (imagen + LLM) corre
 | **Elegir lugar y personaje** | Eliges una **ubicación** y un **personaje**. Cualquier combinación vale. | SPA React (sin IA) |
 | **Generar la escena** | Combina lugar + personaje + estilo en un prompt y pide la imagen a la nube. | Replicate (FLUX schnell) |
 | **Conversar (texto, RAG)** | El personaje responde **en primera persona**, fundamentado en documentos troceados. | LangChain · ChromaDB · DeepL · LLM |
-| **Entrada por voz** | Graba la pregunta con el micro y la transcribe a texto. | ElevenLabs Scribe (o faster-whisper local) |
+| **Entrada por voz** | Graba la pregunta con el micro y la transcribe a texto. | Proveedor intercambiable: ElevenLabs Scribe · faster-whisper local · Whisper en Groq |
 | **Respuesta por voz** | La respuesta se sintetiza con una voz propia por personaje y suena sola. | ElevenLabs Flash |
 
 La respuesta llega **en directo** (streaming SSE): el niño empieza a leer y a oír a los
@@ -29,7 +29,9 @@ La respuesta llega **en directo** (streaming SSE): el niño empieza a leer y a o
 > ([`ARQUITECTURA.md`](docs/ARQUITECTURA.md)), decisiones de diseño ([`DECISIONES.md`](docs/DECISIONES.md)),
 > metodología y mediciones ([`EVALUACION.md`](docs/EVALUACION.md)), la teoría de fondo (qué es RAG,
 > chunking, CLIP/T5) en el [anexo didáctico](docs/ANEXO-DIDACTICO.md), privacidad/RGPD en
-> [`PRIVACIDAD.md`](docs/PRIVACIDAD.md), y para la defensa el [guion de demo](docs/DEFENSA.md) y el
+> [`PRIVACIDAD.md`](docs/PRIVACIDAD.md), la puesta en producción en un VPS
+> ([`DESPLIEGUE.md`](docs/DESPLIEGUE.md)) y el empaquetado como app de Android
+> ([`APK-ANDROID.md`](docs/APK-ANDROID.md)); para la defensa, el [guion de demo](docs/DEFENSA.md) y el
 > [trabajo futuro](docs/TRABAJO-FUTURO.md).
 
 ---
@@ -86,8 +88,10 @@ uv run python -m backend.ingest
 ```
 
 Trocea los documentos de `backend/documentos/<personaje_id>/` e indexa los fragmentos en
-ChromaDB. **Hay que hacerlo una vez** y repetirlo tras cambiar documentos. La app trae unos
-`*_ejemplo.md` de muestra para probar ya. Ver
+ChromaDB. **Hay que hacerlo una vez** y repetirlo tras cambiar documentos. El repositorio ya
+trae una base de conocimiento lista: **11 documentos** repartidos en cinco carpetas (T-Rex,
+Triceratops, Peter Pan, Sherlock Holmes y Leonardo da Vinci), así que se puede chatear sin
+aportar nada. Ver
 [§ Preparar la base de conocimiento](#-preparar-la-base-de-conocimiento).
 
 ### 4. Arrancar backend + frontend
@@ -125,20 +129,44 @@ la sesión es persistente). Al entrar:
    aparece la imagen y, a su lado, un **chat**: escríbele o **díctale** una pregunta al
    personaje y te responderá en primera persona, con su propia voz, palabra a palabra.
 
+La interfaz tiene **efectos de sonido tipo arcade** (girar el carrusel, elegir, enviar,
+recibir…) **sintetizados con la Web Audio API**: ni un solo fichero de audio ni una librería
+extra. Se apagan y encienden con el interruptor **🔊/🔇** del HUD, que está fuera del menú ☰
+porque es un control del niño, y la preferencia se recuerda en el navegador. No tienen nada que
+ver con la voz del personaje, que va por su cuenta.
+
 El botón **📖 Manual de usuario** (en el menú ☰ del HUD) abre la **guía en pantalla**, con una sección para el
 niño (los 3 pasos y el chat) y otra para el adulto (cuenta de familia y ⚙️ Configuración). También
 se llega a ella desde la pantalla de acceso, para poder leerla **antes** de crear la cuenta.
 
 Dos zonas de adulto, cada una con su botón en el HUD:
 
-- **⚙️ Configuración** — autoservicio de la familia: perfiles de niños, PIN de familia (protege
-  la foto y la edición del perfil).
-- **🛡️ Admin** — configuración global compartida (claves API, personajes, ubicaciones,
-  documentos del RAG, parámetros del motor). Detrás de contraseña de admin, con **2FA opcional**.
+- **⚙️ Configuración** — autoservicio de la familia: perfiles de niños (hasta `MAX_NINOS`, 4 por
+  defecto), PIN de familia (protege la foto y la edición del perfil) y **eliminar la cuenta**
+  (derecho de supresión del RGPD: borra la familia, sus perfiles, sus sesiones y su registro de
+  uso).
+- **🛡️ Admin** — configuración global compartida, detrás de contraseña de admin y con **2FA
+  opcional**. Nueve pestañas: **APIs** (claves), **IA** (LLM, RAG y prompts), **Imagen**,
+  **Voz**, **Personajes** (con sus documentos del RAG), **Ubicaciones**, **Correo** (SMTP de la
+  verificación por email), **Auditoría** (registro de uso de la familia, exportable a CSV y con
+  purga por antigüedad) y **Sistema** (contraseña, 2FA, import/export, copias).
 
 > **Subir tu foto** pasa por un aviso de **consentimiento parental** (PIN de familia o casilla)
 > antes de abrir el selector. **La foto no se guarda**: se procesa solo en memoria. Detalles en
 > [`PRIVACIDAD.md`](docs/PRIVACIDAD.md).
+
+### En el móvil, la tablet y como app instalable
+
+La interfaz es **responsive**, diseñada *mobile-first* y con dos cortes: móvil hasta 640 px,
+tablet entre 641 y 959 px, y escritorio desde 960 px. La escena y el chat se apilan o se ponen
+lado a lado según el sitio que haya.
+
+Además es una **PWA instalable**: hay `manifest.webmanifest`, iconos (incluido uno *maskable*) y
+un service worker propio, así que el navegador ofrece **añadirla a la pantalla de inicio** y se
+abre a pantalla completa, sin barra de direcciones. La propia **pantalla de acceso muestra un
+botón «Instalar la app»** cuando el navegador lo permite. Empaquetarla además como **APK de
+Android** (técnica TWA, que reutiliza esa misma PWA) está documentado paso a paso en
+[`docs/APK-ANDROID.md`](docs/APK-ANDROID.md).
 
 ### Build de producción
 
@@ -194,22 +222,28 @@ se construye troceando esos documentos (ver [anexo: chunking](docs/ANEXO-DIDACTI
 
 ## 🔒 (Opcional) Transcripción local con faster-whisper — privacidad
 
-Por defecto la transcripción (voz→texto) va a **ElevenLabs Scribe** (nube). Puedes moverla a
-**local** con `faster-whisper`: la **voz del niño no sale del PC** (argumento de RGPD), es
-gratis y funciona sin conexión. Es **opcional** y con **fallback a la nube**: si el STT local no
-carga, la app nunca se queda muda.
+El proveedor de voz→texto se elige con `STT_PROVIDER` (`elevenlabs` por defecto | `local` |
+`groq`). Con `local` la transcripción la hace **faster-whisper en tu propio PC** —la voz del
+niño no sale de la máquina, que es el argumento de RGPD—, tras instalar el extra opcional
+(`uv sync --extra stt-local`) y ajustar `STT_LOCAL_MODEL`/`_DEVICE`/`_COMPUTE` en el `.env` o en
+🛡️ Admin → Voz. Si no carga (en Windows suelen faltar las DLL de cuBLAS/cuDNN para `cuda`;
+`STT_LOCAL_DEVICE=cpu` es el plan B), **cae solo a la nube** y la app nunca se queda muda. La
+comparación de proveedores por WER y el porqué de todo esto, en el
+[ADR-008](docs/decisiones/ADR-008-stt-local.md).
 
-```powershell
-uv sync --extra stt-local        # instala faster-whisper (CTranslate2, sin torch)
-# Activa el proveedor local en el .env o desde 🛡️ Admin → Sistema:
-#   STT_PROVIDER=local · STT_LOCAL_MODEL=large-v3-turbo · STT_LOCAL_DEVICE=cuda · STT_LOCAL_COMPUTE=int8
-```
+---
 
-> **Windows + GPU (`cuda`):** faster-whisper necesita las **DLL de cuBLAS y cuDNN en el PATH**
-> (ruedas `nvidia-cublas-cu12` / `nvidia-cudnn-cu12`, o el CUDA Toolkit + cuDNN). **Plan B** si
-> tras medio día no arranca en GPU: `STT_LOCAL_DEVICE=cpu` (con `int8`, más lento pero funciona)
-> o deja `STT_PROVIDER=elevenlabs`. No insistas con las DLL: el fallback ya cubre el caso. Ver el
-> [ADR-008](docs/decisiones/ADR-008-stt-local.md).
+## 🗂️ Estructura del repositorio
+
+| Carpeta | Qué hay dentro |
+|---|---|
+| `backend/` | La API FastAPI: `routers/` (endpoints finos), `services/` (toda la lógica), `documentos/` (la base de conocimiento del RAG, una carpeta por personaje) y, generados en tiempo de ejecución, el índice de ChromaDB (`chroma_db/`), la BBDD SQLite de configuración y los `avatares/`. |
+| `frontend-react/` | La SPA (Vite + TypeScript): `src/` con pantallas, componentes y el **único** cliente HTTP (`src/api/client.ts`); `public/` con los iconos, el `manifest.webmanifest` y el service worker de la PWA. |
+| `tests/` | La suite de `pytest` del backend (la que corre el CI). |
+| `evals/` | El banco de pruebas: sets en YAML, runner, métricas y la línea base congelada. |
+| `docs/` | Toda la documentación ([índice](docs/README.md)), con `decisiones/` (ADRs), `mediciones/`, `plan/` (los hitos H1–H10) e `historico/` (documentos de hitos ya cerrados). |
+| `deploy/` | Lo que corre en el VPS: unidades de systemd, `Caddyfile` y los scripts de despliegue y de copia de seguridad. |
+| `scripts/` | Utilidades de desarrollo: arranque doble (`dev.ps1`), generación de tipos desde OpenAPI y bancos de medida. |
 
 ---
 
@@ -222,9 +256,15 @@ uv run pytest --cov=backend             # tests + cobertura
 uv run pre-commit install               # (una vez) engancha ruff + oxlint a cada commit
 ```
 
-El CI de GitHub Actions corre lint + formato + pytest (backend) y oxlint + build (frontend) en
-cada push/PR contra `dev`. El **banco de pruebas** (`evals/`) mide la calidad del RAG con
-números; su metodología y resultados están en [`EVALUACION.md`](docs/EVALUACION.md).
+No es solo CI, es **CI/CD**. El flujo de GitHub Actions (`.github/workflows/ci.yml`) corre en
+cada push y cada PR contra **`dev` y `main`** dos trabajos de verificación —lint + formato +
+pytest (backend) y oxlint + build (frontend)— y un tercero, **`deploy`**, que solo se activa en
+`main` y que, si los dos anteriores pasan, **publica en producción por SSH y comprueba después
+el `/health` del sitio**. Es decir: un merge a `main` despliega solo. El procedimiento está en
+[`DESPLIEGUE.md`](docs/DESPLIEGUE.md).
+
+El **banco de pruebas** (`evals/`) mide la calidad del RAG con números; su metodología y
+resultados están en [`EVALUACION.md`](docs/EVALUACION.md).
 
 ---
 
@@ -233,7 +273,13 @@ números; su metodología y resultados están en [`EVALUACION.md`](docs/EVALUACI
 - **Personajes y ubicaciones (sin tocar código):** 🛡️ Admin → pestañas **Personajes** /
   **Ubicaciones** → **➕ Nuevo**. El catálogo vive en SQLite y lo consumen backend y frontend por
   API. Los de fábrica se siembran desde `backend/personajes.py` / `backend/ubicaciones.py` en el
-  primer arranque. Tope: `MAX_PERSONAJES` (10 por defecto, `.env`).
+  primer arranque. Tope: `MAX_PERSONAJES` (10 por defecto, `.env`); el de niños por familia es
+  `MAX_NINOS` (4). Ambos son límites **fijos de despliegue**: se cambian en el `.env`, no desde
+  la interfaz.
+- **Avatar de un personaje o de una ubicación:** al editarlo, **🎨 Generar imagen** dibuja su
+  retrato a partir de su propio prompt y lo recorta sobre fondo transparente; el carrusel lo usa
+  en lugar del emoji. Ojo: **son dos llamadas a Replicate por avatar** (dibujo + recorte del
+  fondo), así que **cuesta dinero** cada vez que se pulsa.
 - **Parámetros del motor (en caliente):** 🛡️ Admin edita umbrales del Evaluator, chunking,
   modelo/temperatura del LLM, prompts de sistema, etc. sin reiniciar (se guardan en SQLite; con
   la BBDD vacía la app usa los valores por defecto de `config.py`).

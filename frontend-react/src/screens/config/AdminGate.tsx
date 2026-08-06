@@ -27,8 +27,8 @@ type Modo = "cargando" | "setup" | "login";
 
 export default function AdminGate({ onListo }: Props) {
   const [modo, setModo] = useState<Modo>("cargando");
-  const [pin, setPin] = useState("");
-  const [pin2, setPin2] = useState("");
+  const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [codigo, setCodigo] = useState(""); // segundo factor (2FA), si está activo
   const [pide2fa, setPide2fa] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,18 +56,18 @@ export default function AdminGate({ onListo }: Props) {
 
   async function enviar() {
     setError(null);
-    if (modo === "setup" && pin !== pin2) {
+    if (modo === "setup" && password !== password2) {
       setError("La contraseña y su confirmación no coinciden.");
       return;
     }
     setOcupado(true);
     try {
       if (modo === "setup") {
-        await adminSetup(pin);
+        await adminSetup(password);
       } else {
         // Login: si el backend pide 2FA, mostramos el campo de código y esperamos a
         // que el adulto lo introduzca (no entramos todavía).
-        const requiere2fa = await adminLogin(pin, pide2fa ? codigo : undefined);
+        const requiere2fa = await adminLogin(password, pide2fa ? codigo : undefined);
         if (requiere2fa) {
           setPide2fa(true);
           setOcupado(false);
@@ -135,20 +135,20 @@ export default function AdminGate({ onListo }: Props) {
               <input
                 className={styles.input}
                 type="password"
-                value={pin}
+                value={password}
                 placeholder={esSetup ? "Contraseña nueva" : "Contraseña"}
                 autoComplete="off"
                 autoFocus
-                onChange={(e) => setPin(e.target.value)}
+                onChange={(e) => setPassword(e.target.value)}
               />
               {esSetup && (
                 <input
                   className={styles.input}
                   type="password"
-                  value={pin2}
+                  value={password2}
                   placeholder="Repite la contraseña"
                   autoComplete="off"
-                  onChange={(e) => setPin2(e.target.value)}
+                  onChange={(e) => setPassword2(e.target.value)}
                 />
               )}
             </>
@@ -159,7 +159,7 @@ export default function AdminGate({ onListo }: Props) {
           <button
             type="submit"
             className="btn btn-primario"
-            disabled={ocupado || (pide2fa ? !codigo : !pin)}
+            disabled={ocupado || (pide2fa ? !codigo : !password)}
           >
             {ocupado ? "…" : pide2fa ? "Verificar y entrar" : esSetup ? "Crear y entrar" : "Entrar"}
           </button>

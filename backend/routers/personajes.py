@@ -16,12 +16,12 @@ voces de ElevenLabs para el desplegable de la pantalla de configuración:
 Lo consumen tanto la pantalla del niño (elegir personaje) como la pestaña de
 configuración. Las escrituras (POST/PUT/DELETE) y `GET /api/voices` van detrás del
 control de acceso admin (`requiere_admin`, enchufado en `main.py`); los `GET` del
-catálogo siguen públicos para el flujo del niño.
+catálogo siguen públicos para el flujo del niño, PERO `?todos=1` no: ver abajo.
 """
 
 import base64
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import FileResponse
 
 from backend import config
@@ -48,12 +48,23 @@ _admin = [Depends(admin_service.requiere_admin)]
 
 
 @router.get("/personajes", response_model=PersonajesInfo)
-def listar_personajes(todos: bool = False):
+def listar_personajes(todos: bool = False, x_admin_token: str | None = Header(default=None)):
     """Catálogo de personajes. Por defecto solo los activos; `?todos=1` incluye inactivos.
+
+    La lista de ACTIVOS es pública a propósito: la SPA la necesita para pintar el
+    carrusel antes de que el niño tenga sesión.
+
+    `?todos=1` NO lo es. Un personaje desactivado lo está porque un adulto decidió
+    retirarlo, así que su existencia es información de administración y solo la usa
+    la pestaña de configuración. Por eso ese parámetro exige `X-Admin-Token` en vez
+    de ir en un endpoint aparte: el frontend ya manda el token en todas sus
+    peticiones y no hay que tocar el cliente.
 
     Incluye `limite` (MAX_PERSONAJES) para que la pestaña de configuración pueda
     deshabilitar "Nuevo personaje" sin necesidad de otro endpoint.
     """
+    if todos:
+        admin_service.requiere_admin(x_admin_token)
     return {
         "personajes": personajes_service.listar(incluir_inactivos=todos),
         "limite": config.MAX_PERSONAJES,

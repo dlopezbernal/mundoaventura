@@ -647,6 +647,42 @@ servidor estaba apagado a las 03:30, la copia se hace al arrancar; `cron` simple
 salta, y te quedas sin copia justo el día que hubo un problema. Además los fallos quedan en el
 journal (mismo `journalctl -u …` que el resto) en lugar de en un correo local que nadie lee.
 
+#### Cifrar las copias (recomendado)
+
+El `.tgz` lleva dentro el **`.env` con todas las claves** de los proveedores y del SMTP. Sin
+cifrar, quien consiga leer el disco se las lleva todas de una vez. `respaldar.sh` puede cifrarlo
+con **GPG de clave pública**, y esa elección es deliberada: con clave pública el servidor
+**crea** copias pero **no puede leerlas**, porque la clave privada nunca ha estado ahí. Con una
+contraseña simétrica, esa contraseña tendría que vivir en el servidor y no protegería del
+escenario que de verdad importa.
+
+Preparación, **una sola vez**. Los dos primeros comandos van en **tu** máquina, nunca en el
+servidor:
+
+```bash
+# --- En tu equipo ---
+gpg --quick-generate-key "copias-mundoaventura" default default never
+gpg --armor --export copias-mundoaventura > publica.asc
+scp publica.asc mundoaventura@TU_SERVIDOR:/tmp/
+
+# --- En el servidor, como el usuario de la app ---
+gpg --import /tmp/publica.asc && rm /tmp/publica.asc
+gpg --list-keys                      # comprueba que aparece
+```
+
+Y declara el destinatario en el entorno del temporizador
+(`/etc/systemd/system/mundoaventura-backup.service`, línea
+`Environment=BACKUP_GPG_RECIPIENT=copias-mundoaventura`) y en el del despliegue. A partir de
+ahí las copias salen como `.tgz.gpg`. Para restaurar, en tu equipo:
+
+```bash
+gpg -d mundoaventura-AAAAMMDD-HHMMSS-nocturno.tgz.gpg | tar xz -C /ruta/destino
+```
+
+> **Guarda la clave privada fuera del servidor y haz copia de ella.** Sin esa clave, las copias
+> cifradas son ruido y no hay forma de recuperarlas. Si no defines `BACKUP_GPG_RECIPIENT`, el
+> script sigue funcionando pero avisa por `stderr` de que la copia va en claro.
+
 **Retención: 15 días.** Cada ejecución borra los `.tgz` más antiguos, así que la carpeta se
 estabiliza en ~105 MB en vez de crecer sin fin. El borrado se acota al patrón
 `mundoaventura-*.tgz`: si dejas ahí un fichero tuyo, no se lo lleva por delante.

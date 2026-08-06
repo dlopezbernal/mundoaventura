@@ -20,13 +20,6 @@ htmlcov/
 # .env contiene configuración local (URLs, rutas). Solo se versiona .env.example.
 .env
 
-# ─── Modelos de IA (pesados) ────────────────────────────────────
-# Los pesos de los modelos NO se suben al repositorio (pesan cientos de MB).
-# Stable Diffusion se cachea en la caché de Hugging Face, no aquí.
-backend/models/*.pth
-backend/models/*.pt
-backend/models/*.safetensors
-
 # ─── Base vectorial de ChromaDB (se regenera con: python -m backend.ingest) ─
 backend/chroma_db/
 

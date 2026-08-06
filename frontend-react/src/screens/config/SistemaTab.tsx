@@ -17,7 +17,7 @@
 import { useState } from "react";
 import { adminExport, adminImport, BackendError, checkHealth } from "../../api/client";
 import styles from "../Settings.module.css";
-import CambiarPin from "./CambiarPin";
+import CambiarPassword from "./CambiarPassword";
 import ConfigForm from "./ConfigForm";
 import Seguridad2FA from "./Seguridad2FA";
 
@@ -106,7 +106,7 @@ export default function SistemaTab({ onLogout }: Props) {
       <ConfigForm categorias={["general"]} intro="Opciones generales de la aplicación." />
 
       {/* Contraseña de administración (cambiar la que protege esta zona) */}
-      <CambiarPin onCambiado={onLogout} />
+      <CambiarPassword onCambiado={onLogout} />
 
       {/* Verificación en dos pasos (2FA) — toggle de seguridad */}
       <Seguridad2FA />

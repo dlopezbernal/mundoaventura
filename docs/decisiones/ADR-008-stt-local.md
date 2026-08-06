@@ -1,8 +1,10 @@
 # ADR-008 — Transcripción local (STT) con faster-whisper + proveedor seleccionable
 
-- **Estado:** propuesta — **abstracción y fallback IMPLEMENTADOS y verdes**; la
-  verificación en GPU y la tabla WER se completan en la máquina del usuario (el sandbox
-  no tiene GPU/CUDA ni clips de voz infantil).
+- **Estado:** aceptada — abstracción y fallback implementados y verdes, y
+  **verificados en la máquina del usuario el 2026-08-03**
+  ([`mediciones/H7-stt-gpu.md`](../mediciones/H7-stt-gpu.md)). La tabla WER queda
+  **fuera del alcance de la entrega**, no por falta de GPU sino porque exige grabar
+  ~20 clips con voces infantiles que no existen en el repositorio (ver "Medición").
 - **Fecha:** 2026-08-02
 - **Hito:** H7 (`feat/h7-stt-local`)
 - **Depende de:** H5 (patrón de capa de proveedor) y el flujo de voz existente (H-voz).
@@ -48,21 +50,41 @@ intactos) y delega.
   proveedor para la comparativa WER (candidato de latencia), con su propia clave
   (`GROQ_API_KEY`).
 
-## Medición — WER (a completar en la máquina del usuario)
+## Verificación en GPU (hecha: 2026-08-03)
 
-`evals/stt.py` mide **WER** (Word Error Rate) sobre ~20 clips reales, preferiblemente de
-**voces infantiles** (doc H7 §3), contra una transcripción hecha a mano. El WER se calcula
-sobre texto normalizado (minúsculas, sin puntuación, acentos conservados) para no medir la
-puntuación que cada ASR inventa distinto. Pegar aquí la tabla que saca el runner:
+Informe completo: [`mediciones/H7-stt-gpu.md`](../mediciones/H7-stt-gpu.md). Máquina del
+usuario: NVIDIA GTX 1660 (6 GB), faster-whisper 1.2.1 / ctranslate2 4.8.1, modelo
+`large-v3-turbo` en int8.
 
-| Proveedor | WER medio ± σ | latencia mediana (ms) | latencia máx (ms) | ¿la voz sale del PC? |
-|---|---|---|---|---|
-| local (faster-whisper `large-v3-turbo` int8) | | | | **no** |
-| elevenlabs (Scribe) | | | | sí |
-| groq (whisper-large-v3) | | | | sí |
+| Ruta | Resultado |
+|---|---|
+| **GPU (`cuda`/int8)** | ❌ falla: `Library cublas64_12.dll is not found or cannot be loaded` |
+| **CPU (int8)** | ✅ transcribe correcto (carga 4,9 s + transcripción 8,2 s) |
+| **Producción (`STT_PROVIDER=local`)** | ✅ intenta GPU → falla → **avisa y cae a ElevenLabs** |
 
-**Nota esperada:** todos los ASR **suben el WER con voces infantiles** — por eso, además
-de elegir el mejor, se añade el **paso de confirmación** en la UI (§ siguiente).
+Dos conclusiones que sostienen esta decisión: (1) **el riesgo previsto se confirma** — en
+Windows, la ruta CUDA de CTranslate2 necesita las DLLs de cuBLAS/cuDNN de CUDA 12, que no
+vienen ni con el driver ni con el paquete `pip`; (2) **el fallback funciona, verificado en
+vivo**: la app nunca se queda muda, que era justamente el criterio de aceptación. Y por eso
+el **default `elevenlabs` es el correcto**: un clon del repositorio arranca sin CUDA.
+
+## Medición — WER: fuera del alcance de la entrega
+
+`evals/stt.py` mide **WER** (Word Error Rate) sobre texto normalizado (minúsculas, sin
+puntuación, acentos conservados) para no medir la puntuación que cada ASR inventa distinto.
+El arnés está **listo y consume `evals/stt_clips/manifest.yaml` en cuanto existan los clips**;
+ese manifest está **vacío a propósito**.
+
+La comparativa (local vs elevenlabs vs groq) se declara **mejora futura y fuera del alcance
+de entrega**, y el motivo **no es la GPU** —el CPU transcribe bien y la ruta local se verificó
+arriba—: es que exige un **dataset de ~20 clips reales, idealmente con voces infantiles**, que
+no existe en el repositorio y que solo puede grabar el usuario. Es "grabar y ejecutar", sin
+código nuevo. **Esta decisión no depende de esa tabla:** se toma por privacidad (la voz del
+menor no sale del PC) y por reversibilidad, no por una diferencia de WER.
+
+**Lo que sí se sabe sin la tabla:** todos los ASR **suben el WER con voces infantiles** — por
+eso, además de poder elegir proveedor, se añade el **paso de confirmación** en la UI
+(§ siguiente).
 
 ## Confirmación en la interfaz
 

@@ -2,6 +2,17 @@
 
 Documento maestro. Cada hito tiene su propio fichero en `docs/plan/`.
 
+> **Documento histórico: es el plan tal y como se declaró AL EMPEZAR, y se conserva sin
+> reescribir.** Ese es justamente su valor metodológico: las prioridades del §0 se fijaron
+> antes de conocer los resultados y no se reordenaron después para justificarlos. Por eso
+> hay afirmaciones que hoy ya no describen el proyecto — la más visible, el §1, que dice que
+> el despliegue es "un túnel puntual (Colab/ngrok)" y "**no** un despliegue permanente en
+> internet": desde el 2026-08-05 la app corre en `chatmundoaventura.com`.
+>
+> Para el **estado final** ve a [`ARQUITECTURA.md`](ARQUITECTURA.md) (qué es hoy),
+> [`EVALUACION.md`](EVALUACION.md) (qué se midió) y
+> [`TRABAJO-FUTURO.md`](TRABAJO-FUTURO.md) (qué falta).
+
 ---
 
 ## 0. Prioridades declaradas (no cambian sin acuerdo explícito)

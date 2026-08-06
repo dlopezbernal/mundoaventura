@@ -901,10 +901,14 @@ export async function adminStatus(): Promise<AdminStatus> {
   return (await response.json()) as AdminStatus;
 }
 
-async function _postPin(path: string, pin: string): Promise<void> {
+async function _postPassword(path: string, password: string): Promise<void> {
   const response = await fetchBackend(
     path,
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    },
     TIMEOUT_CONFIG,
   );
   const body = (await response.json()) as { token: string };
@@ -912,8 +916,8 @@ async function _postPin(path: string, pin: string): Promise<void> {
 }
 
 /** Crea la contraseña de administración por primera vez (auto-login). POST /api/admin/setup. */
-export async function adminSetup(pin: string): Promise<void> {
-  await _postPin("/api/admin/setup", pin);
+export async function adminSetup(password: string): Promise<void> {
+  await _postPassword("/api/admin/setup", password);
 }
 
 /**
@@ -922,13 +926,13 @@ export async function adminSetup(pin: string): Promise<void> {
  * y NO hay token: el frontend pide el código y reintenta. Con token, se guarda.
  * Devuelve `requiere_2fa` para que la UI sepa si debe pedir el segundo factor.
  */
-export async function adminLogin(pin: string, codigo?: string): Promise<boolean> {
+export async function adminLogin(password: string, codigo?: string): Promise<boolean> {
   const response = await fetchBackend(
     "/api/admin/login",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin, codigo: codigo ?? null }),
+      body: JSON.stringify({ password, codigo: codigo ?? null }),
     },
     TIMEOUT_CONFIG,
   );
@@ -955,10 +959,14 @@ export async function admin2faConfirmar(codigo: string): Promise<string[]> {
 }
 
 /** Desactiva el 2FA (exige la contraseña actual). POST /api/admin/2fa/desactivar. */
-export async function admin2faDesactivar(pin: string): Promise<void> {
+export async function admin2faDesactivar(password: string): Promise<void> {
   await fetchBackend(
     "/api/admin/2fa/desactivar",
-    { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ pin }) },
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    },
     TIMEOUT_CONFIG,
   );
 }
@@ -973,13 +981,16 @@ export async function adminLogout(): Promise<void> {
 }
 
 /** Cambia la contraseña de admin (requiere la actual). POST /api/admin/change. */
-export async function adminChangePin(pinActual: string, pinNuevo: string): Promise<void> {
+export async function adminChangePassword(
+  passwordActual: string,
+  passwordNueva: string,
+): Promise<void> {
   await fetchBackend(
     "/api/admin/change",
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin_actual: pinActual, pin_nuevo: pinNuevo }),
+      body: JSON.stringify({ password_actual: passwordActual, password_nueva: passwordNueva }),
     },
     TIMEOUT_CONFIG,
   );

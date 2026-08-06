@@ -14,7 +14,6 @@ Luego abre la documentación interactiva en:  http://127.0.0.1:8000/docs
 """
 
 import logging
-import os
 import sys
 from contextlib import asynccontextmanager
 
@@ -153,18 +152,15 @@ app.add_exception_handler(Exception, errores.manejar_excepcion)
 # CORS es una regla de seguridad de los navegadores: por defecto, una web solo
 # puede llamar a su propio dominio. Como el frontend (la SPA React) y el backend
 # pueden estar en orígenes distintos (sobre todo con el túnel de Colab), los
-# orígenes permitidos se leen de CORS_ORIGINS (lista separada por comas, ver
-# .env.example). Sin definirla se permite cualquier origen ("*"): cómodo en
-# desarrollo; restríngela si expones el backend a internet.
+# orígenes permitidos se declaran en config.CORS_ORIGINS (lista separada por comas
+# en el .env, ver .env.example). Sin definirla se permite cualquier origen ("*"):
+# cómodo en desarrollo; restríngela si expones el backend a internet.
 #
 # allow_credentials=False a propósito: la app no usa cookies ni sesiones, y los
 # navegadores RECHAZAN la combinación allow_origins=["*"] + credenciales.
-_cors_origins = [
-    origen.strip() for origen in os.getenv("CORS_ORIGINS", "").split(",") if origen.strip()
-] or ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins,
+    allow_origins=config.CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],  # GET, POST, etc.
     allow_headers=["*"],
