@@ -259,12 +259,50 @@ La cadena de mediciones, de la línea base a la config final, defendida hito a h
 | **H4.3** | Reranker (cross-encoder) | **recall chunk · ruteo** | **90,9 % · 82,2 %** (equilibrado) |
 | H4.4 | Quitar DeepL (probado) | recall · ruteo | ❌ **descartado** (−5,4 · −11,1) |
 | **H6** | Elección de LLM | ganador por método | **groq-llama70b** (test ciego) |
-| H7 | STT local (faster-whisper) | WER · privacidad | tabla WER pendiente¹ · voz no sale del PC |
-| H8 | Streaming SSE + TTS por frases | latencia percibida (TTFT) | pendiente¹ (target ~1–2 s vs ~7–12 s) |
+| H7 | STT local (faster-whisper) | privacidad · fallback | voz no sale del PC; **fallback a nube verificado en vivo**. Tabla WER fuera de alcance¹ |
+| **H8** | Streaming SSE + TTS por frases | latencia percibida (TTFT) | **~4 s → 0,92 s** (p50; p95 1,18 s, n=15) |
+| **H9–H10** | Seguridad infantil, cuentas de familia, auditoría | — | Sin métrica de calidad: son hitos de **cumplimiento y producto**, no de rendimiento² |
 
-¹ Mediciones que requieren el hardware/claves del usuario (ver §12). El **arco defendible** es
-claro: el retrieval sube de 78,2 % a 90,9 % de recall de chunk y el ruteo de 66,7 % a 82,2 %,
-todo **medido y comparado contra una línea base inmutable**.
+¹ No por falta de GPU —esa parte se verificó, ver
+[`mediciones/H7-stt-gpu.md`](mediciones/H7-stt-gpu.md)— sino porque la tabla WER exige ~20
+clips reales con **voces infantiles**, que hay que grabar. Declarado fuera del alcance de la
+entrega, no "pendiente por falta de medios".
+
+² Se declara expresamente para que no parezca un hueco: la seguridad infantil sí tiene una
+comprobación (corrida adversarial, §12), pero no una métrica continua comparable con el resto.
+
+El **arco defendible** es claro: el retrieval sube de 78,2 % a 90,9 % de recall de chunk, el
+ruteo de 66,7 % a 82,2 %, y el tiempo hasta el primer contenido baja de ~4 s a **menos de un
+segundo**, todo **medido y comparado contra una línea base inmutable**.
+
+### 11.b Mediciones de plataforma (no de calidad de la IA)
+
+Además del arco de calidad, hay cuatro mediciones de ingeniería con criterio de aceptación
+declarado **antes** de medir. Viven en [`mediciones/`](mediciones/):
+
+| Medición | Resultado | Fichero |
+|---|---|---|
+| **Concurrencia** — endpoints `def` → threadpool | `/health` de **5959 ms → 2,2 ms** con dos chats largos en vuelo (criterio: < 200 ms) | [H2](mediciones/H2-concurrencia.md) |
+| **STT en GPU** | La GPU falla por una DLL de cuBLAS ausente; **el fallback automático a la nube se verificó en vivo** | [H7](mediciones/H7-stt-gpu.md) |
+| **Latencia del streaming** | TTFT p50 **0,92 s**, p95 1,18 s; voz p50 2,30 s (n=15) | [H8](mediciones/H8-latencia-streaming.md) |
+| **Despliegue sin corte** | **10 % de peticiones con 502 → 0 %** con activación por socket de systemd | [F2](mediciones/F2-despliegue-sin-corte.md) |
+
+## 11.c Configuración final entregada
+
+La tabla de progresión dice de dónde se viene; esto es **dónde se ha quedado**, que es lo
+primero que se pregunta después de verla:
+
+| Pieza | Valor entregado |
+|---|---|
+| Embeddings | `multi-minilm` (multilingüe, ONNX/CPU, sin torch) |
+| Troceado | `estructura` (por secciones de Markdown) |
+| Reranker | `jina-v2`, 5 candidatos, umbral −2,75 |
+| Ruteo RAG/GENERAL | Lo decide la puntuación del reranker (el LLM-juez queda inactivo) |
+| LLM | **Groq · Llama-3.3-70B** (ganador del estudio de H6) |
+| STT | `elevenlabs` por defecto, con `local` disponible y fallback automático |
+| TTS | ElevenLabs Flash, **por frases**, con caché en disco |
+| Entrega de la respuesta | **SSE en streaming** |
+| Traducción | DeepL ES→EN (obligatoria; su retirada se midió y se descartó) |
 
 ## 12. Limitaciones reconocidas del proyecto
 
@@ -280,13 +318,24 @@ por qué" que un informe sin fisuras.
   consulta recupera "el fichero correcto"; por eso la métrica que gobierna H4 es el recall de
   **chunk**. Una verdad de referencia a nivel de fragmento más rica es trabajo futuro.
 - **Seguridad juzgada a mano.** El "tacto" del set adversarial (18 preguntas) no tiene métrica
-  automática; la corrida adversarial con el LLM real (0/18 fallos con groq) se ejecuta en la
-  máquina del usuario.
+  automática. La corrida adversarial con el LLM real **se ejecutó** el 2026-08-02 sobre los
+  cinco candidatos, con **0 fallos de 18** en la configuración entregada; los informes están en
+  `evals/resultados/seguridad/`. Incluyen además las corridas `-hardened`, posteriores a
+  endurecer el prompt tras detectar una rotura de personaje — el ciclo **medir → arreglar →
+  volver a medir** está documentado, no solo el resultado final.
 - **Corpus monolingüe (inglés).** La retirada de DeepL se descartó **con datos** precisamente
   porque el corpus es inglés; un corpus en español reabriría esa decisión ([ADR-014](decisiones/ADR-014-retirada-deepl.md)).
-- **Mediciones dependientes del hardware del usuario (H7/H8).** La tabla WER del STT y la latencia
-  p50/p95 del streaming requieren GPU/CUDA y claves de LLM/TTS que el sandbox no tiene; se
-  completan en la máquina del usuario. Los mecanismos están implementados y con tests verdes.
+- **Legibilidad sin cierre medido.** El hallazgo de la línea base (INFLESZ medio 69,9, por
+  debajo del objetivo declarado de 80) señalaba el ajuste de prompt como palanca. **No se
+  volvió a medir la legibilidad después de H5**, así que la mejora no está demostrada. Es una
+  palanca abierta, y se declara como tal.
+- **Evidencia de H4.3 y H4.4 en prosa, no en CSV.** Las dos cifras que gobiernan la defensa
+  (90,9 % de recall y 82,2 % de ruteo) salen de corridas de solo-retrieval cuya salida cruda
+  vive en el [ADR-006](decisiones/ADR-006-reranker.md) y en `docs/plan/H4-retrieval.md`, no en
+  un `evals/resultados/*.csv` archivado como sí ocurre con la línea base y con H6.
+- **Fecha de corte de la evaluación de calidad: 2026-08-02.** Lo posterior (despliegue,
+  responsive, sonido, PWA) es ingeniería de producto y no altera las métricas de IA, que no se
+  volvieron a correr.
 - **Free tier y ruido del LLM alojado.** Algunas corridas completas sufrieron 429 transitorios de
   Replicate (ajenos a la métrica medida); el determinismo a `temperature=0` es casi total, no
   garantizado al 100 % (por eso se reporta σ).

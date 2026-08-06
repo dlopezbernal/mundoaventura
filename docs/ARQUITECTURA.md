@@ -8,10 +8,13 @@ memoria final del capstone.
 
 App educativa (niños 8–12) cliente-servidor desacoplada:
 
-- **Frontend (SPA React):** Vite + React 18 + TypeScript, en el navegador; asistente por
-  pasos: catálogos (carrusel), escena y chat (texto + voz).
-- **Backend (FastAPI):** routers finos → services → config. Sin GPU local.
+- **Frontend (SPA React):** Vite 8 + React 19 + TypeScript 6, en el navegador; asistente por
+  pasos: catálogos (carrusel), escena y chat (texto + voz). **Instalable como app** (PWA) y
+  utilizable en móvil, tablet y PC. Dos dependencias de producción: `react` y `react-dom`.
+- **Backend (FastAPI):** routers finos → services → config. Sin GPU local. 22 dependencias
+  de producción, ninguna de ellas `torch`.
 - **Nube:** Replicate (imagen + LLM), DeepL (traducción), ElevenLabs (voz).
+- **Producción:** VPS propio con Caddy (TLS) + systemd, despliegue continuo desde `main`.
 
 ## Los tres proveedores
 
@@ -72,10 +75,71 @@ contextos seguros (https o localhost): fuera de ellos, o si se deniega el
 permiso, el micro se deshabilita con un aviso claro y el chat de texto sigue
 funcionando.
 
-> *Nota histórica:* el primer frontend (de escritorio, en Flet) no podía usar
-> `flet-audio` (un spike comprobó que no graba y que arrastraba una actualización
-> de Flet que rompía la interfaz), así que grababa con `sounddevice` + `soundfile`.
-> La migración a la SPA React eliminó esa fricción con las APIs nativas del navegador.
+> *Nota histórica:* el primer frontend fue de escritorio (Flet) y no podía grabar con
+> `flet-audio`; la migración a la SPA React eliminó esa fricción con las APIs nativas del
+> navegador. Documentos de aquella etapa en [`historico/`](historico/).
+
+## Capa de presentación (frontend)
+
+El frontend no es un detalle de implementación: la mitad de las decisiones defendibles del
+proyecto están en cómo se le presenta el sistema a un niño de 8 a 12 años.
+
+**Estructura.** `screens/` (una por pantalla del flujo y de la zona de adulto) ·
+`components/` (reutilizables: `Coverflow`, `Chat`, `SceneView`, `HoloCard`, `Console`,
+`Hud`, `Modal`…) · `state/useFlow.ts` (máquina de estados de los 3 pasos, `useReducer`) ·
+`api/client.ts` (única puerta al backend; tokens y SSE) · `audio/sfx.ts` · `pwa/instalar.ts`
+· `styles/tokens.css` (paleta y tipografías) + CSS Modules por componente.
+
+**Sin librerías de UI, de estado ni de router.** Solo `react` y `react-dom` en producción.
+El tema "Arcade Holo" es CSS propio sobre tokens; el carrusel 3D, el streaming incremental
+y los efectos de sonido están escritos a mano. Es una decisión de alcance: menos superficie
+que mantener y nada que explicar que no sea del proyecto.
+
+**Responsive (móvil · tablet · PC).** Tres tramos con cortes en **641 px** y **960 px**. El
+problema que resolvió no era estético: en pantalla estrecha el chat estiraba la página y el
+campo de escribir la pregunta quedaba fuera de la vista. Hoy `.holo-wrap` es una columna
+flex a altura de pantalla, la escena se recoge en una barra mini con visor, y el historial
+hace su propio scroll con el input siempre abajo. Todo con `@media`, **sin JavaScript de
+layout**; el único estado añadido es la apertura del visor de la escena.
+
+**App instalable (PWA).** `manifest.webmanifest` + iconos (con variante *maskable*) + un
+service worker escrito a mano. El service worker **solo intercepta lo que entiende**:
+navegación (red primero, para que un despliegue nuevo no se quede congelado) y `/assets/`
+(caché primero, porque el nombre lleva el hash del contenido). **Nunca toca `/api/`**, donde
+viven el SSE del chat y las subidas. Desde el login se ofrece instalarla. El empaquetado como
+APK (TWA) está documentado y sin ejecutar: [`APK-ANDROID.md`](APK-ANDROID.md).
+
+**Efectos de sonido.** Sintetizados con la Web Audio API (`audio/sfx.ts`): sin ficheros de
+audio ni dependencias. Un solo `AudioContext`, despertado por el primer gesto del usuario
+(política de autoplay). Es independiente de la voz del personaje, que es el mp3 de
+ElevenLabs. Interruptor 🔊/🔇 en el HUD, persistido en `localStorage`.
+
+## Blindaje operativo (Hito 2)
+
+El despliegue es una URL pública, así que los endpoints del niño se protegen sin añadirle
+fricción. Cinco piezas, todas con tests:
+
+| Pieza | Dónde | Qué hace |
+|---|---|---|
+| **Concurrencia** | endpoints `def` (no `async def`) | FastAPI los ejecuta en su threadpool: un SDK bloqueante no congela el event loop ([ADR-002](decisiones/ADR-002-concurrencia.md)) |
+| **Timeouts + reintentos** | `services/resiliencia.py` | Backoff exponencial con jitter ante 429/5xx/timeout. DeepL queda fuera a propósito: su SDK ya lo hace |
+| **Límites de subida** | `routers/limites.py` | Corta por trozos → **413** (imagen 10 MB, audio 5 MB, documento 20 MB) |
+| **Rate limit + cupo** | `ratelimit.py`, `services/cuota_service.py` | Por IP; y un tope diario de imágenes en SQLite. Al superarlo, el chat responde **en personaje**, nunca un 429 crudo al niño |
+| **Saneado de errores** | `routers/errores.py` | Los 500 no filtran el mensaje del SDK: se registra el detalle con un `error_id` y al cliente le llega un texto genérico + ese id |
+
+## Topología de producción
+
+```
+   Internet ──HTTPS(443)──►  Caddy  ──► /api, /health ──► uvicorn (systemd, 127.0.0.1)
+                              │                              │
+                              └── SPA estática (dist/)        └── SQLite · ChromaDB · documentos · caché TTS
+```
+
+SPA y API **comparten origen**, así que no hay CORS que configurar. El backend no se expone:
+escucha solo en local. La activación por **socket de systemd** hace que un despliegue no
+corte las conexiones (medido: 10 % de 502 → 0 %). Un `merge` a `main` dispara el despliegue,
+con comprobación de humo y **vuelta atrás automática** si `/health` no responde.
+Procedimiento completo en [`DESPLIEGUE.md`](DESPLIEGUE.md).
 
 ## Invariante `personaje_id`
 
@@ -116,6 +180,9 @@ través de `backend/services/settings_service.py`, que devuelve el valor **vigen
 menú de configuración surte efecto en la **siguiente petición sin reiniciar**, y con la
 BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atrás).
 
+- **Tablas del SQLite:** `settings` (ajustes en caliente + claves reservadas de admin y 2FA,
+  que nunca se exportan), `personajes`, `ubicaciones`, `documentos`, `familias`,
+  `sesiones_familia` (solo el hash del token), `uso_diario` (cupo de imágenes) y `auditoria`.
 - **Qué vive en SQLite:** ajustes de IA (umbrales/modo del Evaluator, `RAG_TOP_K`,
   `PERMITIR_CONOCIMIENTO_GENERAL`), chunking, modelo/`max_tokens`/`temperature` del LLM,
   los **prompts de sistema** (externalizados desde `rag_service.py`, con variables
@@ -138,8 +205,14 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
 - **Endpoints:** `GET /api/config` (ajustes + secretos enmascarados) y `PUT /api/config`
   (guarda y aplica en caliente; informa de qué cambios exigen reindexar ChromaDB).
 - **Umbral del RAG:** se expone como **distancia coseno directa (0–2), sin conversión a
-  porcentaje**, la misma métrica nativa de ChromaDB que usa el Evaluator (ver README,
-  "Decisiones de diseño").
+  porcentaje**, la misma métrica nativa de ChromaDB que usa el Evaluator (ver
+  [`DECISIONES.md`](DECISIONES.md)).
+- **Auditoría de uso:** tabla `auditoria` (`auditoria_service`, pestaña 🛡️ Admin → Auditoría):
+  registra alta/login/logout de familia, generación de escena y preguntas, con filtros,
+  export CSV y **purga por retención** (`AUDITORIA_RETENCION_DIAS`). Guardar el *contenido*
+  de las preguntas es un toggle aparte (`AUDITORIA_CONTENIDO`), porque es texto de un menor.
+  Registrar **nunca** puede romper el flujo del niño: todo va en `try/except` best-effort.
+  Al borrar una cuenta, sus eventos se borran en cascada.
 - **Dos niveles de acceso (Hito 7 → Hito 9.2):** la app dejó de ser anónima. Hay **dos zonas
   de adulto**, con dos botones en el HUD:
   - **⚙️ Configuración** — autoservicio de la **familia**. Cada familia es una cuenta con email
@@ -152,14 +225,35 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
     `familias_service`, `routers/familias.py`, tablas `familias`/`sesiones_familia`.
   - **🛡️ Admin** — configuración global compartida. Credencial de **contraseña ≥ 8 caracteres**
     con **2FA TOTP opcional** (toggle por defecto OFF; `pyotp`/`segno`). `admin_service`: la
-    dependencia `requiere_admin` protege los endpoints sensibles (config, apis, documentos, y
-    las escrituras de personajes/ubicaciones). El login está endurecido contra fuerza bruta
-    (retardo + bloqueo por IP → 429). Los `GET` de catálogos y el flujo del niño (`/generate`,
-    `/ask`, `/transcribe`, `/health`) siguen públicos. Incluye **import/export** JSON de la
+    dependencia `requiere_admin` protege los endpoints sensibles (config, apis, documentos,
+    auditoría, y las escrituras de personajes/ubicaciones). El login está endurecido contra
+    fuerza bruta (retardo + bloqueo por IP → 429). Incluye **import/export** JSON de la
     configuración (sin secretos) y una **copia de seguridad** del SQLite antes de importar.
 
   Flujos de datos y checklist RGPD (incluido el email del adulto como dato personal) en
   [`PRIVACIDAD.md`](PRIVACIDAD.md).
+
+### Quién puede llamar a cada endpoint
+
+`requiere_admin` **no** es la única barrera, y conviene no confundir "no es de admin" con
+"es público". Los endpoints que cuestan dinero llevan **dos** dependencias encadenadas
+(`_caros = _acceso + _familia` en `main.py`):
+
+| Grupo | Endpoints | Quién puede |
+|---|---|---|
+| **Informativos** | `GET /`, `GET /health` | Cualquiera |
+| **Catálogos (lectura)** | `GET /api/personajes`, `/api/ubicaciones`, sus `/avatar` | Cualquiera — los necesita la SPA antes de tener sesión |
+| **Cuenta de familia** | `signup`, `login`, `verificar`, `reenviar`, `me`, `estado` | Cualquiera (son la puerta); login y OTP con bloqueo por IP → 429 |
+| **Perfil de familia** | `PUT /api/familias/perfil`\|`pin`, `DELETE /api/familias/cuenta` | Sesión de familia (`X-Family-Token`) |
+| **Flujo del niño (caros)** | `POST /api/generate`, `/api/generate-on-photo`, `/api/ask`, `/api/ask/stream`, `/api/transcribe` | **Candado (`X-Access-Code`) + sesión de familia**, más rate limit y cupo diario |
+| **Administración** | config, apis, documentos, auditoría, escrituras de catálogos, voces | `X-Admin-Token` (contraseña + 2FA opcional) |
+
+La segunda barrera del flujo del niño es deliberada y se gobierna con
+`EXIGIR_SESION_FAMILIA` (**por defecto `true`**): el candado `ACCESS_CODE` viaja dentro del
+bundle de la SPA, así que es **público de facto** y no sirve como autenticación. Sin la
+sesión de familia, cualquiera podría gastar el saldo de Replicate con un `curl`. Ese toggle
+es de despliegue (`.env`) y **no** se expone en el menú de configuración: la autenticación
+no se apaga desde la interfaz.
 
 ## Retrieval: reranker opcional (Hito 4.3)
 

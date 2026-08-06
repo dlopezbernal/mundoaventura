@@ -16,7 +16,8 @@ instalar y usar; aquí está todo lo demás.
 | Documento | Qué contiene |
 |---|---|
 | [`EVALUACION.md`](EVALUACION.md) | Metodología de medición, línea base, progresión hito a hito, estudio de LLMs, **limitaciones**. |
-| [`DEFENSA.md`](DEFENSA.md) | Guion de demo de 5 min (clics exactos), plan B por paso, preguntas del tribunal. |
+| [`MEMORIA.md`](MEMORIA.md) | Esqueleto de la memoria del proyecto: qué va en cada sección y de qué documento sale. |
+| [`DEFENSA.md`](DEFENSA.md) | Guion de la demo (clics exactos), plan B por paso, **grabación con OBS** y preguntas del tribunal. |
 | [`TRABAJO-FUTURO.md`](TRABAJO-FUTURO.md) | Lo recortado, lo descartado conscientemente, y lo que se haría en un servidor. |
 | [`PRIVACIDAD.md`](PRIVACIDAD.md) | Flujos de datos personales y checklist RGPD/LOPDGDD. |
 

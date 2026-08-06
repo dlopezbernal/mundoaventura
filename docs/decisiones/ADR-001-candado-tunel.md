@@ -59,7 +59,28 @@ a un atacante que inspeccione el tráfico del navegador.
   `RATE_LIMIT_ASK`/`GENERATE`/`TRANSCRIBE`, `MAX_IMAGENES_DIA`, `MENSAJE_LIMITE`.
   El frontend usa `VITE_ACCESS_CODE`, que debe coincidir.
 - **Deuda/limitación aceptada:** el rate limit por IP usa `get_remote_address`; tras
-  un proxy/túnel todas las peticiones pueden compartir la IP del proxy (un único
-  cubo). Para el objetivo (frenar el escaneo) sigue sirviendo como techo global.
+  un proxy todas las peticiones podrían compartir la IP del proxy (un único cubo).
+  **Resuelto en el despliegue en VPS** (2026-08-05): `deploy/mundoaventura.service`
+  arranca uvicorn con `--proxy-headers --forwarded-allow-ips=127.0.0.1`, así que
+  slowapi ve la IP real del cliente y no la de Caddy. Sin eso, un niño agotando su
+  cupo bloquearía a los demás.
 - **Revisar si:** el proyecto pasa a un despliegue permanente en la nube → entonces
   sí tocaría autenticación real y rate limit por token, no por IP.
+
+## Addendum — 2026-08-05: el despliegue permanente ya ocurrió
+
+La condición de "revisar si…" se cumplió: la app está en producción en un dominio
+propio desde el 2026-08-05 ([ADR-015](ADR-015-despliegue-nativo-vps.md)), no en un
+túnel efímero. Con eso, el supuesto central de este ADR —que el atacante realista es
+un bot contra una URL que vivirá dos horas— deja de sostenerse: `ACCESS_CODE` viaja
+dentro del bundle de la SPA (y del APK), así que es **público de facto**.
+
+El candado **se mantiene** como defensa en profundidad (es gratis y sigue frenando el
+escaneo automático), pero **ya no es la única barrera**: los endpoints que cuestan
+dinero exigen además una **sesión de familia** válida (`X-Family-Token` → 401). Esa
+decisión, con sus alternativas descartadas, está en el
+**[ADR-016](ADR-016-sesion-familia-endpoints-caros.md)**, que extiende y sustituye
+parcialmente a este.
+
+El **rate limit por token** que anticipaba el "revisar si" sigue pendiente: el cupo
+diario de imágenes es todavía global, no por familia (ver `TRABAJO-FUTURO.md`).

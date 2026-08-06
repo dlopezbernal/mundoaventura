@@ -76,18 +76,27 @@
       <p class="sub">MundoAventura · información para el adulto responsable (RGPD / LOPDGDD)</p>
 
       <div class="card">
-        <p style="margin:0"><strong>En una frase:</strong> esta app para niños (8–12) solo
-        pide el <strong>correo de un adulto</strong> para crear la cuenta de la familia (se
-        guarda en el propio dispositivo, no se envía a nadie), no muestra al niño el historial
-        del chat y <strong>no almacena la foto</strong>. Lo que sí sale del dispositivo es el
-        <em>texto</em> de la pregunta (para traducirlo y generar la respuesta) y,
-        opcionalmente, la voz y la foto. Para el adulto hay un <strong>registro de uso</strong>
-        local (auditoría): guarda metadatos por defecto y el texto de las conversaciones solo
-        si el adulto lo activa.</p>
+        <p style="margin:0"><strong>En una frase:</strong> esta app para niños (8–12) pide el
+        <strong>correo de un adulto</strong> y el <strong>nombre de pila</strong> de cada niño
+        que juega. Esos datos se guardan <strong>en el servidor de la aplicación</strong>.
+        <strong>No se almacena la foto</strong>, ni el audio del micrófono, ni el historial del
+        chat. Sí salen hacia servicios externos el <em>texto</em> de la pregunta (que incluye
+        el nombre del niño, para que el personaje le hable por su nombre), y opcionalmente la
+        voz y la foto. Para el adulto hay un <strong>registro de uso</strong>: guarda
+        metadatos por defecto y el texto de las conversaciones solo si el adulto lo activa.</p>
       </div>
 
+      <h2>Quién es responsable</h2>
+      <p>Cuando usas la aplicación publicada en <strong>chatmundoaventura.com</strong>, el
+      responsable del tratamiento es <strong>el titular de ese servidor</strong>, que es el
+      autor del proyecto; puedes contactar con él respondiendo al correo desde el que la app
+      envía sus avisos. Este es un <strong>proyecto académico</strong> sin explotación
+      comercial. Si en lugar de eso ejecutas la aplicación en tu propio equipo, entonces los
+      datos no salen de él salvo hacia los servicios externos de la tabla, y la responsable
+      eres tú.</p>
+
       <h2>Por qué esto importa</h2>
-      <p>Es una app para <strong>menores</strong> que puede exponerse por un túnel público,
+      <p>Es una app para <strong>menores</strong> publicada en internet, que
       <strong>sube fotos</strong> de cuartos infantiles a un servicio externo y les hace
       <strong>hablar con una IA</strong>. Por eso aplican el <strong>RGPD</strong> (UE
       2016/679) y la <strong>LOPDGDD</strong> (LO 3/2018), que en España exige
@@ -133,13 +142,19 @@
             </tr>
             <tr>
               <td><strong>Cuenta de familia</strong> (correo del adulto, nombre, contraseña)</td>
-              <td><strong>No</strong> (se queda en este dispositivo)</td>
-              <td>—</td>
-              <td>Sí, en el equipo: correo y nombre en claro, contraseña <strong>cifrada</strong> (hasheada)</td>
+              <td>Se guarda en el servidor; el correo se envía además al servicio de correo</td>
+              <td>Brevo (envío del código de verificación, Francia)</td>
+              <td>Sí: correo y nombre en claro, contraseña <strong>cifrada</strong> (hasheada), hasta que borres la cuenta</td>
+            </tr>
+            <tr>
+              <td><strong>Perfiles de los niños</strong> (nombre de pila y sexo)</td>
+              <td>Se guardan en el servidor; el <strong>nombre viaja con cada pregunta</strong></td>
+              <td>El traductor y el modelo de IA</td>
+              <td>Sí, hasta que borres el perfil o la cuenta. No se piden apellidos, ni edad, ni foto</td>
             </tr>
             <tr>
               <td><strong>Registro de uso</strong> (auditoría, para el adulto)</td>
-              <td><strong>No</strong> (se queda en este dispositivo)</td>
+              <td>Se guarda en el servidor</td>
               <td>—</td>
               <td>Sí, en el equipo: metadatos (evento, familia, niño, hora); el <strong>texto</strong>
                 de preguntas/respuestas solo si el adulto lo activa. Se borra por antigüedad y con la cuenta</td>
@@ -172,16 +187,28 @@
           limita su antigüedad y solo guarda el texto si se activa a propósito.</li>
         <li><strong>Cuenta de familia protegida:</strong> la contraseña se guarda cifrada
           (hasheada), nunca en claro, y el acceso está protegido contra intentos repetidos.</li>
-        <li><strong>Acceso protegido:</strong> candado del túnel y PIN de adulto para la
-          configuración.</li>
+        <li><strong>Acceso protegido:</strong> hace falta una sesión de familia activa para
+          jugar; la configuración de la familia va tras un <strong>PIN de familia</strong> y la
+          administración, tras una contraseña propia con verificación en dos pasos opcional.</li>
+        <li><strong>Conexión cifrada (HTTPS)</strong> en el servicio publicado.</li>
       </ul>
+
+      <h2>Qué se guarda en tu navegador</h2>
+      <p>Para no pedirte la contraseña cada vez y para recordar tus preferencias, la app
+      guarda en el navegador: el <strong>identificador de tu sesión</strong> (90 días), el
+      <strong>nombre del niño que juega</strong>, si saltaste el alta del primer perfil y si
+      prefieres la app <strong>con o sin sonido</strong>. No son cookies de publicidad ni de
+      seguimiento, y no se envían a nadie. Al cerrar sesión se borran el identificador y el
+      nombre del niño; el resto lo puedes eliminar borrando los datos del sitio desde tu
+      navegador.</p>
 
       <h2>Cumplimiento RGPD / LOPDGDD</h2>
       <ul class="check">
-        <li><strong>Minimización:</strong> solo lo imprescindible; el dato personal de base es la
-          cuenta de familia (correo del <em>adulto</em> + nombre + contraseña). El registro de uso
-          está minimizado: metadatos por defecto, el texto es opt-in y tiene antigüedad limitada
-          (se puede desactivar del todo).</li>
+        <li><strong>Minimización:</strong> solo lo imprescindible. De los niños se guarda
+          únicamente el <em>nombre de pila</em> y, si quieres, el sexo (para que el personaje
+          hable en femenino o masculino): ni apellidos, ni edad, ni correo, ni foto de perfil.
+          El registro de uso está minimizado: metadatos por defecto, el texto es opt-in y tiene
+          antigüedad limitada (se puede desactivar del todo).</li>
         <li><strong>Consentimiento parental:</strong> explícito para la foto; el alta de la
           cuenta la hace un adulto con su correo (opcionalmente <em>verificado con un código</em>),
           lo que refuerza el consentimiento. Para el chat y la voz (el núcleo de la app) se
@@ -189,13 +216,23 @@
         <li><strong>Información transparente:</strong> esta misma página, enlazada desde la app.</li>
         <li><strong>Derecho de supresión:</strong> no se guardan fotos ni el chat del niño; la cuenta
           de familia se puede <strong>eliminar desde la propia app</strong> (Configuración → "Eliminar
-          la cuenta"), lo que borra también <strong>todo su registro de uso</strong>. Cerrar sesión
-          elimina el acceso del dispositivo.</li>
+          la cuenta"), lo que borra también los perfiles de los niños y <strong>todo su registro de
+          uso</strong>. Cerrar sesión elimina el acceso del dispositivo.</li>
+        <li><strong>Rectificación:</strong> puedes cambiar el nombre de la familia y añadir,
+          editar o quitar perfiles de niños cuando quieras, desde ⚙️ Configuración.</li>
+        <li><strong>Transferencias internacionales:</strong> el modelo de IA por defecto (Groq)
+          y la voz (ElevenLabs) procesan en <strong>EEUU</strong>, así que el texto de la pregunta
+          —que incluye el nombre del niño— sale de la UE. Es una decisión consciente por calidad,
+          y es reversible: se puede cambiar a un proveedor europeo o a un modelo local.</li>
         <li><strong>Medidas técnicas:</strong> las de la sección anterior.</li>
       </ul>
       <ul class="pend">
-        <li><strong>Transferencias internacionales:</strong> el modelo por defecto (Groq, EEUU)
-          implica transferencia; elegir un proveedor UE o local la elimina.</li>
+        <li><strong>Otros derechos:</strong> el acceso, la portabilidad, la oposición y la
+          limitación (arts. 15, 18, 20 y 21) no tienen todavía un canal automático en la app;
+          para ejercerlos, escribe al responsable.</li>
+        <li><strong>Verificación de edad:</strong> la app no puede comprobar que quien crea la
+          cuenta sea realmente el padre, la madre o el tutor. El correo verificado solo prueba
+          que esa persona controla ese buzón.</li>
       </ul>
 
       <h2>Límites que reconocemos</h2>
