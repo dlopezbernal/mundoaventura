@@ -24,7 +24,9 @@ export default function QuickChips({
   onElegir,
 }: Props) {
   return (
-    <div className={styles.chips} role="group" aria-label="Preguntas rápidas">
+    // data-no-sfx: un chip envía la pregunta, así que ya suena con "send"
+    // (Chat.enviarPregunta); sin la marca sonaría además el "click" global.
+    <div className={styles.chips} data-no-sfx role="group" aria-label="Preguntas rápidas">
       {preguntas.map((pregunta) => (
         <button
           key={pregunta}

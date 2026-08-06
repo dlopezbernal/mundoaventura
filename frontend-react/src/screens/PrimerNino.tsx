@@ -18,9 +18,10 @@
  * (PerfilFamilia) queda intacta: sigue siendo el sitio para editarlos después.
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BackendError, familiaActualizarPerfil } from "../api/client";
 import type { FamiliaDTO, NinoDTO } from "../api/types";
+import { sfxBienvenida } from "../audio/sfx";
 import { avatarNino } from "./avatar";
 import styles from "./Settings.module.css";
 
@@ -45,6 +46,17 @@ export default function PrimerNino({ familia, onListo, onSaltar }: Props) {
   const [nuevoSexo, setNuevoSexo] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+
+  // Fanfarria de bienvenida, UNA sola vez al llegar aquí. El guard no es cosmético:
+  // en desarrollo <StrictMode> monta cada componente dos veces, y sin él la
+  // fanfarria sonaría duplicada y desfasada. El AudioContext ya está despierto,
+  // porque a esta pantalla se llega pulsando "Crear cuenta y entrar".
+  const yaSono = useRef(false);
+  useEffect(() => {
+    if (yaSono.current) return;
+    yaSono.current = true;
+    sfxBienvenida();
+  }, []);
 
   // Tope de niños por familia (constante de despliegue, la manda el backend).
   const lleno = ninos.length >= familia.max_ninos;

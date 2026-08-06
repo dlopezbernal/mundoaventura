@@ -10,6 +10,7 @@
  */
 
 import type { NinoDTO } from "../api/types";
+import { sfx } from "../audio/sfx";
 import { avatarNino } from "./avatar";
 import styles from "./Settings.module.css";
 
@@ -37,8 +38,12 @@ export default function QuienJuega({ nombreFamilia, ninos, onElegir, onGestionar
             <button
               key={nino.nombre}
               type="button"
+              data-no-sfx
               className={styles.perfilBtn}
-              onClick={() => onElegir(nino)}
+              onClick={() => {
+                sfx("select"); // elegir perfil es una confirmación, no un clic más
+                onElegir(nino);
+              }}
             >
               <span className={styles.perfilEmoji} aria-hidden="true">
                 {avatarNino(nino.sexo)}

@@ -15,6 +15,7 @@
 import { useState } from "react";
 import { BackendError, familiaVerificarPin } from "../api/client";
 import type { FamiliaDTO } from "../api/types";
+import { sfx } from "../audio/sfx";
 import styles from "./Settings.module.css";
 import PerfilFamilia from "./config/PerfilFamilia";
 
@@ -60,7 +61,15 @@ export default function Configuracion({
           <p className={styles.kicker}>⚙️ FAMILIA</p>
           <h1 className={styles.title}>CONFIGURACIÓN</h1>
         </div>
-        <button type="button" className={styles.close} onClick={onCerrar}>
+        <button
+          type="button"
+          data-no-sfx
+          className={styles.close}
+          onClick={() => {
+            sfx("back");
+            onCerrar();
+          }}
+        >
           ✕ Cerrar
         </button>
       </header>

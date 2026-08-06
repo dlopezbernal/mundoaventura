@@ -51,13 +51,29 @@ button {
   color: inherit;
 }
 
-/* El contenedor central de cada pantalla, sobre el fondo animado. */
+/* El contenedor central de cada pantalla, sobre el fondo animado.
+   Columna flex de al menos una pantalla de alto: así el paso 3 (escena + chat)
+   puede quedarse la altura sobrante y el historial del chat hace SU PROPIO
+   scroll, en vez de estirar la página (lo que en móvil dejaba el input de
+   preguntar fuera de la pantalla). Es min-height, no height: el resto de
+   pantallas (manual, admin) siguen creciendo con su contenido y la página
+   scrollea con normalidad. */
 .holo-wrap {
   position: relative;
   z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh; /* dvh descuenta la barra del navegador móvil */
   max-width: 1060px;
   margin: 0 auto;
   padding: 14px 14px 40px;
+}
+/* En móvil el pie de 40px es altura que le robamos al chat: se recorta. */
+@media (max-width: 640px) {
+  .holo-wrap {
+    padding: 12px 12px 14px;
+  }
 }
 
 /* Scanlines CRT (efecto "TV antigua"). Fijo a pantalla completa y decorativo,

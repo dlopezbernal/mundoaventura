@@ -20,6 +20,7 @@
 
 import { useCallback, useState } from "react";
 import { adminLogout } from "../api/client";
+import { sfx } from "../audio/sfx";
 import styles from "./Settings.module.css";
 import AdminGate from "./config/AdminGate";
 import ApisTab from "./config/ApisTab";
@@ -65,7 +66,15 @@ export default function Admin({ onCerrar }: Props) {
           <p className={styles.kicker}>🛡️ ADMINISTRACIÓN</p>
           <h1 className={styles.title}>ADMIN</h1>
         </div>
-        <button type="button" className={styles.close} onClick={onCerrar}>
+        <button
+          type="button"
+          data-no-sfx
+          className={styles.close}
+          onClick={() => {
+            sfx("back");
+            onCerrar();
+          }}
+        >
           ✕ Cerrar
         </button>
       </header>

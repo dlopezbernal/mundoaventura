@@ -161,6 +161,31 @@
   line-height: 1;
 }
 
+/* Tramo intermedio de tablet: cartas algo menores que en escritorio, pero con
+   las cinco posiciones del coverflow (en móvil se quedan tres). */
+@media (min-width: 641px) and (max-width: 959px) {
+  .stage {
+    height: 322px;
+  }
+  .flow {
+    width: 192px;
+    height: 258px;
+    margin: -129px 0 0 -96px;
+  }
+  .cl1 {
+    transform: translateX(-150px) translateZ(-170px) rotateY(40deg) scale(0.85);
+  }
+  .cr1 {
+    transform: translateX(150px) translateZ(-170px) rotateY(-40deg) scale(0.85);
+  }
+  .cl2 {
+    transform: translateX(-264px) translateZ(-320px) rotateY(48deg) scale(0.7);
+  }
+  .cr2 {
+    transform: translateX(264px) translateZ(-320px) rotateY(-48deg) scale(0.7);
+  }
+}
+
 @media (max-width: 640px) {
   .stage {
     height: 296px;

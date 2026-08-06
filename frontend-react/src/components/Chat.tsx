@@ -21,6 +21,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { askStream, BackendError, transcribe } from "../api/client";
+import { sfx } from "../audio/sfx";
 import QuickChips from "./QuickChips/QuickChips";
 import styles from "./Chat.module.css";
 
@@ -174,6 +175,7 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
   }
 
   function burbujaError(texto: string) {
+    sfx("error"); // cubre todos los fallos suaves del chat, micro incluido
     setMensajes((previos) => [...previos, { autor: "error", texto }]);
   }
 
@@ -192,6 +194,7 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
   // llega, en vez de esperar en blanco a toda la respuesta.
 
   async function enviarPregunta(texto: string) {
+    sfx("send"); // escrita, por chip o transcrita: todas entran por aquí
     setMensajes((previos) => [...previos, { autor: "nino", texto }]);
     setGenerando(true);
     setPensando(true);
@@ -208,6 +211,7 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
           acumulado += trozo;
           if (!creada) {
             // Primer token: quita el "pensando" y crea la burbuja del personaje.
+            sfx("receive"); // SFX ligero, aparte de la voz mp3 del personaje
             setPensando(false);
             setMensajes((previos) => [
               ...previos,
@@ -445,12 +449,20 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
           </button>
         )}
 
+        {/* Icono en móvil, palabra a partir de tablet: lo decide el CSS, y el
+            aria-label mantiene el nombre de la acción en los dos casos.
+            data-no-sfx: enviar ya suena con "send" desde `enviarPregunta`. */}
         <button
           type="submit"
+          data-no-sfx
           className={styles.enviar}
+          aria-label="Preguntar"
           disabled={ocupado || !pregunta.trim()}
         >
-          Preguntar
+          <span className={styles.enviarIco} aria-hidden="true">
+            ➤
+          </span>
+          <span className={styles.enviarTexto}>Preguntar</span>
         </button>
       </form>
     </section>

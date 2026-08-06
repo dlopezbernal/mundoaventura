@@ -1,24 +1,38 @@
 /**
  * SceneChat — Layout del paso 3 (escena + chat) y estados de carga/error holo.
  * El estilado fino de Scene/Chat vive en sus propios módulos (SceneView/Chat);
- * aquí queda el armazón del layout de dos columnas y los estados de carga/error.
+ * aquí queda el armazón del layout y los estados de carga/error.
+ *
+ * Mobile-first, en tres tramos (ver el handoff de diseño responsive):
+ *   · móvil (< 641px)  — una columna: barra mini de la escena arriba (la escena
+ *     grande vive en el visor "⤢ Ver", ver SceneView) y el chat ocupando TODO
+ *     el resto de la altura, como una app de mensajería.
+ *   · tablet (641–959) — escena hero arriba y chat a lo ancho debajo.
+ *   · PC (≥ 960px)     — dos columnas, escena | chat, igualando altura.
  */
 
+/* Base = móvil: una columna que se queda la altura sobrante de .holo-wrap
+   (que es una columna flex a altura de pantalla, ver global.css).
+   `position: relative` es el ancla de las acciones de la escena, que en tablet
+   se posicionan de forma absoluta sobre la fila del StepTracker (SceneView). */
 .layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-  margin-top: 14px;
-  align-items: start;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 10px;
 }
 
-/* --- Carga (panel izquierdo, junto al chat) --- */
+/* --- Carga (encima del chat en móvil/tablet; columna izquierda en PC) --- */
 .loading {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   text-align: center;
+  flex: 0 0 auto; /* la altura sobrante es del chat, no del portal */
   min-height: 320px;
   padding: 40px 20px;
   border: 1px dashed var(--edge);
@@ -126,6 +140,7 @@
   justify-content: center;
   align-items: center;
   text-align: center;
+  flex: 0 0 auto;
   min-height: 320px;
   padding: 32px 20px;
   border: 1px dashed var(--edge);
@@ -166,11 +181,44 @@
   padding: 12px 18px;
 }
 
-@media (max-width: 760px) {
-  .layout {
-    grid-template-columns: 1fr;
+/* --- Móvil: los estados de espera/error se encogen para no comerle altura al
+       chat, que en este tramo es la pantalla entera. --- */
+@media (max-width: 640px) {
+  .loading {
+    min-height: 0;
+    padding: 20px 16px;
+  }
+  .error {
+    min-height: 0;
+    padding: 18px 16px;
+  }
+  .portal,
+  .vortice {
+    width: 128px;
+    height: 128px;
+  }
+  .anillo {
+    width: 120px;
+    height: 120px;
+  }
+  .loadingHint {
+    margin-top: 12px;
+    font-size: 13px;
   }
 }
+
+/* --- PC: vuelve la rejilla de dos columnas, escena | chat, igualando altura
+       (`stretch`) para que el chat tenga su propio scroll de arriba abajo. --- */
+@media (min-width: 960px) {
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    gap: 18px;
+    align-items: stretch;
+    margin-top: 14px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Portal quieto: sin túnel ni giro, solo el núcleo y un anillo estáticos. */
   .vortice,

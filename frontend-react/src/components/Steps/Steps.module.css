@@ -8,6 +8,9 @@
   align-items: center;
   justify-content: center;
   gap: 0;
+  /* Sin salto de línea: los tres nodos son una línea temporal, y partirla en dos
+     filas rompe la lectura (encogen con el breakpoint de móvil, más abajo). */
+  flex-wrap: nowrap;
   margin: 14px 0 4px;
 }
 
