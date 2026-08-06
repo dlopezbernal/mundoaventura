@@ -514,12 +514,20 @@ deliberados:
 ### 5.1 Despliegue automático desde GitHub
 
 Un push a `main` (o el botón **Run workflow** de la pestaña Actions) lanza el job `deploy`
-de [`.github/workflows/ci.yml`](../.github/workflows/ci.yml): entra por SSH al VPS y ejecuta
-`desplegar.sh`. Va en el **mismo** workflow que los tests, con `needs: [backend, frontend]`,
+de [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), que ejecuta `desplegar.sh` en
+el servidor. Va en el **mismo** workflow que los tests, con `needs: [backend, frontend]`,
 así que **no hay forma de desplegar con el CI en rojo**. `dev` pasa el CI pero no toca el
 servidor.
 
-Lo que hace falta configurar, una vez:
+> **Quién ejecuta ese job cambió el 2026-08-06.** Hoy lo ejecuta un **runner autoalojado en
+> el propio VPS** (§5.4): el servidor pide trabajo a GitHub y despliega desde dentro, así que
+> ya **no hace falta el puerto 22 abierto a internet ni una clave privada del servidor
+> guardada en GitHub**. Lo que sigue en esta sección es el montaje **anterior, por SSH**; se
+> conserva porque es la alternativa si algún día no quieres mantener un agente en el servidor,
+> y porque explica por qué el diseño de §5.4 es como es. Con el runner instalado, los secretos
+> `VPS_*` dejan de usarse.
+
+Lo que hacía falta configurar, una vez:
 
 **1. Una clave SSH exclusiva para el despliegue** (en tu PC, no en el servidor):
 
@@ -722,6 +730,111 @@ todos los recuentos de tablas idénticos a la BBDD viva.
 > propios ficheros: `.ssh/` (con la deploy key), `.cache/` (modelos ONNX), `.bashrc`, `.local/`…
 > Un `git clean` se los llevaría por delante. Si necesitas limpiar, hazlo con rutas explícitas.
 
+
+### 5.4 Runner autoalojado en el VPS (el que despliega hoy)
+
+Un *runner* autoalojado es un agente que corre en tu servidor, **abre él la conexión hacia
+GitHub** y se queda esperando trabajo. Le da la vuelta a la dirección del despliegue, y eso
+resuelve de golpe las dos cosas que peor sabían del montaje por SSH:
+
+- **El puerto 22 ya no tiene que estar abierto a internet.** Antes tenía que estarlo para que
+  el runner de GitHub pudiera entrar. Ahora nadie entra: es el servidor quien sale.
+- **Ya no hay una clave privada del servidor guardada en GitHub.** Aunque iba con *forced
+  command*, seguía siendo una credencial de acceso viviendo fuera de tu máquina.
+
+Y de paso, **los minutos de un runner propio no se facturan**.
+
+> **Lo que NO arregla, para que no haya sorpresas:** el trabajo lo sigue repartiendo GitHub.
+> Si Actions tiene una incidencia —como la del 2026-08-06—, tu runner se queda esperando igual
+> que uno alojado. La independencia real de GitHub es el despliegue a mano de §5.
+
+#### El usuario del runner, y por qué no es el de la app
+
+Un runner ejecuta **lo que diga el workflow**, así que quien pueda cambiar un `.yml` del
+repositorio puede ejecutar comandos en el servidor. Con la clave SSH eso estaba acotado por el
+`command=` forzado: daba igual lo que pidieras, sshd ejecutaba el script de despliegue y nada
+más. Para no perder esa propiedad, el runner corre como un usuario **sin acceso a la app**
+(`gha-runner`) y lo único que puede hacer con privilegios es invocar el script de despliegue
+como el dueño de la app:
+
+```bash
+# Usuario propio del agente, sin sudo general y sin nada que ver con /opt/mundoaventura.
+adduser --disabled-password --gecos "" gha-runner
+
+# Su ÚNICO permiso: ejecutar el script de despliegue como el usuario de la app.
+cat > /etc/sudoers.d/gha-runner <<'EOF'
+gha-runner ALL=(mundoaventura) NOPASSWD: /opt/mundoaventura/deploy/desplegar.sh
+EOF
+chmod 440 /etc/sudoers.d/gha-runner
+visudo -c        # debe decir "parsed OK"
+```
+
+Con eso, un workflow malicioso puede hacer ruido como `gha-runner` (que no puede leer el
+`.env` ni la base de datos), pero lo único que alcanza de la app es *desplegar*.
+
+#### Instalar el agente
+
+El token de registro **caduca en una hora** y se saca en el momento (Settings → Actions →
+Runners → New self-hosted runner, o con el CLI desde tu PC):
+
+```bash
+gh api -X POST repos/dlopezbernal/mundoaventura/actions/runners/registration-token --jq .token
+```
+
+En el servidor, como `gha-runner`:
+
+```bash
+sudo -u gha-runner -H bash -lc '
+  mkdir -p ~/actions-runner && cd ~/actions-runner
+  # Comprueba la última versión en github.com/actions/runner/releases
+  VER=2.330.0
+  curl -sSLo runner.tar.gz "https://github.com/actions/runner/releases/download/v${VER}/actions-runner-linux-x64-${VER}.tar.gz"
+  tar xzf runner.tar.gz && rm runner.tar.gz
+  ./config.sh --url https://github.com/dlopezbernal/mundoaventura \
+              --token PEGA_AQUI_EL_TOKEN \
+              --name vps-mundoaventura \
+              --labels despliegue \
+              --unattended --replace'
+```
+
+Las **etiquetas importan**: el workflow pide `[self-hosted, linux, despliegue]`. `self-hosted`
+y `linux` las pone el propio agente; `despliegue` es la que acabas de dar con `--labels`. Si no
+coincide, el job se queda esperando para siempre sin decir por qué.
+
+Y como servicio, para que sobreviva a los reinicios:
+
+```bash
+cd /home/gha-runner/actions-runner
+./svc.sh install gha-runner     # crea la unidad de systemd
+./svc.sh start
+./svc.sh status                 # debe decir "active (running)" y "Connected to GitHub"
+```
+
+#### Cerrar el puerto 22 (el premio)
+
+Solo **después** de comprobar que un despliegue completo funciona por el runner. Y sin
+quedarte fuera: deja tu propia IP, que es como sigues administrando el servidor.
+
+```bash
+ufw status numbered            # localiza la regla "OpenSSH"
+ufw delete <numero>            # quita el 22 abierto a todo el mundo
+ufw allow from TU.IP.PUBLICA to any port 22 proto tcp
+ufw status                     # comprueba que 80 y 443 siguen abiertos
+```
+
+> **Si tu IP doméstica es dinámica**, esta regla caduca sola el día que tu operador te la
+> cambie y te deja sin SSH. Antes de cerrar el puerto, ten a mano la **consola web (KVM)** del
+> panel de netcup: es el acceso que no depende de la red y con el que se arregla justo esto.
+
+#### Mantenimiento
+
+- **Actualizar el agente:** se actualiza solo mientras la versión no quede obsoleta del todo.
+  Si GitHub lo marca como *offline* por versión antigua: `./svc.sh stop`, descargar el tar
+  nuevo encima, `./svc.sh start`.
+- **Ver qué hizo:** `journalctl -u actions.runner.* -f`.
+- **Volver al despliegue por SSH:** cambia `runs-on` del job `deploy` a `ubuntu-latest`,
+  recupera los pasos de la clave SSH de §5.1 y vuelve a abrir el 22. Los secretos `VPS_*`
+  siguen en el repositorio precisamente para eso.
 ---
 
 ## 6. Lo que cambia al pasar de un túnel a internet
@@ -862,7 +975,10 @@ del VPS, cifrado de las copias (§5.2) y borrado de cuentas.
 | Falla la generación de imagen con `500 Internal server error` | Suele ser Replicate, no tu servidor: comprueba `GET /v1/account` con tu token y su página de estado. Si el panel de Replicate no muestra ni siquiera predicciones **fallidas**, la petición murió antes de crearlas |
 | `address already in use` al arrancar el backend | El socket y el servicio se pisan: o `--fd 3` **con** `mundoaventura.socket`, o `--host/--port` **sin** él (§3.9) |
 | Siguen apareciendo 502 al desplegar | El `.socket` lleva `PartOf=`, o se reinició `mundoaventura.socket` en vez de solo el `.service` (§3.9) |
-| El job `deploy` falla con `Permission denied (publickey)` | La clave no está en `authorized_keys` de **`mundoaventura`** (no de root), o `VPS_SSH_KEY` se pegó incompleta (faltan las líneas `BEGIN/END`) |
+| El job `deploy` se queda **encolado para siempre**, sin empezar | No hay ningún runner con las tres etiquetas que pide (`self-hosted`, `linux`, `despliegue`). Comprueba que el agente está arriba (`./svc.sh status`) y que se registró con `--labels despliegue` (§5.4) |
+| El job `deploy` falla con `sudo: a password is required` | Falta o no coincide `/etc/sudoers.d/gha-runner`. La regla tiene que autorizar **la ruta exacta** del script (§5.4) |
+| El despliegue por el runner falla en `uv sync` con `command not found` | Falta el `-H` en el `sudo`: sin él se conserva el HOME de `gha-runner` y no se encuentra `uv`, que vive en `~/.local/bin` del usuario de la app |
+| El job `deploy` falla con `Permission denied (publickey)` | Solo aplica al montaje **por SSH** (§5.1): la clave no está en `authorized_keys` de **`mundoaventura`** (no de root), o `VPS_SSH_KEY` se pegó incompleta (faltan las líneas `BEGIN/END`) |
 | El job `deploy` falla con `Host key verification failed` | `VPS_KNOWN_HOSTS` vacío o desfasado. Regenéralo con `ssh-keyscan` (§5.1) |
 | El despliegue automático dice `uv: command not found` | El comando forzado no es una shell de login. El script ya añade `~/.local/bin` al PATH: comprueba que el servidor tiene la versión nueva de `desplegar.sh` |
 | `desplegar.sh` falla en el paso 1 con `Permission denied` en `../copias` | Falta el directorio de copias. `install -d -o mundoaventura -g mundoaventura -m 750 /opt/copias` (§3.1) |
