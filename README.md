@@ -132,8 +132,9 @@ la sesión es persistente). Al entrar:
 La interfaz tiene **efectos de sonido tipo arcade** (girar el carrusel, elegir, enviar,
 recibir…) **sintetizados con la Web Audio API**: ni un solo fichero de audio ni una librería
 extra. Se apagan y encienden con el interruptor **🔊/🔇** del HUD, que está fuera del menú ☰
-porque es un control del niño, y la preferencia se recuerda en el navegador. No tienen nada que
-ver con la voz del personaje, que va por su cuenta.
+porque es un control del niño, y la preferencia se recuerda en el navegador. Ese interruptor
+silencia **todo lo que suena**, también la voz del personaje: con el sonido apagado el chat
+responde solo por texto, y al volver a encenderlo el personaje vuelve a hablar.
 
 El botón **📖 Manual de usuario** (en el menú ☰ del HUD) abre la **guía en pantalla**, con una sección para el
 niño (los 3 pasos y el chat) y otra para el adulto (cuenta de familia y ⚙️ Configuración). También

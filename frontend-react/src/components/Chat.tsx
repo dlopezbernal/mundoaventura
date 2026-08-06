@@ -9,6 +9,10 @@
  * Voz de RESPUESTA: si la respuesta trae audio_base64, se reproduce sola al
  * llegar (y cada burbuja con audio tiene un botón para volver a escucharla).
  * Si es null, el chat sigue funcionando solo con texto (degradación).
+ * Obedece al interruptor 🔊/🔇 del HUD (`audio/sfx.ts`): con el sonido apagado
+ * el personaje NO habla —solo texto— y, si se silencia a mitad de una frase, se
+ * calla en el acto. Los mp3 recibidos se conservan igualmente en la burbuja, así
+ * que al volver a encender el sonido se pueden escuchar con "Volver a escuchar".
  *
  * Voz de PREGUNTA: el botón de micrófono graba con MediaRecorder, sube el blob
  * a /api/transcribe y el texto entra por el MISMO flujo que una pregunta
@@ -19,9 +23,9 @@
  * generar una escena nueva, con lo que la conversación empieza de cero.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { askStream, BackendError, transcribe } from "../api/client";
-import { sfx } from "../audio/sfx";
+import { sfx, sonidoActivo, suscribirSonido } from "../audio/sfx";
 import QuickChips from "./QuickChips/QuickChips";
 import styles from "./Chat.module.css";
 
@@ -96,6 +100,11 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
   // y se reproducen EN ORDEN, sin pisarse, aunque lleguen mientras suena la anterior.
   const colaAudioRef = useRef<string[]>([]);
   const reproduciendoRef = useRef(false);
+  // Interruptor 🔊/🔇 del HUD. Se suscribe (no se copia a estado) para que apagar
+  // el sonido mientras el personaje habla se note al instante. Ojo: dentro de los
+  // callbacks del stream se llama a `sonidoActivo()` en vez de usar esta variable,
+  // porque el valor capturado en el render sería el de hace unos segundos.
+  const sonido = useSyncExternalStore(suscribirSonido, sonidoActivo, () => true);
 
   // Mientras se genera la respuesta, el personaje habla, se graba o se transcribe, no
   // se puede escribir/enviar ni lanzar otra pregunta: evita solapar preguntas y activar
@@ -119,9 +128,7 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
   // que sonara y soltar el micrófono si estaba grabando.
   useEffect(() => {
     return () => {
-      if (audioRef.current) audioRef.current.onended = null; // corta el encadenado de la cola
-      audioRef.current?.pause();
-      colaAudioRef.current = [];
+      callar(); // corta la voz y vacía la cola
       const grabacion = grabacionRef.current;
       if (grabacion) {
         grabacion.cancelada = true;
@@ -135,9 +142,34 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
     };
   }, []);
 
+  /** Corta la voz en curso y vacía la cola (silenciar, o desmontar el chat). */
+  function callar() {
+    if (audioRef.current) audioRef.current.onended = null; // corta el encadenado
+    audioRef.current?.pause();
+    audioRef.current = null;
+    colaAudioRef.current = [];
+    reproduciendoRef.current = false;
+  }
+
+  // Silenciar desde el HUD calla al personaje AHORA, sin esperar a que acabe la
+  // frase: es lo que espera quien pulsa 🔇 (a menudo, para que deje de sonar ya).
+  useEffect(() => {
+    if (!sonido) {
+      callar(); // solo toca refs, así que no hace falta en las dependencias
+      setHablando(false);
+    }
+  }, [sonido]);
+
   /** Reproduce el siguiente audio de la cola; al acabar, encadena el siguiente. */
   function bombearCola() {
     if (reproduciendoRef.current) return;
+    // El interruptor se consulta en cada frase, no al encolar: así una frase que
+    // ya estaba en la cola tampoco suena si el niño ha silenciado entretanto.
+    if (!sonidoActivo()) {
+      colaAudioRef.current = [];
+      setHablando(false);
+      return;
+    }
     const siguiente = colaAudioRef.current.shift();
     if (!siguiente) {
       setHablando(false); // cola vacía: el personaje deja de hablar
@@ -161,15 +193,14 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
 
   /** Encola una frase de audio (llega por streaming) y arranca la cola si hace falta. */
   function encolarAudio(audioBase64: string) {
+    if (!sonidoActivo()) return; // sonido apagado: la respuesta se entrega solo por texto
     colaAudioRef.current.push(audioBase64);
     bombearCola();
   }
 
   /** Reproduce una respuesta completa (todas sus frases) desde cero: botón "escuchar". */
   function reproducirMensaje(audios: string[]) {
-    if (audioRef.current) audioRef.current.onended = null; // corta el encadenado anterior
-    audioRef.current?.pause();
-    reproduciendoRef.current = false;
+    callar(); // corta lo que sonara antes de empezar de nuevo
     colaAudioRef.current = [...audios];
     bombearCola();
   }
@@ -366,7 +397,9 @@ export default function Chat({ personajeId, nombre, emoji, nombreNino, sexoNino 
             </span>
             <p className={styles.texto}>{mensaje.texto}</p>
 
-            {mensaje.audios && mensaje.audios.length > 0 && (
+            {/* Con el sonido apagado no se ofrece: un botón que no suena al
+                pulsarlo es peor que no tenerlo. Vuelve al reactivar 🔊. */}
+            {sonido && mensaje.audios && mensaje.audios.length > 0 && (
               <button
                 type="button"
                 className={styles.audio}
