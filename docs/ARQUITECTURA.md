@@ -242,7 +242,7 @@ BBDD vacía la app se comporta exactamente como antes (compatibilidad hacia atr�
 | Grupo | Endpoints | Quién puede |
 |---|---|---|
 | **Informativos** | `GET /`, `GET /health` | Cualquiera |
-| **Catálogos (lectura)** | `GET /api/personajes`, `/api/ubicaciones`, sus `/avatar` | Cualquiera — los necesita la SPA antes de tener sesión |
+| **Catálogos (lectura)** | `GET /api/personajes`, `/api/ubicaciones`, sus `/avatar` | Cualquiera — los necesita la SPA antes de tener sesión. **Salvo `?todos=1`**, que incluye los elementos desactivados y exige `X-Admin-Token` |
 | **Cuenta de familia** | `signup`, `login`, `verificar`, `reenviar`, `me`, `estado` | Cualquiera (son la puerta); login y OTP con bloqueo por IP → 429 |
 | **Perfil de familia** | `PUT /api/familias/perfil`\|`pin`, `DELETE /api/familias/cuenta` | Sesión de familia (`X-Family-Token`) |
 | **Flujo del niño (caros)** | `POST /api/generate`, `/api/generate-on-photo`, `/api/ask`, `/api/ask/stream`, `/api/transcribe` | **Candado (`X-Access-Code`) + sesión de familia**, más rate limit y cupo diario |

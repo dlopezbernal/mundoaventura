@@ -66,11 +66,10 @@ despliegue **todavía no** resuelve:
   Hito 7: el componente `CambiarPin`, la función `adminChangePin`, la clave `admin_pin_hash`,
   el esquema `AdminPin` (`backend/schemas/admin.py`) y, por arrastre, el `schema.d.ts`
   autogenerado. Sin impacto funcional ni visible. Refactor de limpieza para después de la entrega.
-- **Catálogos inactivos visibles sin credenciales**: `GET /api/personajes?todos=1` y su gemelo
-  de ubicaciones son públicos e incluyen los elementos **inactivos**. El parámetro solo lo usa
-  la pestaña de administración, así que debería exigir `requiere_admin`. No expone datos
-  personales —solo nombres de personajes desactivados—, pero es una fuga de superficie
-  innecesaria.
+- ✅ **Catálogos inactivos visibles sin credenciales.** **Corregido** el 2026-08-06:
+  `GET /api/personajes?todos=1` y su gemelo de ubicaciones exigen ahora `X-Admin-Token` (→ 401);
+  la lista de **activos** sigue siendo pública, porque la SPA la necesita antes de que el niño
+  tenga sesión. Fijado con `tests/test_catalogos_inactivos.py`.
 
 ## Fase 2 — el despliegue
 
