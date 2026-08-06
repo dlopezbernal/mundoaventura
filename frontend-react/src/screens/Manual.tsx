@@ -25,8 +25,9 @@ interface Props {
   onCerrar: () => void;
 }
 
-/** Preguntas de muestra: las mismas que ve el niño como chips en el chat. */
-const EJEMPLOS = ["¿Dónde vives?", "¿Tienes amigos?", "Cuéntame algo", "¿Qué comes?"];
+/** Preguntas de muestra: las mismas que ve el niño como chips en el chat.
+ *  Si cambian en QuickChips.tsx, cambian también aquí. */
+const EJEMPLOS = ["¿Dónde vives?", "¿Tienes amigos?", "Cuéntame algo"];
 
 export default function Manual({ onCerrar }: Props) {
   // El manual se abre desde cualquier punto de la página: empezar por el principio.
@@ -88,7 +89,7 @@ export default function Manual({ onCerrar }: Props) {
         </div>
 
         <div className={styles.requisitos}>
-          <span className={styles.requisito}>📶 Un dispositivo con internet</span>
+          <span className={styles.requisito}>📱 Móvil, tablet u ordenador, con internet</span>
           <span className={styles.requisito}>👤 Un adulto que cree la cuenta</span>
           <span className={styles.requisito}>🎙️ Micrófono (opcional) para hablar</span>
         </div>
@@ -150,7 +151,8 @@ export default function Manual({ onCerrar }: Props) {
             <h3 className={styles.pasoTitulo}>¡A JUGAR!</h3>
             <p className={styles.pasoTexto}>
               Pulsa <strong className={styles.destacado}>¡GENERAR! ▶</strong> y la máquina abre un
-              portal 🌀 y crea tu escena. Cuando aparezca la imagen, ¡ya puedes hablar!
+              portal 🌀 y crea tu escena. <strong>No hace falta esperar:</strong> puedes empezar a
+              hablar mientras se dibuja.
             </p>
           </div>
         </div>
@@ -184,6 +186,25 @@ export default function Manual({ onCerrar }: Props) {
                 El personaje te responde con su voz. Pulsa{" "}
                 <strong className={styles.destacado}>🔊 Volver a escuchar</strong> para oírlo otra
                 vez.
+              </p>
+            </div>
+            <div className={styles.uso}>
+              <span className={styles.usoEmoji} aria-hidden="true">
+                ⏳
+              </span>
+              <p className={styles.usoTexto}>
+                Mientras el personaje piensa o habla, el micro y el cuadro de escribir se{" "}
+                <strong className={styles.destacado}>bloquean un momento</strong>. Verás{" "}
+                <em>«está pensando…»</em>. Es normal: espera a que termine.
+              </p>
+            </div>
+            <div className={styles.uso}>
+              <span className={styles.usoEmoji} aria-hidden="true">
+                📚
+              </span>
+              <p className={styles.usoTexto}>
+                A veces aparece <strong className={styles.destacado}>¿De dónde lo he sacado?</strong>
+                : ábrelo y verás los trocitos de libro que ha usado para responderte.
               </p>
             </div>
           </div>
@@ -232,15 +253,47 @@ export default function Manual({ onCerrar }: Props) {
                 dígitos.
               </li>
               <li>
-                <strong className={styles.destacado}>Añade un perfil por cada niño</strong>: su
-                nombre y, si quieres, el sexo, para que el personaje le hable bien. Con varios
-                perfiles, la app pregunta «¿quién juega?» al empezar.
+                <strong className={styles.destacado}>Añade un perfil por cada niño</strong>. No
+                tienes que buscarlo: nada más crear la cuenta, la app te lleva a una pantalla de
+                bienvenida donde los das de alta con su nombre y, si quieres, el sexo, para que el
+                personaje le hable bien. Puedes saltarla («Lo haré luego») y hacerlo más tarde
+                desde ⚙️ Configuración.
+              </li>
+              <li>
+                <strong className={styles.destacado}>Elige quién juega.</strong> Con un solo niño,
+                la app entra directa. Con varios, pregunta «¿quién juega?» al empezar, y puedes
+                cambiar de niño cuando quieras con el botón 👥 de la barra de arriba.
               </li>
               <li>
                 <strong className={styles.destacado}>Pon un PIN de 4 dígitos</strong> 🔐 para
                 proteger los ajustes de la familia y la subida de fotos.
               </li>
             </ol>
+          </div>
+
+          <div className={styles.panel}>
+            <h3 className={styles.panelTitulo}>📱 En el móvil, y como app</h3>
+            <p className={styles.introPanel}>
+              La app se adapta al móvil, a la tablet y al ordenador. En pantallas pequeñas la
+              escena se recoge arriba en una barra, con un botón <strong>⤢ Ver</strong> para verla
+              en grande, y el chat ocupa el resto.
+            </p>
+            <ul className={styles.lista}>
+              <li>
+                📲 En la pantalla de acceso puede aparecer{" "}
+                <strong className={styles.destacado}>«Instalar en Android»</strong>: la añade a la
+                pantalla de inicio y se abre como una app, sin la barra del navegador.
+              </li>
+              <li>
+                🍏 En <strong>iPhone y iPad</strong> no sale ese botón: se instala desde{" "}
+                <em>Compartir → Añadir a pantalla de inicio</em>.
+              </li>
+              <li>
+                🔊 La app tiene <strong className={styles.destacado}>efectos de sonido</strong>. Se
+                silencian con el botón 🔊 de la barra de arriba, que está fuera del menú ☰ para
+                que el niño lo tenga a mano. Eso no calla la voz del personaje.
+              </li>
+            </ul>
           </div>
 
           <div className={styles.panel}>
@@ -262,8 +315,9 @@ export default function Manual({ onCerrar }: Props) {
                 (para cambiarlo hace falta el actual).
               </li>
               <li>
-                🗑️ <strong className={styles.peligro}>Eliminar la cuenta</strong> (acción
-                destructiva; pide confirmación).
+                🗑️ <strong className={styles.peligro}>Eliminar la cuenta de familia</strong>: es tu
+                derecho de supresión (RGPD). Borra la cuenta, los perfiles de los niños y el
+                registro de uso, y no se puede deshacer. Pide confirmación.
               </li>
             </ul>
             <p className={styles.cierrePanel}>
@@ -330,6 +384,29 @@ export default function Manual({ onCerrar }: Props) {
               No hay recuperación automática: para cambiarlo hay que escribir el actual. Podéis
               seguir jugando (solo bloquea ⚙️ Configuración y subir una foto); si lo necesitas,
               crea una cuenta de familia nueva.
+            </p>
+          </div>
+          <div className={styles.faqCard}>
+            <p className={styles.faqPregunta}>📲 No me sale el botón de instalar</p>
+            <p className={styles.faqTexto}>
+              Solo aparece si el navegador puede instalarla y aún no lo está. En Chrome de Android
+              debería salir; en iPhone y iPad se hace desde <em>Compartir → Añadir a pantalla de
+              inicio</em>. Si ya la instalaste, el botón desaparece: es normal.
+            </p>
+          </div>
+          <div className={styles.faqCard}>
+            <p className={styles.faqPregunta}>📩 No me llega el código del correo</p>
+            <p className={styles.faqTexto}>
+              Mira en la carpeta de spam y usa «Reenviar código». Si tu instalación no pide
+              verificar el correo, este paso ni aparece.
+            </p>
+          </div>
+          <div className={styles.faqCard}>
+            <p className={styles.faqPregunta}>🛡️ ¿Qué es «Administración de la aplicación»?</p>
+            <p className={styles.faqTexto}>
+              Es la zona de quien instala y mantiene la app, no la de tu familia: tiene su propia
+              contraseña y no se abre con el PIN. Si solo vas a usarla con tus hijos, no la
+              necesitas.
             </p>
           </div>
         </div>

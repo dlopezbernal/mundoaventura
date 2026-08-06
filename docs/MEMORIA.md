@@ -106,18 +106,38 @@ sección puntúa. Lleva al cuerpo la tabla de flujos de datos, los dos modos de 
 
 ---
 
-## Material gráfico que hace falta ✍️
+## Material gráfico
 
-La memoria necesita imágenes y **hoy solo hay una** en `docs/img/`. Mínimo recomendable:
+### Capturas ya hechas ✅
+
+Están en [`img/`](img/), tomadas de la aplicación funcionando de verdad (con una cuenta de
+demostración, escena generada real y respuesta real del LLM):
+
+| Fichero | Qué muestra | Dónde encaja |
+|---|---|---|
+| `app-01-acceso.png` | Pantalla de acceso, con el manual y la política de privacidad a la vista | §1 o §4 |
+| `app-02-quien-juega.png` | Selector de perfil con dos hermanos | §4 (multi-perfil) |
+| `app-03-paso1-personaje.png` | Paso 1: carrusel coverflow de personajes | §4 |
+| `app-04-paso2-mundo.png` | Paso 2: carrusel de mundos, con la carta "Mi foto" | §4 |
+| `app-05-consentimiento-foto.png` | **Consentimiento parental** antes de subir la foto | §7 (cumplimiento) |
+| `app-06-generando-escena.png` | El chat ya usable mientras la escena se genera | §4 (decisión de latencia percibida) |
+| `app-07-paso3-escena-chat.png` | Escena generada + respuesta del personaje **llamando al niño por su nombre** | §1 y §4 — es la mejor figura del conjunto |
+| `app-08-movil-paso3.png` | El mismo paso 3 en móvil: barra mini + chat a pantalla completa | §4 (responsive) |
+| `app-09-movil-visor-escena.png` | El visor "⤢ Ver" de móvil | §4 |
+| `app-10-configuracion-familia.png` | ⚙️ Configuración: perfiles, PIN y borrado de cuenta | §7 (derechos) |
+| `app-11-manual-usuario.png` | El manual en pantalla | §4 |
+
+> La captura 07 es la que mejor resume el proyecto en una imagen: escena generada,
+> conversación fundamentada y personalización por nombre, todo a la vez.
+
+### Lo que aún falta ✍️
 
 | Figura | Cómo obtenerla |
 |---|---|
 | Diagrama de arquitectura | Redibujar el ASCII de `ARQUITECTURA.md` en una herramienta de diagramas |
 | Diagrama de secuencia de una pregunta | Ídem |
-| Capturas del flujo (3 pasos + chat) | Directamente de la app |
-| Captura en móvil | DevTools en 390×780 |
 | Gráfica de progresión de métricas | De los CSV de `evals/resultados/` |
-| Gráfica de latencia antes/después | De `docs/mediciones/H8-latencia-streaming.md` |
+| Gráfica de latencia antes/después | De `mediciones/H8-latencia-streaming.md` |
 
 ---
 
