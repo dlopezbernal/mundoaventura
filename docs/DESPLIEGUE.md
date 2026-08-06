@@ -785,10 +785,17 @@ En el servidor, como `gha-runner`:
 
 ```bash
 sudo -u gha-runner -H bash -lc '
+  set -e
   mkdir -p ~/actions-runner && cd ~/actions-runner
-  # Comprueba la última versión en github.com/actions/runner/releases
-  VER=2.330.0
+  # Versión y hash: los publica cada release en github.com/actions/runner/releases.
+  # Se pueden sacar sin abrir el navegador:
+  #   gh api repos/actions/runner/releases/latest --jq .tag_name
+  VER=2.336.0
+  SHA=04cf0be1aff4c3ec3554466c39124ca250e3effd8873bb7e8d68535aa9505d5d
   curl -sSLo runner.tar.gz "https://github.com/actions/runner/releases/download/v${VER}/actions-runner-linux-x64-${VER}.tar.gz"
+  # Comprobar el hash NO es ceremonia: este binario va a ejecutar codigo en el
+  # servidor de produccion. Si no coincide, `set -e` corta aqui.
+  echo "${SHA}  runner.tar.gz" | sha256sum -c -
   tar xzf runner.tar.gz && rm runner.tar.gz
   ./config.sh --url https://github.com/dlopezbernal/mundoaventura \
               --token PEGA_AQUI_EL_TOKEN \
@@ -805,9 +812,17 @@ Y como servicio, para que sobreviva a los reinicios:
 
 ```bash
 cd /home/gha-runner/actions-runner
-./svc.sh install gha-runner     # crea la unidad de systemd
+./svc.sh install gha-runner     # crea la unidad de systemd (como root, y le dice
+                                # a systemd que el proceso corre como gha-runner)
 ./svc.sh start
 ./svc.sh status                 # debe decir "active (running)" y "Connected to GitHub"
+```
+
+Comprobación de que GitHub lo ve, desde tu PC (tiene que salir `online` y las tres etiquetas):
+
+```bash
+gh api repos/dlopezbernal/mundoaventura/actions/runners \
+  --jq '.runners[] | {name, status, labels: [.labels[].name]}'
 ```
 
 #### Cerrar el puerto 22 (el premio)
