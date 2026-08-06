@@ -120,6 +120,11 @@ extend-immutable-calls = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
+# `evals/` NO se recorre (aunque se pase a mano: `pytest evals/`): `evals/test_ciego.py`
+# se llama "test_*" pero es una HERRAMIENTA de línea de comandos (el test ciego de H6),
+# no una suite de pytest. El resto de la lista son los valores por defecto de pytest,
+# que se pierden al declarar esta clave.
+norecursedirs = ["evals", "*.egg", ".*", "_darcs", "build", "CVS", "dist", "node_modules", "venv"]
 
 [tool.coverage.run]
 source = ["backend"]

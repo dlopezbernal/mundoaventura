@@ -47,6 +47,30 @@ DESTINO="${DESTINO:-$APP_DIR/../copias}"
 RETENCION_DIAS="${RETENCION_DIAS:-15}"
 ETIQUETA="${1:-manual}"
 
+# Destinatario GPG para CIFRAR la copia. El tarball lleva el .env con TODAS las
+# claves de los proveedores, así que en claro es una bomba: quien lea el disco
+# se lleva Replicate, Groq, DeepL, ElevenLabs y el SMTP de una vez.
+#
+# Se cifra con CLAVE PÚBLICA a propósito, no con contraseña simétrica: así el
+# servidor puede crear copias pero NO puede leerlas. Si alguien entra en la
+# máquina, se encuentra ficheros que no puede abrir, porque la clave privada
+# nunca ha estado aquí. Con una contraseña simétrica tendría que vivir en el
+# servidor —o en este script— y no protegería del escenario que importa.
+#
+# Preparación (UNA vez). En TU máquina, nunca en el servidor:
+#     gpg --quick-generate-key "copias-mundoaventura" default default never
+#     gpg --armor --export copias-mundoaventura > publica.asc
+# Copia SOLO publica.asc al servidor y, como el usuario de la app:
+#     gpg --import publica.asc
+#     gpg --list-keys                      # anota el correo o la huella
+# Y declara el destinatario en el entorno del temporizador y del despliegue:
+#     BACKUP_GPG_RECIPIENT=copias-mundoaventura
+#
+# Para restaurar, en TU máquina:  gpg -d copia.tgz.gpg | tar xz -C ...
+#
+# GUARDA LA CLAVE PRIVADA FUERA DEL SERVIDOR. Sin ella las copias son ruido.
+BACKUP_GPG_RECIPIENT="${BACKUP_GPG_RECIPIENT:-}"
+
 cd "$APP_DIR"
 
 if [ ! -d "$DESTINO" ] || [ ! -w "$DESTINO" ]; then
@@ -57,9 +81,14 @@ if [ ! -d "$DESTINO" ] || [ ! -w "$DESTINO" ]; then
 fi
 
 SELLO="$(date +%Y%m%d-%H%M%S)"
-ARCHIVO="$DESTINO/mundoaventura-$SELLO-$ETIQUETA.tgz"
 ESCENARIO="$(mktemp -d)"
 trap 'rm -rf "$ESCENARIO"' EXIT
+
+# El tarball se arma DENTRO del escenario temporal (que ya nace privado por el
+# umask y se borra solo). Solo llega al destino final cuando está verificado y,
+# si procede, cifrado: así en la carpeta de copias nunca aparece un fichero a
+# medias, ni un claro fugaz que alguien pueda leer entre medias.
+ARCHIVO="$ESCENARIO/mundoaventura-$SELLO-$ETIQUETA.tgz"
 
 # --- 1. Instantánea CONSISTENTE de la BBDD -----------------------------------
 # Un `cp` de un SQLite vivo puede capturarlo a medias si justo hay una escritura
@@ -118,18 +147,46 @@ tar czf "$ARCHIVO" \
 # Una copia que no se ha abierto nunca es una hipótesis. Esto no sustituye a una
 # restauración de verdad, pero sí detecta el archivo truncado o corrupto.
 if ! tar tzf "$ARCHIVO" > /dev/null 2>&1; then
-	echo "ERROR: el archivo generado no se puede leer. Se borra: $ARCHIVO" >&2
-	rm -f "$ARCHIVO"
+	echo "ERROR: el archivo generado no se puede leer. Se descarta." >&2
 	exit 1
 fi
+ENTRADAS="$(tar tzf "$ARCHIVO" | wc -l)"
 
-echo "Copia creada: $ARCHIVO ($(du -h "$ARCHIVO" | cut -f1), $(tar tzf "$ARCHIVO" | wc -l) entradas)"
+# --- 5. Cifrar y mover al destino --------------------------------------------
+# Se verifica ANTES de cifrar: después ya no se puede mirar dentro sin la clave
+# privada, que a propósito no está en esta máquina.
+if [ -n "$BACKUP_GPG_RECIPIENT" ]; then
+	if ! command -v gpg > /dev/null 2>&1; then
+		echo "ERROR: BACKUP_GPG_RECIPIENT está puesto pero no hay gpg instalado." >&2
+		echo "       Instálalo (apt install gnupg) o quita la variable." >&2
+		exit 1
+	fi
+	FINAL="$DESTINO/$(basename "$ARCHIVO").gpg"
+	# --trust-model always: la clave se importó a mano en el servidor; exigir
+	# además firmarla no añade seguridad aquí y rompería el temporizador.
+	if ! gpg --batch --yes --trust-model always \
+		--recipient "$BACKUP_GPG_RECIPIENT" \
+		--output "$FINAL" --encrypt "$ARCHIVO"; then
+		echo "ERROR: falló el cifrado con GPG. No se deja copia en claro." >&2
+		rm -f "$FINAL"
+		exit 1
+	fi
+	echo "Copia creada y CIFRADA: $FINAL ($(du -h "$FINAL" | cut -f1), $ENTRADAS entradas)"
+else
+	FINAL="$DESTINO/$(basename "$ARCHIVO")"
+	mv "$ARCHIVO" "$FINAL"
+	echo "Copia creada: $FINAL ($(du -h "$FINAL" | cut -f1), $ENTRADAS entradas)"
+	echo "AVISO: la copia va SIN CIFRAR y contiene el .env con todas las claves." >&2
+	echo "       Define BACKUP_GPG_RECIPIENT para cifrarla (ver cabecera de este script)." >&2
+fi
 
-# --- 5. Retención ------------------------------------------------------------
+# --- 6. Retención ------------------------------------------------------------
 # Se borran las copias con más de RETENCION_DIAS días. El patrón del nombre
 # acota el borrado a NUESTROS ficheros: si alguien deja algo suyo en la carpeta,
-# no se lo llevamos por delante.
-BORRADAS="$(find "$DESTINO" -maxdepth 1 -name 'mundoaventura-*.tgz' -type f -mtime "+$RETENCION_DIAS" -print -delete | wc -l)"
+# no se lo llevamos por delante. El comodín final cubre tanto `.tgz` como
+# `.tgz.gpg`, para que una carpeta con copias de antes y de después del cifrado
+# se pode igual.
+BORRADAS="$(find "$DESTINO" -maxdepth 1 -name 'mundoaventura-*.tgz*' -type f -mtime "+$RETENCION_DIAS" -print -delete | wc -l)"
 [ "$BORRADAS" -gt 0 ] && echo "Retención: borradas $BORRADAS copias de más de $RETENCION_DIAS días."
 
-echo "En $DESTINO hay $(find "$DESTINO" -maxdepth 1 -name 'mundoaventura-*.tgz' | wc -l) copias ($(du -sh "$DESTINO" | cut -f1))."
+echo "En $DESTINO hay $(find "$DESTINO" -maxdepth 1 -name 'mundoaventura-*.tgz*' | wc -l) copias ($(du -sh "$DESTINO" | cut -f1))."

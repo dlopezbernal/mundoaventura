@@ -24,7 +24,7 @@ export default function Seguridad2FA() {
   const [enrol, setEnrol] = useState<Admin2FAEnrol | null>(null);
   const [codigo, setCodigo] = useState("");
   const [recovery, setRecovery] = useState<string[] | null>(null);
-  const [pinDesactivar, setPinDesactivar] = useState("");
+  const [passwordDesactivar, setPasswordDesactivar] = useState("");
   const [desactivando, setDesactivando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
@@ -66,10 +66,10 @@ export default function Seguridad2FA() {
     setError(null);
     setOcupado(true);
     try {
-      await admin2faDesactivar(pinDesactivar);
+      await admin2faDesactivar(passwordDesactivar);
       setActivo(false);
       setDesactivando(false);
-      setPinDesactivar("");
+      setPasswordDesactivar("");
     } catch (exc) {
       setError(exc instanceof BackendError ? exc.message : String(exc));
     } finally {
@@ -175,9 +175,9 @@ export default function Seguridad2FA() {
                     <input
                       className={styles.input}
                       type="password"
-                      value={pinDesactivar}
+                      value={passwordDesactivar}
                       autoComplete="off"
-                      onChange={(e) => setPinDesactivar(e.target.value)}
+                      onChange={(e) => setPasswordDesactivar(e.target.value)}
                     />
                   </label>
                   <div className={styles.pjBarra}>
@@ -185,7 +185,7 @@ export default function Seguridad2FA() {
                       type="button"
                       className="btn btn-primario"
                       onClick={() => void desactivar()}
-                      disabled={ocupado || !pinDesactivar}
+                      disabled={ocupado || !passwordDesactivar}
                     >
                       Desactivar
                     </button>
@@ -194,7 +194,7 @@ export default function Seguridad2FA() {
                       className="btn btn-secundario"
                       onClick={() => {
                         setDesactivando(false);
-                        setPinDesactivar("");
+                        setPasswordDesactivar("");
                       }}
                     >
                       Cancelar

@@ -44,7 +44,11 @@ logger = logging.getLogger(__name__)
 # Claves RESERVADAS en la tabla `settings`. Ninguna está en el `_SPEC` de
 # settings_service, así que ni se exportan, ni se importan, ni aparecen en el menú de
 # ajustes: son internas de este servicio.
-_CLAVE_PIN = "admin_pin_hash"
+# OJO: el STRING conserva el nombre viejo ("admin_pin_hash") a propósito. Es la clave
+# primaria de una fila que ya existe en el SQLite de las instalaciones desplegadas
+# (producción incluida); renombrarla dejaría a esos adultos sin contraseña de admin.
+# El identificador de Python sí se renombró a la nomenclatura actual (contraseña).
+_CLAVE_PASSWORD = "admin_pin_hash"
 # 2FA (Hito 9.2d): el secreto TOTP activo, el secreto "pendiente" durante el
 # enrolamiento (antes de confirmar), y los códigos de recuperación (hasheados).
 _CLAVE_2FA_SECRET = "admin_2fa_secret"
@@ -56,14 +60,14 @@ _ITERACIONES = 200_000
 # Longitud mínima de la CONTRASEÑA de administración (Hito 9.2d): se sube de 4 a 8 al
 # robustecer el acceso pensando en internet. Solo se comprueba al crear/cambiar, así
 # que una credencial más corta ya existente sigue sirviendo para entrar.
-_LONGITUD_MIN_PIN = 8
+_LONGITUD_MIN_PASSWORD = 8
 # Nº de códigos de recuperación de un solo uso que se generan al activar el 2FA.
 _NUM_RECOVERY = 8
 # Ventana de validación TOTP: ±1 intervalo (30 s) para tolerar desfases de reloj.
 _TOTP_WINDOW = 1
 
 # Vigencia de un token de sesión (segundos). 12 h: cómodo para un adulto que
-# configura la app en una sesión sin tener que reintroducir el PIN a cada paso.
+# configura la app en una sesión sin tener que reintroducir la contraseña a cada paso.
 _TTL_TOKEN = 12 * 3600
 
 # Tokens de sesión válidos → instante de caducidad (epoch). En memoria: un solo
@@ -87,7 +91,7 @@ _fallos_login: dict[str, dict[str, float]] = {}
 
 
 class BloqueoLoginError(Exception):
-    """Demasiados intentos fallidos de PIN: bloqueo temporal (el router → HTTP 429)."""
+    """Demasiados intentos fallidos de contraseña: bloqueo temporal (el router → HTTP 429)."""
 
     def __init__(self, segundos: int):
         self.segundos = segundos
@@ -129,7 +133,7 @@ def _limpiar_fallos(ip: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Almacenamiento del PIN (hash) en la tabla settings
+# Almacenamiento de la contraseña (hash) en la tabla settings
 # ---------------------------------------------------------------------------
 def _leer_clave(clave: str) -> str | None:
     """Lee el valor de una clave reservada de la tabla settings (o None)."""
@@ -164,32 +168,38 @@ def _borrar_clave(clave: str) -> None:
 
 
 def _leer_hash() -> str | None:
-    return _leer_clave(_CLAVE_PIN)
+    return _leer_clave(_CLAVE_PASSWORD)
 
 
 def _guardar_hash(valor: str) -> None:
-    _guardar_clave(_CLAVE_PIN, valor)
+    _guardar_clave(_CLAVE_PASSWORD, valor)
 
 
-def _hashear(pin: str, salt_hex: str) -> str:
-    """Deriva el hash del PIN con PBKDF2. Devuelve 'salt$hash' en hex."""
-    dk = hashlib.pbkdf2_hmac("sha256", pin.encode("utf-8"), bytes.fromhex(salt_hex), _ITERACIONES)
+def _hashear(secreto: str, salt_hex: str) -> str:
+    """Deriva el hash de un secreto con PBKDF2. Devuelve 'salt$hash' en hex.
+
+    Se usa tanto para la contraseña de admin como para los códigos de recuperación 2FA.
+    """
+    dk = hashlib.pbkdf2_hmac(
+        "sha256", secreto.encode("utf-8"), bytes.fromhex(salt_hex), _ITERACIONES
+    )
     return f"{salt_hex}${dk.hex()}"
 
 
-def _verificar(pin: str, guardado: str) -> bool:
-    """Comprueba el PIN contra el 'salt$hash' guardado (comparación en tiempo constante)."""
+def _verificar(secreto: str, guardado: str) -> bool:
+    """Comprueba un secreto contra el 'salt$hash' guardado (comparación en tiempo constante)."""
     try:
         salt_hex, _ = guardado.split("$", 1)
     except ValueError:
         return False
-    return hmac.compare_digest(_hashear(pin, salt_hex), guardado)
+    return hmac.compare_digest(_hashear(secreto, salt_hex), guardado)
 
 
-def _validar_pin_nuevo(pin: str) -> None:
-    if not pin or len(pin.strip()) < _LONGITUD_MIN_PIN:
+def _validar_password_nueva(password: str) -> None:
+    if not password or len(password.strip()) < _LONGITUD_MIN_PASSWORD:
         raise ValueError(
-            f"La contraseña de administración debe tener al menos {_LONGITUD_MIN_PIN} caracteres."
+            "La contraseña de administración debe tener al menos "
+            f"{_LONGITUD_MIN_PASSWORD} caracteres."
         )
 
 
@@ -201,7 +211,7 @@ def esta_configurado() -> bool:
     return _leer_hash() is not None
 
 
-def configurar(pin: str) -> str:
+def configurar(password: str) -> str:
     """Crea la contraseña por primera vez y devuelve un token de sesión (auto-login).
 
     Lanza ValueError (→ 400) si ya hay una contraseña configurada o es demasiado corta.
@@ -210,12 +220,12 @@ def configurar(pin: str) -> str:
         raise ValueError(
             "Ya hay una contraseña configurada. Usa 'cambiar contraseña' para modificarla."
         )
-    _validar_pin_nuevo(pin)
-    _guardar_hash(_hashear(pin.strip(), secrets.token_hex(16)))
+    _validar_password_nueva(password)
+    _guardar_hash(_hashear(password.strip(), secrets.token_hex(16)))
     return _crear_token()
 
 
-def login(pin: str, ip: str = "?", codigo: str | None = None) -> str:
+def login(password: str, ip: str = "?", codigo: str | None = None) -> str:
     """Valida la contraseña (y el 2FA si está activo) y devuelve un token de sesión.
 
     Lanza BloqueoLoginError (→ 429) si la IP está bloqueada; ValueError (→ 400) si no
@@ -228,7 +238,7 @@ def login(pin: str, ip: str = "?", codigo: str | None = None) -> str:
     guardado = _leer_hash()
     if guardado is None:
         raise ValueError("Aún no hay una contraseña configurada. Créala primero.")
-    if not _verificar(pin.strip(), guardado):
+    if not _verificar(password.strip(), guardado):
         _registrar_fallo(ip)
         raise ValueError("Contraseña incorrecta.")
     # Contraseña correcta. Si el 2FA está activo, exigimos el segundo factor.
@@ -242,15 +252,15 @@ def login(pin: str, ip: str = "?", codigo: str | None = None) -> str:
     return _crear_token()
 
 
-def cambiar(pin_actual: str, pin_nuevo: str) -> None:
+def cambiar(password_actual: str, password_nueva: str) -> None:
     """Cambia la contraseña (requiere la actual). Lanza ValueError (→ 400) si no cuadra."""
     guardado = _leer_hash()
     if guardado is None:
         raise ValueError("Aún no hay una contraseña configurada.")
-    if not _verificar(pin_actual.strip(), guardado):
+    if not _verificar(password_actual.strip(), guardado):
         raise ValueError("La contraseña actual no es correcta.")
-    _validar_pin_nuevo(pin_nuevo)
-    _guardar_hash(_hashear(pin_nuevo.strip(), secrets.token_hex(16)))
+    _validar_password_nueva(password_nueva)
+    _guardar_hash(_hashear(password_nueva.strip(), secrets.token_hex(16)))
     # Al cambiar la contraseña invalidamos todas las sesiones abiertas.
     _tokens.clear()
 
@@ -338,10 +348,10 @@ def confirmar_enrolamiento_2fa(codigo: str) -> list[str]:
     return codigos
 
 
-def desactivar_2fa(pin: str) -> None:
+def desactivar_2fa(password: str) -> None:
     """Desactiva el 2FA. Exige la CONTRASEÑA actual (re-autenticación). Lanza ValueError si falla."""
     guardado = _leer_hash()
-    if guardado is None or not _verificar((pin or "").strip(), guardado):
+    if guardado is None or not _verificar((password or "").strip(), guardado):
         raise ValueError("La contraseña no es correcta.")
     _borrar_clave(_CLAVE_2FA_SECRET)
     _borrar_clave(_CLAVE_2FA_PENDIENTE)

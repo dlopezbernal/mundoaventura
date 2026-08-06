@@ -367,6 +367,17 @@ MENSAJE_LIMITE: str = os.getenv(
     "Vuelve a intentarlo dentro de un momento, ¿vale?",
 ).strip()
 
+# --- CORS: orígenes del navegador autorizados a llamar al backend ---
+# CORS es una regla de seguridad de los navegadores: por defecto, una web solo puede
+# llamar a su propio dominio. Como el frontend (la SPA React) y el backend pueden
+# estar en orígenes distintos, aquí se declara la lista de permitidos (separada por
+# comas en el .env, ver .env.example). Vacía = se permite CUALQUIER origen ("*"):
+# cómodo en desarrollo; acótala si expones el backend a internet.
+# Es un ajuste de DESPLIEGUE (.env), como ACCESS_CODE: no se edita en caliente.
+CORS_ORIGINS: list[str] = [
+    origen.strip() for origen in os.getenv("CORS_ORIGINS", "").split(",") if origen.strip()
+] or ["*"]
+
 
 def _leer_bool(nombre: str, por_defecto: str = "false") -> bool:
     """Lee una variable de entorno como booleano (acepta true/1/yes/on)."""

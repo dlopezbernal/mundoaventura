@@ -130,14 +130,27 @@ demostración, escena generada real y respuesta real del LLM):
 > La captura 07 es la que mejor resume el proyecto en una imagen: escena generada,
 > conversación fundamentada y personalización por nombre, todo a la vez.
 
+### Gráficas ✅
+
+En [`img/`](img/), en **SVG** (vectorial: no se pixela al ampliar ni al imprimir el PDF). Se
+regeneran con `uv run python scripts/generar_graficas.py`, así que si algún dato cambia no hay
+que redibujar nada:
+
+| Fichero | Qué muestra | Dónde encaja |
+|---|---|---|
+| `gr-01-progresion-retrieval.svg` | Recall@3 de chunk y acierto de ruteo en las cuatro configuraciones de H4 | §5 — es la figura del "¿cómo sabéis que ha mejorado?" |
+| `gr-02-latencia-percibida.svg` | Latencia percibida antes y después del streaming | §5 y §1 — la que explica el problema que más se nota |
+
+> Los colores están **validados para daltonismo** (ΔE 24,7 en protanopía frente a un umbral de
+> 8) y las series llevan etiqueta además de color, así que la figura sigue leyéndose impresa en
+> blanco y negro o por alguien con visión del color reducida.
+
 ### Lo que aún falta ✍️
 
 | Figura | Cómo obtenerla |
 |---|---|
 | Diagrama de arquitectura | Redibujar el ASCII de `ARQUITECTURA.md` en una herramienta de diagramas |
 | Diagrama de secuencia de una pregunta | Ídem |
-| Gráfica de progresión de métricas | De los CSV de `evals/resultados/` |
-| Gráfica de latencia antes/después | De `mediciones/H8-latencia-streaming.md` |
 
 ---
 

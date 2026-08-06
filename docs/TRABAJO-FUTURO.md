@@ -61,11 +61,14 @@ despliegue **todavía no** resuelve:
   de todas. Observabilidad (métricas, trazas) más allá de los logs de consola.
 - **Un `Dockerfile` simple** para reproducibilidad. Orquestación (Compose/Kubernetes) **no**: sería
   sobre-ingeniería para el tamaño del proyecto (`PLAN.md §6`).
-- **Nomenclatura interna**: la UI y los mensajes de la credencial de admin ya dicen "contraseña"
-  (≥ 8 + 2FA, H9.2d); quedan por renombrar los **identificadores internos** heredados del
-  Hito 7: el componente `CambiarPin`, la función `adminChangePin`, la clave `admin_pin_hash`,
-  el esquema `AdminPin` (`backend/schemas/admin.py`) y, por arrastre, el `schema.d.ts`
-  autogenerado. Sin impacto funcional ni visible. Refactor de limpieza para después de la entrega.
+- ✅ **Nomenclatura interna de la credencial de admin.** **Hecho** el 2026-08-06: renombrados
+  `CambiarPin` → `CambiarPassword`, `adminChangePin` → `adminChangePassword`, el esquema
+  `AdminPin` → `AdminPassword` y los campos del cuerpo JSON (`pin` → `password`), con el
+  `schema.d.ts` regenerado. **La clave de BBDD `admin_pin_hash` se conserva a propósito**: es la
+  clave primaria de una fila que ya existe en el SQLite de producción, y cambiarla obligaría a
+  migrar. Queda documentado con un comentario en el propio `admin_service`. Ojo, sigue habiendo
+  **dos credenciales distintas** y solo se renombró la de admin: el **PIN de familia** es un PIN
+  de verdad (4 dígitos) y su nombre es correcto.
 - ✅ **Catálogos inactivos visibles sin credenciales.** **Corregido** el 2026-08-06:
   `GET /api/personajes?todos=1` y su gemelo de ubicaciones exigen ahora `X-Admin-Token` (→ 401);
   la lista de **activos** sigue siendo pública, porque la SPA la necesita antes de que el niño
@@ -108,11 +111,14 @@ persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo auto
   servidor tenga la versión correcta de Node, `uv` y Python.
 - **Entorno de pruebas.** Hoy solo existe producción: lo que se despliega no se ha visto nunca
   funcionando en un servidor antes de estar delante de los usuarios.
-- **Peticiones en vuelo: implementado, sin medir.** El corte para conexiones nuevas está
-  resuelto por el socket de systemd. Para las respuestas ya empezadas (el SSE del chat, que
-  dura segundos) el servicio usa `KillSignal=SIGINT` + `TimeoutStopSec=30`, que le da margen a
-  uvicorn para terminarlas. **El mecanismo existe; lo que falta es la medición** que demuestre
-  que ninguna respuesta en vuelo se corta al desplegar.
+- **Peticiones en vuelo: implementado, arnés listo, medición pendiente.** El corte para
+  conexiones nuevas está resuelto por el socket de systemd. Para las respuestas ya empezadas
+  (el SSE del chat, que dura segundos) el servicio usa `KillSignal=SIGINT` +
+  `TimeoutStopSec=30`. Desde el 2026-08-06 existe además `scripts/bench_drenado.py`, que abre
+  un stream, reinicia el servicio a mitad y comprueba si la respuesta llega a su final, con el
+  criterio de aceptación declarado en
+  [`mediciones/F3-drenado-en-vuelo.md`](mediciones/F3-drenado-en-vuelo.md). **Solo falta
+  ejecutarlo en el VPS**, porque requiere reiniciar el servicio real.
 - **Observabilidad y avisos.** `journalctl` es suficiente para depurar a mano, pero nadie se entera
   si el servicio se cae de madrugada, si caduca un certificado o si se agota el saldo de un
   proveedor. Un *healthcheck* externo con aviso es el mínimo.
@@ -122,34 +128,40 @@ persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo auto
   (2026-08-05: `integrity_check` en `ok` y recuentos idénticos a la BBDD viva). Lo que falta es
   lo más importante: **sacarlas del servidor**. Hoy viven en el mismo disco que protegen, así que
   no cubren el escenario que más duele — perder la máquina. Un `rclone`/`restic` a
-  almacenamiento externo desde el mismo temporizador lo cerraría. **Y antes de subirlas hay que
-  cifrarlas**: el `.tgz` incluye el `.env` con todas las claves **en claro**. Eso no es solo
-  trabajo futuro — hoy es una exposición real si alguien accede al servidor.
+  almacenamiento externo desde el mismo temporizador lo cerraría.
+- ✅ **Copias cifradas.** **Hecho** el 2026-08-06: `deploy/respaldar.sh` cifra el `.tgz` con
+  **GPG de clave pública** (`BACKUP_GPG_RECIPIENT`). Se eligió asimétrico y no una contraseña
+  simétrica precisamente por el escenario que importa: el servidor puede **crear** copias pero
+  **no leerlas**, porque la clave privada nunca ha estado en esa máquina. Sin la variable
+  configurada la copia se sigue haciendo, pero avisa por `stderr` de que va en claro. Probado
+  de extremo a extremo: el secreto no aparece en el fichero cifrado y se recupera al descifrar.
+  Instrucciones de la clave en la cabecera del propio script y en
+  [`DESPLIEGUE.md §5.2`](DESPLIEGUE.md).
 
 ## Higiene del repositorio (limpieza, sin impacto funcional)
 
 Nada de esto afecta a cómo funciona la app; son restos que un revisor encontrará al abrir el
-repositorio y conviene reconocer antes de que los encuentre él.
+repositorio. **La mayoría se limpió el 2026-08-06**; queda constancia de qué era cada cosa.
 
-- **`backend/models/` está vacío** (solo un `.gitkeep`) y su comentario habla de checkpoints
-  `.pth` y de un `scripts/download_models.py` que **no existe**: es un residuo de la época en
-  que la generación de imagen iba a ser local. El módulo real de tablas es `backend/models.py`.
-- **`legacy/frontend-flet/` ya no tiene fuentes** (solo `__pycache__`, ignorado), pero
-  `api/client.ts` sigue diciendo que "replica las 5 funciones de `legacy/frontend-flet/api_client.py`".
+- ✅ **`backend/models/` borrado.** Directorio vacío (solo un `.gitkeep`) cuyo comentario hablaba
+  de checkpoints `.pth` y de un `scripts/download_models.py` inexistente: residuo de cuando la
+  generación de imagen iba a ser local. El módulo real de tablas es el **fichero**
+  `backend/models.py`; tener además un directorio con ese nombre era un paquete-espacio latente.
+- ✅ **`legacy/` borrada.** No quedaba ningún fichero versionado, solo un `__pycache__` local.
+- ✅ **`CORS_ORIGINS` movido a `config.py`**, con el mismo comportamiento, restaurando el patrón
+  de "toda la configuración de despliegue en un sitio".
+- ✅ **`evals/` excluido de la recolección de pytest** (`norecursedirs`), para que `evals/test_ciego.py`
+  —que es una herramienta de línea de comandos, no un test— no se recoja nunca por error. No se
+  renombró a propósito: el comando está documentado en `EVALUACION.md`.
 - **`requirements-backend.txt` duplica a mano** la lista de dependencias de `pyproject.toml`,
   sin versiones. Se declara a sí mismo como *fallback*, pero nada impide que se desincronice
-  en silencio.
-- **`CORS_ORIGINS` se lee con `os.getenv` en `main.py`**, no en `config.py`, rompiendo el
-  patrón de "toda la configuración en un sitio".
+  en silencio. **Sigue pendiente** (generarlo desde el lockfile sería lo suyo).
 - **Doble gobernanza de los ajustes de correo y de `DEBUG`**: viven a la vez en `config.py`
   (como toggle de despliegue) y en `settings_service` (editables en caliente). Funciona, pero
-  hay que saber cuál gana.
-- **`evals/test_ciego.py` se llama como un test de pytest** y no lo es (es una herramienta de
-  línea de comandos). Hoy no rompe porque `testpaths = ["tests"]`, pero un `pytest evals/` lo
-  recogería.
-- **Cobertura de tests desigual**: 31 ficheros de test, pero sin fichero propio
+  hay que saber cuál gana. **Sigue pendiente.**
+- **Cobertura de tests desigual**: 32 ficheros de test, pero sin fichero propio
   `embeddings`, `personajes_service`, `ubicaciones_service`, `settings_service`,
-  `voice_service` y `replicate_client`.
+  `voice_service` y `replicate_client`. **Sigue pendiente.**
 
 ## Ideas de mejora del producto (con criterio, no lista de deseos)
 

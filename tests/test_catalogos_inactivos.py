@@ -35,7 +35,7 @@ def _bbdd_temporal(tmp_path, monkeypatch):
 
 def _token_admin() -> str:
     """Configura la credencial de admin en la BBDD temporal y devuelve un token."""
-    r = _CLIENTE.post("/api/admin/setup", json={"pin": "contrasena-de-prueba"})
+    r = _CLIENTE.post("/api/admin/setup", json={"password": "contrasena-de-prueba"})
     assert r.status_code == 200, r.text
     return r.json()["token"]
 
