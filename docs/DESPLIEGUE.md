@@ -693,9 +693,12 @@ gpg -d mundoaventura-AAAAMMDD-HHMMSS-nocturno.tgz.gpg | tar xz -C /ruta/destino
 > cifradas son ruido y no hay forma de recuperarlas. Si no defines `BACKUP_GPG_RECIPIENT`, el
 > script sigue funcionando pero avisa por `stderr` de que la copia va en claro.
 
-**Retención: 15 días.** Cada ejecución borra los `.tgz` más antiguos, así que la carpeta se
+**Retención: 15 días.** Cada ejecución borra las copias más antiguas, así que la carpeta se
 estabiliza en ~105 MB en vez de crecer sin fin. El borrado se acota al patrón
-`mundoaventura-*.tgz`: si dejas ahí un fichero tuyo, no se lo lleva por delante.
+`mundoaventura-*.tgz*` — con el comodín final, para que la limpieza alcance tanto a los `.tgz`
+en claro como a los `.tgz.gpg` cifrados y una carpeta con copias de antes y de después de
+activar el cifrado no acumule dos generaciones. Si dejas ahí un fichero tuyo con otro nombre,
+no se lo lleva por delante.
 
 ### 5.3 Restaurar
 
@@ -724,9 +727,13 @@ todos los recuentos de tablas idénticos a la BBDD viva.
 ## 6. Lo que cambia al pasar de un túnel a internet
 
 El blindaje del [Hito 2](decisiones/ADR-001-candado-tunel.md) se diseñó para un túnel
-efímero. Con un dominio permanente hay tres puntos que cambian:
+efímero. Con un dominio permanente hay tres puntos que cambian: la **autenticación** de los
+endpoints caros (§6.1), la **verificación del correo** (§6.2, con su montaje en §6.3) y los
+**datos personales** (§6.4).
 
-**1. Los endpoints caros exigen sesión de familia** (ya implementado). `ACCESS_CODE` frena
+### 6.1 Los endpoints caros exigen sesión de familia
+
+Ya implementado. `ACCESS_CODE` frena
 el escaneo automático, pero **no es autenticación**: viaja incrustado en el bundle de la
 SPA (`VITE_ACCESS_CODE`), así que cualquiera que abra las DevTools lo lee y puede llamar a
 `/api/generate`, `/api/ask` y `/api/transcribe` con `curl`, gastando tu saldo de
@@ -743,9 +750,11 @@ apagarse desde la UI. Ponlo en `false` solo para trastear desde `/docs`. Y no qu
 techo de gasto: `MAX_IMAGENES_DIA` es el que te protege de una familia legítima —o de una
 cuenta creada para abusar— que se pase de vueltas.
 
-**2. `EMAIL_VERIFICACION`.** Por defecto está en `false` (cómodo para la demo). En un
-servidor abierto significa que cualquiera puede crear cuentas con correos inventados.
-Ponlo en `true` y elige un proveedor de envío real (§6.3).
+### 6.2 `EMAIL_VERIFICACION`
+
+Por defecto está en `false` (cómodo para la demo). En un servidor abierto significa que
+cualquiera puede crear cuentas con correos inventados. Ponlo en `true` y elige un proveedor de
+envío real (§6.3).
 
 ### 6.3 Envío de correo: Brevo desde el dominio propio
 
@@ -819,10 +828,12 @@ alta con el mismo correo.
 > bien. Hay que añadir reglas `ACCEPT OUTGOING` explícitas (una por protocolo si el panel no
 > admite `ANY`) **por debajo** de los `DROP` de los puertos de correo.
 
-**3. Datos personales.** Con el despliegue permanente, los correos de los adultos y los
-nombres de los niños viven en un servidor tuyo de forma indefinida, no en un portátil
-durante una demo. Repasa [`PRIVACIDAD.md`](PRIVACIDAD.md): quién es el responsable del
-tratamiento, cifrado del disco del VPS, y borrado de cuentas.
+### 6.4 Datos personales
+
+Con el despliegue permanente, los correos de los adultos y los nombres de los niños viven en
+un servidor tuyo de forma indefinida, no en un portátil durante una demo. Repasa
+[`PRIVACIDAD.md`](PRIVACIDAD.md): quién es el responsable del tratamiento, cifrado del disco
+del VPS, cifrado de las copias (§5.2) y borrado de cuentas.
 
 ---
 

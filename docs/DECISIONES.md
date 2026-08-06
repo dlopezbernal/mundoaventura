@@ -28,7 +28,7 @@ medición → decisión → qué se descarta → consecuencias**. La plantilla e
 | [014](decisiones/ADR-014-retirada-deepl.md) | Retirar DeepL del camino crítico | H4.4 | ❌ **descartada²** |
 | [015](decisiones/ADR-015-despliegue-nativo-vps.md) | Despliegue nativo en VPS (uv + systemd + Caddy), no Docker ni PaaS | F2 | ✅ aceptada |
 | [016](decisiones/ADR-016-sesion-familia-endpoints-caros.md) | Sesión de familia obligatoria en los endpoints que cuestan dinero | H9.2/F2 | ✅ aceptada³ |
-| [017](decisiones/ADR-017-pwa-twa.md) | App de Android como PWA + TWA, no Capacitor ni React Native | F2 | ✅ aceptada⁴ |
+| [017](decisiones/ADR-017-pwa-twa.md) | App de Android como PWA + TWA, no Capacitor ni React Native | F3 | ✅ aceptada⁴ |
 
 ¹ **medido en la máquina del usuario, no en CI.** Ambos mecanismos van verdes en CI, y sus
 verificaciones con hardware y proveedores reales están hechas: la **latencia del streaming**
@@ -75,9 +75,10 @@ blindaje, concurrencia, metodología y seguridad que el listado mínimo no enume
 | Mantener ElevenLabs para TTS | **013** |
 | Streaming SSE frase a frase | **009** |
 
-Los ADR **015–017** son **posteriores al H10**: nacen de la **Fase 2** (llevar la app a un
-servidor permanente y a un móvil), no del plan de hitos. Ver
-[`TRABAJO-FUTURO.md §Fase 2`](TRABAJO-FUTURO.md).
+Los ADR **015–017** son **posteriores al H10** y no salen del plan de hitos, sino de las dos
+fases que vinieron después: **015 y 016 son de la Fase 2** (llevar la app a un servidor
+permanente) y **017 es de la Fase 3** (llevarla al móvil). Ver
+[`TRABAJO-FUTURO.md §Fase 2`](TRABAJO-FUTURO.md) y su §Fase 3.
 
 ## Material relacionado
 

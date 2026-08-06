@@ -41,26 +41,26 @@ qué no está.
 
 Durante el desarrollo el despliegue fue un **túnel puntual** (Colab/ngrok). Desde el 2026-08-05 hay
 además un **servidor permanente** en `chatmundoaventura.com` (VPS, systemd + Caddy con TLS; el
-procedimiento completo está en [`DESPLIEGUE.md`](DESPLIEGUE.md)). Lo que sigue es lo que ese
-despliegue **todavía no** resuelve:
+procedimiento completo está en [`DESPLIEGUE.md`](DESPLIEGUE.md)).
+
+Esta sección nació como lista de deseos del "si algún día hay servidor". Buena parte se hizo al
+montarlo, así que se separa en dos: **lo que ya resolvió el despliegue** y **lo que sigue
+abierto**. Lo primero está aquí en vez de borrarse porque documenta *qué cambió al pasar de un
+túnel a internet*, que es una de las preguntas previsibles del tribunal.
+
+### Ya resuelto al desplegar
 
 - ✅ **Autenticación fuerte** en lugar del candado del túnel (`ACCESS_CODE` es una barrera ligera
   contra escaneo, no autenticación real — [ADR-001](decisiones/ADR-001-candado-tunel.md)).
   **Hecho** al preparar el VPS: los endpoints caros exigen sesión de familia
-  (`EXIGIR_SESION_FAMILIA`, por defecto ON). Ver [`DESPLIEGUE.md §6`](DESPLIEGUE.md).
+  (`EXIGIR_SESION_FAMILIA`, por defecto ON). Ver [`DESPLIEGUE.md §6`](DESPLIEGUE.md) y el
+  [ADR-016](decisiones/ADR-016-sesion-familia-endpoints-caros.md).
 - ✅ **Verificación de correo y SMTP transaccional real.** **Hecho**: el OTP sale por
   **Brevo** desde el dominio propio (`no-reply@chatmundoaventura.com`), con plantilla HTML
   (`backend/templates/verificacion_email.html`) y fallback a consola solo en local. En
   producción `EMAIL_VERIFICACION=true`. El default del repo sigue en `false` **a propósito**,
   para que un clon nuevo y el tribunal puedan darse de alta sin montar un servidor de correo.
   Ver [`DESPLIEGUE.md §6.3`](DESPLIEGUE.md).
-- **Almacenamiento gestionado**: SQLite es perfecto para local/túnel; un servidor multiusuario
-  pediría Postgres y un vector store gestionado.
-- **Rate limit y cupo POR CUENTA**, no solo por IP. Hoy el cupo diario de imágenes
-  (`cuota_service`) es **global**, no por familia: una familia intensiva puede agotar el cupo
-  de todas. Observabilidad (métricas, trazas) más allá de los logs de consola.
-- **Un `Dockerfile` simple** para reproducibilidad. Orquestación (Compose/Kubernetes) **no**: sería
-  sobre-ingeniería para el tamaño del proyecto (`PLAN.md §6`).
 - ✅ **Nomenclatura interna de la credencial de admin.** **Hecho** el 2026-08-06: renombrados
   `CambiarPin` → `CambiarPassword`, `adminChangePin` → `adminChangePassword`, el esquema
   `AdminPin` → `AdminPassword` y los campos del cuerpo JSON (`pin` → `password`), con el
@@ -73,6 +73,21 @@ despliegue **todavía no** resuelve:
   `GET /api/personajes?todos=1` y su gemelo de ubicaciones exigen ahora `X-Admin-Token` (→ 401);
   la lista de **activos** sigue siendo pública, porque la SPA la necesita antes de que el niño
   tenga sesión. Fijado con `tests/test_catalogos_inactivos.py`.
+
+### Lo que el despliegue actual todavía no resuelve
+
+- **Almacenamiento gestionado**: SQLite es perfecto para local/túnel; un servidor multiusuario
+  pediría Postgres y un vector store gestionado.
+- **Rate limit y cupo POR CUENTA, no solo por IP.** El rate limit (`ratelimit.py`, slowapi) tiene
+  como clave la **IP**, así que dos familias tras el mismo router comparten cubo y una misma
+  familia desde dos redes tiene dos. Y el cupo diario de imágenes (`cuota_service`, tabla
+  `uso_diario`) es **global**: su clave primaria es solo la fecha, sin `familia_id`, de modo que
+  una familia intensiva puede agotar las `MAX_IMAGENES_DIA` de todas. Cerrarlo serían una clave
+  compuesta `(fecha, familia_id)` y una `key_func` que use el token de familia con caída a IP.
+- **Un `Dockerfile` simple** para reproducibilidad. Orquestación (Compose/Kubernetes) **no**: sería
+  sobre-ingeniería para el tamaño del proyecto (`PLAN.md §6`).
+- **Observabilidad** (métricas, trazas) más allá de los logs de consola — detallado abajo, en
+  los pendientes de la **Fase 2**, junto con los avisos de caída.
 
 ## Fase 2 — el despliegue
 
@@ -95,6 +110,20 @@ persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo auto
 - ✅ **Despliegue sin corte**: activación por socket de systemd (`deploy/mundoaventura.socket` +
   `uvicorn --fd 3`). Medido: de **10 % de peticiones con 502** durante el reinicio a **0 %**
   ([`mediciones/F2-despliegue-sin-corte.md`](mediciones/F2-despliegue-sin-corte.md)).
+- ✅ **Copias de seguridad automáticas y verificadas**: `deploy/respaldar.sh` empaqueta en un
+  `.tgz` todo lo que no está en git (`.env`, el `.env` del frontend, `backend/documentos/`,
+  `backend/avatares/` y una instantánea consistente del SQLite), se dispara **antes de cada
+  despliegue y cada noche** por temporizador de systemd, con **retención de 15 días** y
+  **restauración probada** (2026-08-05: `integrity_check` en `ok` y recuentos idénticos a la
+  BBDD viva).
+- ✅ **Copias cifradas.** **Hecho** el 2026-08-06: `deploy/respaldar.sh` cifra el `.tgz` con
+  **GPG de clave pública** (`BACKUP_GPG_RECIPIENT`). Se eligió asimétrico y no una contraseña
+  simétrica precisamente por el escenario que importa: el servidor puede **crear** copias pero
+  **no leerlas**, porque la clave privada nunca ha estado en esa máquina. Sin la variable
+  configurada la copia se sigue haciendo, pero avisa por `stderr` de que va en claro. Probado
+  de extremo a extremo: el secreto no aparece en el fichero cifrado y se recupera al descifrar.
+  Instrucciones de la clave en la cabecera del propio script y en
+  [`DESPLIEGUE.md §5.2`](DESPLIEGUE.md).
 
 ### Lo que sigue pendiente
 
@@ -132,21 +161,10 @@ persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo auto
 - **Observabilidad y avisos.** `journalctl` es suficiente para depurar a mano, pero nadie se entera
   si el servicio se cae de madrugada, si caduca un certificado o si se agota el saldo de un
   proveedor. Un *healthcheck* externo con aviso es el mínimo.
-- **Copias de seguridad fuera del servidor.** Ya hay copia completa (`deploy/respaldar.sh`, un
-  `.tgz` con todo lo que no está en git), **automática** (antes de cada despliegue y cada noche
-  vía temporizador de systemd), con **retención de 15 días** y **restauración verificada**
-  (2026-08-05: `integrity_check` en `ok` y recuentos idénticos a la BBDD viva). Lo que falta es
-  lo más importante: **sacarlas del servidor**. Hoy viven en el mismo disco que protegen, así que
-  no cubren el escenario que más duele — perder la máquina. Un `rclone`/`restic` a
-  almacenamiento externo desde el mismo temporizador lo cerraría.
-- ✅ **Copias cifradas.** **Hecho** el 2026-08-06: `deploy/respaldar.sh` cifra el `.tgz` con
-  **GPG de clave pública** (`BACKUP_GPG_RECIPIENT`). Se eligió asimétrico y no una contraseña
-  simétrica precisamente por el escenario que importa: el servidor puede **crear** copias pero
-  **no leerlas**, porque la clave privada nunca ha estado en esa máquina. Sin la variable
-  configurada la copia se sigue haciendo, pero avisa por `stderr` de que va en claro. Probado
-  de extremo a extremo: el secreto no aparece en el fichero cifrado y se recupera al descifrar.
-  Instrucciones de la clave en la cabecera del propio script y en
-  [`DESPLIEGUE.md §5.2`](DESPLIEGUE.md).
+- **Copias de seguridad fuera del servidor.** Las copias existen, son automáticas y van cifradas
+  (ver arriba), pero **siguen viviendo en el mismo disco que protegen**, así que no cubren el
+  escenario que más duele: perder la máquina. Un `rclone`/`restic` a almacenamiento externo
+  desde el mismo temporizador lo cerraría.
 
 ## Higiene del repositorio (limpieza, sin impacto funcional)
 
@@ -165,7 +183,11 @@ repositorio. **La mayoría se limpió el 2026-08-06**; queda constancia de qué 
   renombró a propósito: el comando está documentado en `EVALUACION.md`.
 - **`requirements-backend.txt` duplica a mano** la lista de dependencias de `pyproject.toml`,
   sin versiones. Se declara a sí mismo como *fallback*, pero nada impide que se desincronice
-  en silencio. **Sigue pendiente** (generarlo desde el lockfile sería lo suyo).
+  en silencio — y de hecho **se había desincronizado**: le faltaban ocho paquetes de producción
+  añadidos en hitos posteriores (`httpx`, `slowapi`, `lingua`, `pyphen`, `fastembed`, `openai`,
+  `pyotp`, `segno`), así que un `pip install -r` no levantaba la app. Se resincronizó a mano el
+  2026-08-06; **generarlo desde el lockfile sigue pendiente**, que es lo único que evita que
+  vuelva a pasar.
 - **Doble gobernanza de los ajustes de correo y de `DEBUG`**: viven a la vez en `config.py`
   (como toggle de despliegue) y en `settings_service` (editables en caliente). Funciona, pero
   hay que saber cuál gana. **Sigue pendiente.**
@@ -215,10 +237,3 @@ Ordenadas por relación entre valor para el niño y esfuerzo:
 - **Sin conexión no hay app**, y no es un defecto del empaquetado: la imagen la genera Replicate,
   el chat es un LLM en la nube y la voz es ElevenLabs. Un modo offline real exigiría modelos
   locales, que es otro proyecto.
-
-## Ideas de producto (más allá de la ingeniería)
-
-- Enrutar la vía GENERAL a una **búsqueda web** segura cuando las fichas no cubren la pregunta
-  (hoy es un punto de extensión previsto en `rag_service`, no implementado).
-- Más personajes y un corpus curado por edades.
-- Panel para el adulto con métricas de uso del niño (ya hay una base de **auditoría**).

@@ -284,7 +284,7 @@ resultados están en [`EVALUACION.md`](docs/EVALUACION.md).
   modelo/temperatura del LLM, prompts de sistema, etc. sin reiniciar (se guardan en SQLite; con
   la BBDD vacía la app usa los valores por defecto de `config.py`).
 - **Modelo o estilo de imagen:** `REPLICATE_MODEL` en el `.env`; el estilo (`STYLE_SUFFIX`) es un
-  ajuste editable en 🛡️ Admin → General.
+  ajuste editable en 🛡️ Admin → **Imagen**.
 
 ---
 

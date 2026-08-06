@@ -42,8 +42,10 @@ El recorrido de una pregunta:
 
 > **"Entra en inglés, sale en español".** La base de conocimiento, las consultas de
 > recuperación y todos los prompts al modelo van en inglés; la única cosa en español es la
-> respuesta final, porque es lo que lee el niño. El porqué está en el
-> [ADR sobre el idioma del pipeline](DECISIONES.md).
+> respuesta final, porque es lo que lee el niño. Es un **invariante del sistema**, no una
+> decisión con ADR propio: está declarado en `CLAUDE.md` §Invariantes críticos, y lo que sí
+> se midió —si se podía quitar DeepL y consultar en español— está en el
+> [ADR-014](decisiones/ADR-014-retirada-deepl.md), que salió **negativo**.
 
 ---
 
@@ -99,9 +101,10 @@ si no → **SIN_INFO**.
 
 Qué `método` aparece depende de la config: `EVALUATOR_MODE` (`umbral`/`llm`/`hibrido`)
 cuando **no** hay reranker; con reranker activo (`RERANKER != off`) el ruteo es siempre
-`rerank` y el LLM-juez ya no se llama. Ver el
-[ADR-004 (elección del Evaluator)](DECISIONES.md) y el
-[ADR-006 (reranker)](decisiones/ADR-006-reranker.md).
+`rerank` y el LLM-juez ya no se llama. El porqué de que el reranker jubile al juez está en el
+[ADR-006](decisiones/ADR-006-reranker.md); la calibración de los umbrales coseno (y por qué
+dependen del backend de embeddings) en el
+[ADR-004](decisiones/ADR-004-embeddings-multilingues.md).
 
 ### Las combinaciones que puedes ver (sin reranker)
 

@@ -11,8 +11,9 @@ App educativa (niños 8–12) cliente-servidor desacoplada:
 - **Frontend (SPA React):** Vite 8 + React 19 + TypeScript 6, en el navegador; asistente por
   pasos: catálogos (carrusel), escena y chat (texto + voz). **Instalable como app** (PWA) y
   utilizable en móvil, tablet y PC. Dos dependencias de producción: `react` y `react-dom`.
-- **Backend (FastAPI):** routers finos → services → config. Sin GPU local. 22 dependencias
-  de producción, ninguna de ellas `torch`.
+- **Backend (FastAPI):** routers finos → services → config. Sin GPU local. **21 dependencias
+  de producción** (`pyproject.toml`), ninguna de ellas `torch`; `faster-whisper` va aparte como
+  extra opcional (`stt-local`).
 - **Nube:** Replicate (imagen + LLM), DeepL (traducción), ElevenLabs (voz).
 - **Producción:** VPS propio con Caddy (TLS) + systemd, despliegue continuo desde `main`.
 

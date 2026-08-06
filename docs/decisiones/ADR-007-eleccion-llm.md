@@ -137,7 +137,7 @@ y un candidato fuerte). Procedimiento (sin código nuevo; el runner ya lee los p
 `settings_service`):
 
 1. Corrida con los prompts EN por defecto (ya se tiene de las corridas de candidatos).
-2. Traducir a español los ajustes `RAG_SYSTEM_PROMPT`/`RAG_USER_PROMPT` en la pantalla de
+2. Traducir a español los ajustes `PROMPT_RAG_SYSTEM`/`PROMPT_RAG_USER` en la pantalla de
    config y **reindexar no hace falta** (el prompt es de generación, no de retrieval).
 3. Re-correr esos 2 modelos con etiqueta `h6-<id>-promptES` y comparar INFLESZ/fidelidad.
 4. Restaurar los prompts EN. Anotar la fila resultante en `docs/EVALUACION.md`.

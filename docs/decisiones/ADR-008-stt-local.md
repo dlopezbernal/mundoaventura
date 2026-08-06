@@ -83,21 +83,35 @@ código nuevo. **Esta decisión no depende de esa tabla:** se toma por privacida
 menor no sale del PC) y por reversibilidad, no por una diferencia de WER.
 
 **Lo que sí se sabe sin la tabla:** todos los ASR **suben el WER con voces infantiles** — por
-eso, además de poder elegir proveedor, se añade el **paso de confirmación** en la UI
-(§ siguiente).
+eso, además de poder elegir proveedor, se añadió un **paso de confirmación** en la UI, que
+después se retiró (§ siguiente).
 
-## Confirmación en la interfaz
+## Confirmación en la interfaz — añadida en H7 y RETIRADA el 2026-08-04
 
-Como todos los ASR fallan con voces infantiles, la transcripción **ya no se auto-envía**:
-el texto entra en el input (editable) y aparece un **"¿has dicho esto?"** con
-confirmar/repetir antes de mandar a `/api/ask`. Es más barato confirmar que responder a la
-pregunta equivocada, y es buena pedagogía: el niño ve que la máquina le entendió.
+**Decisión original (H7).** Como todos los ASR fallan con voces infantiles, la transcripción
+no se auto-enviaba: el texto entraba en el input (editable) y aparecía un **"¿has dicho
+esto?"** con confirmar/repetir antes de mandar a `/api/ask`. El razonamiento era que es más
+barato confirmar que responder a la pregunta equivocada.
+
+> **Addendum (2026-08-04, commit `eb870b7`): revertido.** Probado con la app terminada, el paso
+> intermedio pesaba más que el error que evitaba: rompía el ritmo justo en el momento más
+> divertido para el niño, y obligaba a leer y pulsar antes de que le contestaran. Hoy
+> `Chat.transcribirYEnviar` **envía el texto directamente**, igual que una pregunta escrita; si
+> el ASR se equivoca queda el aviso "No te oí bien" y el niño repregunta, que a esta edad es más
+> natural que corregir un campo de texto.
+>
+> **Lo que NO cambia con la reversión:** el argumento de esta decisión sigue en pie, porque el
+> ADR-008 se decide por **privacidad y reversibilidad del proveedor** (§ Decisión), no por la
+> UI. El WER alto con voces infantiles sigue siendo cierto y sigue sin tabla; lo que cambió es
+> cómo se absorbe ese error en la interfaz.
 
 ## Consecuencias
 
 - **Código:** `services/stt_service.py` (dispatch + fallback + singletons perezosos con
   firma), `voice_service.transcribir` delega, `secrets_service` gana el proveedor `groq`.
-  `Chat.tsx`/`Chat.module.css` añaden el paso de confirmación. `evals/stt.py` (WER).
+  `Chat.tsx` gestiona el micro y manda la transcripción al mismo flujo que una pregunta
+  escrita (el paso de confirmación que añadió H7 se retiró después, ver arriba).
+  `evals/stt.py` (WER).
 - **Dependencia:** `faster-whisper` como **extra opcional** (`stt-local`); el `uv sync`
   base no la instala (clon ligero). Clavada en `uv.lock`.
 - **Configuración:** `STT_PROVIDER`/`STT_LOCAL_MODEL`/`STT_LOCAL_DEVICE`/`STT_LOCAL_COMPUTE`/
