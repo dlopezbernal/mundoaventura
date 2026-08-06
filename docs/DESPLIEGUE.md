@@ -825,6 +825,41 @@ gh api repos/dlopezbernal/mundoaventura/actions/runners \
   --jq '.runners[] | {name, status, labels: [.labels[].name]}'
 ```
 
+#### ¿Vuelve solo si se reinicia el servidor?
+
+Sí: `svc.sh install` genera la unidad a partir de una plantilla con
+`WantedBy=multi-user.target` y la habilita. Pero conviene **comprobarlo**, porque un runner
+que no vuelve no da ningún error — los despliegues simplemente se quedan encolados para
+siempre, que es el síntoma peor de diagnosticar. Y ojo con la diferencia: `is-active` dice si
+corre **ahora**; el que responde a "¿arranca al reiniciar?" es `is-enabled`.
+
+```bash
+# El nombre de la unidad es actions.runner.<owner>-<repo>.<nombre del runner>.service
+systemctl show actions.runner.dlopezbernal-mundoaventura.vps-mundoaventura.service \
+  -p UnitFileState -p ActiveState -p Restart -p User
+```
+
+Verificado en este servidor el 2026-08-06: `UnitFileState=enabled` y `ActiveState=active`,
+corriendo como `gha-runner`. Si alguna vez saliera `disabled`, se arregla con
+`systemctl enable <esa misma unidad>`.
+
+**Lo que la plantilla NO trae es `Restart=`**: el agente vuelve tras un reinicio del servidor,
+pero si el proceso se muere por su cuenta —y aquí el OOM killer es un riesgo real, con 4 GB
+compartidos con producción— systemd no lo levanta. Se añade con un *drop-in*, que además
+sobrevive a las actualizaciones del agente (`svc.sh` regenera la unidad, pero no toca los
+drop-ins):
+
+```bash
+UNIT=actions.runner.dlopezbernal-mundoaventura.vps-mundoaventura.service
+mkdir -p /etc/systemd/system/$UNIT.d
+cat > /etc/systemd/system/$UNIT.d/reinicio.conf <<'EOF'
+[Service]
+Restart=always
+RestartSec=15
+EOF
+systemctl daemon-reload && systemctl restart $UNIT
+```
+
 #### Cerrar el puerto 22 (el premio)
 
 Solo **después** de comprobar que un despliegue completo funciona por el runner. Y sin
