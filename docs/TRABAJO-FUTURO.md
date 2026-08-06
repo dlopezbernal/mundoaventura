@@ -132,9 +132,15 @@ persona pudiera montarlo y entenderlo entero. La fase 2 lo lleva a un ciclo auto
   [ADR-015](decisiones/ADR-015-despliegue-nativo-vps.md) la decisión **sí está contrastada por
   escrito** contra Docker, Compose/Kubernetes, PaaS y runner autoalojado; lo que sigue sin
   existir es la comparación **empírica** (no se ha montado la alternativa para medirla).
-- **Runner autoalojado** en el propio VPS como alternativa al alojado: haría *pull* sin que nadie
-  tenga que entrar por SSH, lo que permitiría cerrar el puerto 22 a internet (hoy tiene que
-  seguir abierto para que el runner de GitHub llegue). A cambio, un agente más que mantener.
+- **Runner autoalojado**: ✅ **hecho** el 2026-08-06 en el lado del repositorio (el job de
+  despliegue pide `runs-on: [self-hosted, linux, despliegue]`), con su procedimiento de
+  instalación en [`DESPLIEGUE.md §5.4`](DESPLIEGUE.md) y su
+  [ADR-018](decisiones/ADR-018-runner-autoalojado.md). Es el servidor quien abre la conexión, así
+  que **deja de hacer falta el puerto 22 abierto a internet** y no hay una clave privada del
+  servidor guardada en GitHub. Queda pendiente **el paso manual en la máquina**: registrar el
+  agente y, ya con un despliegue comprobado, cerrar el 22 dejando solo tu IP. Y una advertencia
+  que conviene no olvidar: **esto no da independencia de GitHub** — el trabajo lo sigue
+  repartiendo Actions, así que una incidencia suya deja al runner propio esperando igual.
 - **Reproducibilidad y entornos.** Un `Dockerfile` sigue pendiente (ver arriba). Con contenedor,
   el despliegue pasa a ser "construye imagen, publica, arranca", y deja de depender de que el
   servidor tenga la versión correcta de Node, `uv` y Python.

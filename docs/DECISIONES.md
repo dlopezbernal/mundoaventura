@@ -29,6 +29,7 @@ medición → decisión → qué se descarta → consecuencias**. La plantilla e
 | [015](decisiones/ADR-015-despliegue-nativo-vps.md) | Despliegue nativo en VPS (uv + systemd + Caddy), no Docker ni PaaS | F2 | ✅ aceptada |
 | [016](decisiones/ADR-016-sesion-familia-endpoints-caros.md) | Sesión de familia obligatoria en los endpoints que cuestan dinero | H9.2/F2 | ✅ aceptada³ |
 | [017](decisiones/ADR-017-pwa-twa.md) | App de Android como PWA + TWA, no Capacitor ni React Native | F3 | ✅ aceptada⁴ |
+| [018](decisiones/ADR-018-runner-autoalojado.md) | Runner autoalojado en el VPS en vez de SSH desde GitHub (cierra el puerto 22) | F2 | ✅ aceptada⁵ |
 
 ¹ **medido en la máquina del usuario, no en CI.** Ambos mecanismos van verdes en CI, y sus
 verificaciones con hardware y proveedores reales están hechas: la **latencia del streaming**
@@ -49,6 +50,10 @@ se escribió para el modelo de amenaza del **túnel efímero**. Con el despliegu
 (2026-08-05) el **016 lo extiende y lo sustituye parcialmente**: `ACCESS_CODE` viaja dentro del
 bundle de la SPA, así que es público de facto, y los endpoints caros exigen además **sesión de
 familia**. El 001 lleva un addendum fechado que remite al 016.
+
+⁵ **el repositorio ya apunta al runner**; el agente se instala en el servidor con el
+procedimiento de [`DESPLIEGUE.md §5.4`](DESPLIEGUE.md). **El orden importa**: primero el agente,
+después el merge — al revés, el job de despliegue espera para siempre a un runner que no existe.
 
 ⁴ **parcialmente ejecutada:** la **PWA instalable está en producción**; el **APK (TWA) no está
 generado**, porque falta exactamente el tramo que depende del *keystore* de firma (huella SHA-256

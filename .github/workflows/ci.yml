@@ -112,7 +112,22 @@ jobs:
     # Solo main = producción. Un push a dev pasa el CI pero no toca el servidor.
     # Cubre a la vez el push a main y el "Run workflow" manual desde esa rama.
     if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
+    # Runner AUTOALOJADO: el propio VPS pide trabajo a GitHub y despliega desde
+    # dentro. Antes esto era un `ssh` desde un runner de GitHub, lo que obligaba
+    # a tener el puerto 22 abierto a internet y una clave privada del servidor
+    # guardada en los secretos del repositorio. Ahora no hace falta ninguna de
+    # las dos cosas: la conexión la abre el servidor, hacia fuera.
+    #
+    # `self-hosted` + la etiqueta del despliegue, para que si algún día hay más
+    # de un runner el trabajo caiga en el correcto. Los dos trabajos de
+    # verificación siguen en los runners de GitHub A PROPÓSITO: son 2 vCPU y 4 GB
+    # compartidos con la app en producción, y no conviene que un `npm run build`
+    # de un PR compita por la memoria con el backend que está sirviendo a un niño.
+    # Etiquetas copiadas TAL CUAL las reporta el agente
+    # (`gh api repos/…/actions/runners`): GitHub las compara sin distinguir
+    # mayúsculas, pero si un día no encaja, el job se queda encolado para siempre
+    # sin decir por qué — y eso se diagnostica fatal. Mejor que coincidan a la vista.
+    runs-on: [self-hosted, Linux, despliegue]
     # Dos merges seguidos NO pueden desplegar a la vez: el segundo espera. Sin
     # esto, dos `git pull` + `npm run build` simultáneos sobre el mismo
     # directorio del servidor se pisarían a mitad.
@@ -127,30 +142,25 @@ jobs:
       name: produccion
       url: https://chatmundoaventura.com
     steps:
-      - name: Preparar la clave SSH
-        # La clave se escribe en disco (no en la línea de órdenes) para que no
-        # aparezca en la lista de procesos del runner.
-        run: |
-          mkdir -p ~/.ssh && chmod 700 ~/.ssh
-          printf '%s\n' "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_deploy
-          chmod 600 ~/.ssh/id_deploy
-          # known_hosts FIJADO a mano, nunca StrictHostKeyChecking=no: si no se
-          # verifica el servidor, cualquiera que logre interponerse recibe la
-          # clave privada de despliegue.
-          printf '%s\n' "${{ secrets.VPS_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
-
+      # NO se hace `checkout`. El árbol que se despliega lo trae el propio script
+      # con su `git pull` sobre /opt/mundoaventura, que es la copia de trabajo de
+      # verdad (con su .env, su SQLite y sus documentos). Clonar aquí solo
+      # ensuciaría el directorio del runner con una copia que nadie usa.
       - name: Desplegar
-        # No se manda ninguna orden: la clave está registrada en el servidor con
-        # `command="…/desplegar.sh"`, así que sshd ejecuta ESE script y nada más,
-        # decida lo que decida quien tenga la clave (docs/DESPLIEGUE.md §5.1).
-        # El script vuelve atrás solo y sale con error si /health no responde,
-        # así que el resultado de este paso es el resultado real del despliegue.
-        run: |
-          ssh -i ~/.ssh/id_deploy \
-              -o BatchMode=yes \
-              -o ConnectTimeout=15 \
-              "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}"
+        # El runner corre como `gha-runner`, un usuario SIN acceso a la app: lo
+        # único que puede hacer es invocar ESTE script como el dueño de la app,
+        # porque así está acotado en /etc/sudoers.d/gha-runner (docs/DESPLIEGUE.md
+        # §5.4). Es el equivalente al `command=` forzado que tenía la clave SSH:
+        # da igual lo que diga el resto del workflow, aquí solo se despliega.
+        #
+        # El script vuelve atrás solo y sale con error si /health no responde, así
+        # que el resultado de este paso es el resultado real del despliegue.
+        #
+        # `-H` no es opcional: sin él, sudo conserva el HOME de quien llama
+        # (`/home/gha-runner`) y el script no encontraría `uv`, que vive en
+        # `~/.local/bin` del usuario de la app. Falla en `uv sync` con un
+        # "command not found" que no se explica solo.
+        run: sudo -H -u mundoaventura /opt/mundoaventura/deploy/desplegar.sh
 
       - name: Comprobar el sitio público
         # El script ya valida /health por dentro (127.0.0.1). Esto verifica lo
