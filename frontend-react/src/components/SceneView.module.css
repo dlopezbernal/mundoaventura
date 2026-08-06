@@ -1,11 +1,17 @@
 /**
  * SceneView — La escena generada, con marco holo y badge "IMAGEN GENERADA".
+ *
+ * Mobile-first: la base es el MÓVIL (barra mini + visor), y con `min-width` se
+ * añaden el tramo de tablet (escena hero, acciones como icono en la fila del
+ * StepTracker) y el de PC (columna a altura completa, imagen 4:3).
  */
 
+/* En móvil la escena grande no se muestra: la sustituye .minibar (abajo). */
 .scene {
-  display: flex;
+  display: none;
   flex-direction: column;
   gap: 12px;
+  min-height: 0;
 }
 
 /* Marco holográfico alrededor de la imagen.
@@ -65,7 +71,17 @@
 }
 
 /* Botones con el MISMO lenguaje visual que la consola de personaje/mundo
-   (Console.module.css .cta/.back): CTA biselada + secundario oscuro con borde. */
+   (Console.module.css .cta/.back): CTA biselada + secundario oscuro con borde.
+   `inline-flex` porque el icono y el texto son dos spans (el texto se esconde
+   en tablet, ver más abajo). */
+.btnCta,
+.btnBack {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px; /* toque cómodo en pantalla táctil */
+}
 .btnCta {
   font-family: var(--font-disp);
   font-weight: 900;
@@ -89,4 +105,224 @@
   border: 1px solid var(--edge);
   padding: 12px 18px;
   border-radius: 12px;
+}
+.btnIco {
+  line-height: 1;
+}
+
+/* ===========================================================================
+ * Barra mini (SOLO móvil): miniatura + caption en una línea + "⤢ Ver"
+ * ======================================================================== */
+.minibar {
+  position: relative;
+  z-index: 70; /* por encima de las scanlines, igual que .marco */
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 8px;
+  border: 1px solid var(--holo);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(62, 242, 255, 0.1), rgba(6, 12, 34, 0.6));
+  box-shadow:
+    0 0 0 1px var(--edge),
+    0 0 20px rgba(62, 242, 255, 0.28);
+}
+.thumb {
+  display: block;
+  flex: 0 0 auto;
+  width: 58px;
+  height: 58px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.miniInfo {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+/* Una sola línea con elipsis: el nombre del lugar puede ser largo. */
+.miniCaption {
+  font-family: var(--font-disp);
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: var(--txt);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.miniTag {
+  font-family: var(--font-pixel);
+  font-size: 7px;
+  letter-spacing: 0.05em;
+  color: var(--holo);
+}
+.miniVer {
+  flex: 0 0 auto;
+  min-height: 44px;
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #04121f;
+  background: linear-gradient(90deg, var(--holo), var(--lime));
+  border: none;
+  border-radius: 10px;
+  padding: 10px 14px;
+}
+
+/* ===========================================================================
+ * Visor "⤢ Ver" (SOLO móvil): la escena grande + los dos botones con texto
+ * ======================================================================== */
+.visor {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgba(2, 4, 16, 0.82);
+  backdrop-filter: blur(2px);
+}
+.visorPanel {
+  width: min(460px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid var(--edge);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(14, 20, 64, 0.97), rgba(6, 12, 34, 0.97));
+  box-shadow: 0 0 46px rgba(62, 242, 255, 0.25);
+}
+.visorHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.visorTitulo {
+  margin: 0;
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 1rem;
+  color: #fff;
+}
+.visorCerrar {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  font-family: var(--font-disp);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--pink);
+  border: 1px solid rgba(255, 46, 151, 0.5);
+  background: rgba(255, 46, 151, 0.08);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.visorCerrar:hover {
+  background: rgba(255, 46, 151, 0.18);
+}
+/* Aquí el niño viene a VER su escena: se muestra entera, sin recortes ni
+   bandas (el marco se ajusta a la imagen, sea cual sea su proporción). */
+.imgGrande {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: 46vh;
+  margin: 0 auto;
+  border-radius: 10px;
+}
+.botonesVisor {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+/* ===========================================================================
+ * TABLET (≥ 641px) — vuelve la escena hero y desaparece la barra mini
+ * ======================================================================== */
+@media (min-width: 641px) {
+  .scene {
+    display: flex;
+  }
+  .minibar {
+    display: none;
+  }
+}
+
+/* --- TABLET a secas (641–959px) ---
+   Aquí la escena y el chat comparten una sola columna, así que se le devuelve
+   altura al chat: fuera la caption (el dato ya está en el flujo) y los dos
+   botones suben a la fila del StepTracker, como iconos. El ancla del
+   `position: absolute` es .layout de SceneChat (el contenedor del paso, que es
+   `position: relative`); el desplazamiento negativo los sube a esa fila. */
+@media (min-width: 641px) and (max-width: 959px) {
+  .scene .caption {
+    display: none;
+  }
+  .scene .botones {
+    position: absolute;
+    top: -44px;
+    right: 0;
+    z-index: 7;
+    margin: 0;
+    gap: 8px;
+  }
+  .botones .btnLbl {
+    display: none;
+  }
+  .botones .btnCta,
+  .botones .btnBack {
+    padding: 9px 14px;
+    font-size: 18px;
+    line-height: 1;
+    clip-path: none;
+    border-radius: 12px;
+    box-shadow: none;
+  }
+  /* Escena hero con TOPE de altura: a lo ancho de la tablet, el alto natural de
+     la imagen no dejaría sitio al chat. Se limita el alto y el marco se encoge
+     hasta la imagen (centrado) en vez de recortarla: la proporción real la
+     decide el ajuste IMG_ASPECT_RATIO del backend (16:9 por defecto), así que
+     aquí no se fija ninguna. */
+  .marco {
+    align-self: center;
+    max-width: 100%;
+  }
+  .img {
+    width: auto;
+    max-width: 100%;
+    max-height: 300px;
+  }
+}
+
+/* ===========================================================================
+ * PC (≥ 960px) — columna a altura completa junto al chat, imagen 4:3
+ * ======================================================================== */
+/* Las dos columnas igualan altura (`stretch` en SceneChat) para que el chat
+   tenga scroll propio de arriba abajo. La imagen conserva su proporción real y
+   solo se ENCOGE si la columna es más baja que ella (`flex: 0 1 auto` +
+   `object-fit: contain`): nunca se recorta la escena que el niño ha generado. */
+@media (min-width: 960px) {
+  .marco {
+    display: flex;
+    flex-direction: column;
+    flex: 0 1 auto;
+    min-height: 0;
+  }
+  .img {
+    flex: 0 1 auto;
+    min-height: 0;
+    object-fit: contain;
+  }
 }

@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useId, useRef, useState } from "react";
+import { sfx } from "../../audio/sfx";
 import type { HoloCardData } from "../../data/holo";
 import HoloCard from "../HoloCard/HoloCard";
 import styles from "./Coverflow.module.css";
@@ -106,8 +107,12 @@ export default function Coverflow({
     return () => window.clearInterval(id);
   }, [pausado, onMove]);
 
-  /** Cualquier interacción manual pausa el autoplay (se reanuda con el botón). */
+  /** Cualquier interacción manual pausa el autoplay (se reanuda con el botón).
+   *  Es el punto por el que pasan TODOS los giros a mano (flechas, puntos,
+   *  teclado, swipe y clic en una carta lateral), así que el sonido de giro va
+   *  aquí una sola vez; el autoplay, que no llama a esta función, sigue mudo. */
   function pausarPorInteraccion() {
+    sfx("move");
     setPausado(true);
   }
 
@@ -182,8 +187,11 @@ export default function Coverflow({
           hoverRef.current = true;
         }}
       >
+        {/* data-no-sfx: estos botones ya suenan con "move"; sin la marca se
+            solaparía además el "click" del listener global de App. */}
         <button
           type="button"
+          data-no-sfx
           className={`${styles.arw} ${styles.l}`}
           aria-label="Anterior"
           onClick={() => {
@@ -215,6 +223,7 @@ export default function Coverflow({
 
         <button
           type="button"
+          data-no-sfx
           className={`${styles.arw} ${styles.r}`}
           aria-label="Siguiente"
           onClick={() => {
@@ -231,6 +240,7 @@ export default function Coverflow({
           <button
             key={carta.id}
             type="button"
+            data-no-sfx
             className={`${styles.dot} ${j === i ? styles.dotOn : ""}`}
             aria-label={`Ir a ${carta.name}`}
             onClick={() => {

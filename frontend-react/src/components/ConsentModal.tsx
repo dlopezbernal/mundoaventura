@@ -14,6 +14,7 @@
 
 import { useEffect, useState } from "react";
 import { BackendError, familiaMe, familiaVerificarPin } from "../api/client";
+import { sfx } from "../audio/sfx";
 import Modal from "./Modal/Modal";
 import styles from "./ConsentModal.module.css";
 
@@ -45,13 +46,23 @@ export default function ConsentModal({ onConsentir, onCancelar }: Props) {
     };
   }, []);
 
+  /** Autorización concedida: suena la confirmación y se abre el selector de foto. */
+  function autorizar() {
+    sfx("select");
+    onConsentir();
+  }
+
   async function confirmarConPin() {
     setVerificando(true);
     setError("");
     try {
-      if (await familiaVerificarPin(pin)) onConsentir();
-      else setError("El PIN no es correcto.");
+      if (await familiaVerificarPin(pin)) autorizar();
+      else {
+        sfx("error");
+        setError("El PIN no es correcto.");
+      }
     } catch (exc) {
+      sfx("error");
       setError(exc instanceof BackendError ? exc.message : "No pude comprobar el PIN.");
     } finally {
       setVerificando(false);
@@ -112,9 +123,12 @@ export default function ConsentModal({ onConsentir, onCancelar }: Props) {
           <button type="button" className="btn btn-secundario" onClick={onCancelar}>
             Cancelar
           </button>
+          {/* data-no-sfx: autorizar suena con "select" (o con "error" si el PIN
+              falla), no con el "click" genérico. */}
           {modo === "pin" && (
             <button
               type="button"
+              data-no-sfx
               className="btn btn-primario"
               onClick={confirmarConPin}
               disabled={!pin || verificando}
@@ -125,8 +139,9 @@ export default function ConsentModal({ onConsentir, onCancelar }: Props) {
           {modo === "casilla" && (
             <button
               type="button"
+              data-no-sfx
               className="btn btn-primario"
-              onClick={onConsentir}
+              onClick={autorizar}
               disabled={!casilla}
             >
               Autorizar y subir

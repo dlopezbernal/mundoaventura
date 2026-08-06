@@ -14,6 +14,7 @@
  */
 
 import type { ReactNode } from "react";
+import { sfx } from "../../audio/sfx";
 import styles from "./Console.module.css";
 
 interface Props {
@@ -50,14 +51,34 @@ export default function Console({
         </div>
       </div>
       {/* Los botones van juntos en su propia caja: así, cuando no hay "atrás", el
-          principal ocupa el ancho en móvil sin necesitar un hueco de relleno. */}
+          principal ocupa el ancho en móvil sin necesitar un hueco de relleno.
+          Son los dos avances del flujo del niño (SIGUIENTE ▶ / ¡GENERAR! ▶ y
+          ◀ ATRÁS), así que llevan su propio sonido con matiz — de ahí el
+          `data-no-sfx`, que evita que suene ADEMÁS el "click" global. */}
       <div className={styles.acciones}>
         {onBack && (
-          <button type="button" className={styles.back} onClick={onBack}>
+          <button
+            type="button"
+            data-no-sfx
+            className={styles.back}
+            onClick={() => {
+              sfx("back");
+              onBack();
+            }}
+          >
             {backLabel}
           </button>
         )}
-        <button type="button" className={styles.cta} onClick={onCta} disabled={ctaDisabled}>
+        <button
+          type="button"
+          data-no-sfx
+          className={styles.cta}
+          onClick={() => {
+            sfx("select");
+            onCta();
+          }}
+          disabled={ctaDisabled}
+        >
           {ctaLabel}
         </button>
       </div>

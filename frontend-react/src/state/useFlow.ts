@@ -14,6 +14,7 @@
 
 import { useMemo, useReducer, useRef } from "react";
 import { BackendError, generate, generateOnPhoto } from "../api/client";
+import { bucleGenerando, sfx } from "../audio/sfx";
 import type { PersonajeDTO, UbicacionDTO } from "../api/types";
 
 /** Id especial (no es una ubicación real) para el modo "Usar mi foto". */
@@ -160,26 +161,37 @@ export function useFlow(personajes: PersonajeDTO[], ubicaciones: UbicacionDTO[])
     if (generandoRef.current) return; // ya hay una generación en vuelo
     generandoRef.current = true;
     dispatch({ type: "GENERANDO", clave: claveSeleccion(pid, uid, foto) });
+    // Bucle de "viajando" mientras se genera. Se para en el `finally`, así que
+    // no se queda sonando ni cuando la generación falla ni si algo revienta.
+    const pararBucle = bucleGenerando();
     try {
       const resultado =
         uid === FOTO_ID
           ? await generateOnPhoto(foto as File, pid)
           : await generate(uid, pid);
       dispatch({ type: "ESCENA_OK", base64: resultado.result_png_base64 });
+      pararBucle();
+      sfx("done"); // ¡escena lista!
     } catch (exc) {
       const mensaje =
         exc instanceof BackendError
           ? exc.message
           : "Algo no ha ido bien creando tu escena. Inténtalo otra vez.";
       dispatch({ type: "ESCENA_ERROR", mensaje });
+      pararBucle();
+      sfx("error");
     } finally {
+      pararBucle(); // idempotente: red de seguridad
       generandoRef.current = false;
     }
   }
 
   /** Confirmar el paso 2: reutiliza la escena si la selección no cambió. */
   function confirmarLugar() {
-    if (!ubicacionId || !ubicacionLista) return;
+    if (!ubicacionId || !ubicacionLista) {
+      sfx("error"); // sin mundo elegido no se puede generar
+      return;
+    }
     const clave = claveSeleccion(personajeId, ubicacionId, fotoFile);
     if (clave === estado.generadoPara && estado.escenaBase64) {
       dispatch({ type: "IR_PASO", paso: 3 }); // esa escena ya está hecha
