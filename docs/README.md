@@ -25,6 +25,7 @@ instalar y usar; aquí está todo lo demás.
 | Ruta | Qué contiene |
 |---|---|
 | [`DESPLIEGUE.md`](DESPLIEGUE.md) | Puesta en producción en un VPS: uv + systemd + Caddy, HTTPS, operación y copias. |
+| [`APK-ANDROID.md`](APK-ANDROID.md) | Empaquetar la app como APK de Android (TWA): PWA instalable, firma y Digital Asset Links. |
 | [`decisiones/`](decisiones/) | Un fichero ADR por decisión (ADR-000 es la plantilla). |
 | [`plan/`](plan/) | El plan de trabajo por hitos (H1–H10) y el plan de reorganización documental. Se archiva tras la entrega. |
 | [`mediciones/`](mediciones/) | Notas de mediciones puntuales (concurrencia, GPU/STT, latencia de streaming). |
