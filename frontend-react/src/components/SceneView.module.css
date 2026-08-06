@@ -294,7 +294,22 @@
      la imagen no dejaría sitio al chat. Se limita el alto y el marco se encoge
      hasta la imagen (centrado) en vez de recortarla: la proporción real la
      decide el ajuste IMG_ASPECT_RATIO del backend (16:9 por defecto), así que
-     aquí no se fija ninguna. */
+     aquí no se fija ninguna.
+
+     Dos detalles que se midieron en 834×1000 y no son obvios:
+
+     · `flex: 0 0 auto` en la escena. Por defecto un elemento flex ENCOGE, y al
+       fijar la altura de la pantalla (body.pantalla-chat) la escena se encogía
+       por debajo de su contenido: la imagen se salía de su caja y se montaba
+       encima del chat. Aquí la escena no se encoge; quien cede altura es el
+       historial del chat, que para eso tiene scroll propio.
+     · El tope va en `vh` además de en píxeles. Con 300px fijos, una tablet
+       apaisada se quedaba sin sitio para el chat. Como la altura la limita el
+       propio `max-height` y el ancho es `auto`, la imagen conserva su
+       proporción sola, sin bandas ni recortes. */
+  .scene {
+    flex: 0 0 auto;
+  }
   .marco {
     align-self: center;
     max-width: 100%;
@@ -302,7 +317,7 @@
   .img {
     width: auto;
     max-width: 100%;
-    max-height: 300px;
+    max-height: min(300px, 32vh);
   }
 }
 

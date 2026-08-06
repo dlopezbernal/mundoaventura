@@ -213,6 +213,11 @@
   .layout {
     display: grid;
     grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+    /* Una sola fila, exactamente del alto disponible. El `minmax(0, 1fr)` es lo
+       que impide que la fila crezca con la conversación: sin él, la fila es
+       `auto` y se estira con el contenido del chat, que es como la escena
+       acababa saliéndose de la pantalla. */
+    grid-template-rows: minmax(0, 1fr);
     gap: 18px;
     align-items: stretch;
     margin-top: 14px;
