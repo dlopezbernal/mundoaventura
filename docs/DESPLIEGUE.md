@@ -670,10 +670,20 @@ gpg --import /tmp/publica.asc && rm /tmp/publica.asc
 gpg --list-keys                      # comprueba que aparece
 ```
 
-Y declara el destinatario en el entorno del temporizador
-(`/etc/systemd/system/mundoaventura-backup.service`, línea
-`Environment=BACKUP_GPG_RECIPIENT=copias-mundoaventura`) y en el del despliegue. A partir de
-ahí las copias salen como `.tgz.gpg`. Para restaurar, en tu equipo:
+Y declara el destinatario en la unidad del temporizador, añadiendo bajo `[Service]`:
+
+```ini
+Environment=BACKUP_GPG_RECIPIENT=copias-mundoaventura
+```
+
+> **Y vuelve a copiar la unidad desde `deploy/`**, porque el endurecimiento tuvo que cambiar:
+> `ProtectSystem=strict` deja todo el sistema en solo lectura salvo lo declarado, y GPG
+> necesita escribir en su propio directorio incluso para cifrar. Por eso `ReadWritePaths`
+> incluye ahora `/opt/mundoaventura/.gnupg`. Sin eso, la copia **manual** funcionaría (a mano
+> el script corre fuera de systemd) pero la **nocturna** fallaría — el peor de los dos mundos,
+> porque lo habrías dado por probado.
+
+A partir de ahí las copias salen como `.tgz.gpg`. Para restaurar, en tu equipo:
 
 ```bash
 gpg -d mundoaventura-AAAAMMDD-HHMMSS-nocturno.tgz.gpg | tar xz -C /ruta/destino
