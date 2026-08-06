@@ -33,9 +33,39 @@ import Marca from "../components/Marca/Marca";
 import { instalar, sePuedeInstalar, suscribirInstalacion } from "../pwa/instalar";
 import styles from "./Settings.module.css";
 
-/** ¿Es un Android? Solo cambia el rótulo del botón de instalar, no el comportamiento. */
+/** ¿Es un Android? Solo cambia el rótulo y el icono de instalar, no el comportamiento. */
 function esAndroid(): boolean {
   return typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
+}
+
+/**
+ * El robot de Android, dibujado a mano en SVG (cúpula con dos ojos recortados por
+ * `evenodd`, más las dos antenas). Sin librería de iconos ni fichero de imagen:
+ * es el único icono de marca ajena que usa la app y no compensa nada de eso.
+ * Decorativo — el texto de al lado ya dice "Android".
+ */
+function IconoAndroid({ size = 18 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="currentColor"
+      stroke="currentColor"
+      aria-hidden="true"
+      focusable="false"
+      style={{ display: "block" }}
+    >
+      <path
+        fillRule="evenodd"
+        d="M4 13a8 8 0 0 1 16 0z
+           M8.6 9a1.1 1.1 0 1 0 2.2 0a1.1 1.1 0 1 0 -2.2 0
+           M13.2 9a1.1 1.1 0 1 0 2.2 0a1.1 1.1 0 1 0 -2.2 0"
+      />
+      <line x1="7.6" y1="3.2" x2="9.3" y2="6.2" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="16.4" y1="3.2" x2="14.7" y2="6.2" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 interface Props {
@@ -238,6 +268,25 @@ export default function LoginFamilia({ onListo, onAbrirManual, onAbrirAdmin }: P
         <p className={styles.marcaEslogan}>¡Descubre tu próxima aventura!</p>
       </div>
 
+      {/* Instalar la app, como LÍNEA DE DISPONIBILIDAD justo bajo el eslogan.
+          Instalar no es una acción administrativa, es parte de la presentación del
+          producto ("esto puede vivir en tu móvil"): al pie, junto al acceso de
+          Administración, se leía como un residuo. Aquí se ve nada más entrar y no
+          compite con el formulario, que es a lo que viene el adulto.
+          Solo se pinta si el navegador dice que se puede instalar (ver
+          pwa/instalar.ts); si no, no hay nada, que es mejor que un botón muerto. */}
+      {puedeInstalar && (
+        <div className={styles.instalarLinea}>
+          <span className={styles.instalarRotulo}>◇ INSTÁLALA EN TU DISPOSITIVO ◇</span>
+          <button type="button" className={styles.instalarChip} onClick={() => void instalar()}>
+            {/* El robot solo en Android: el evento de Chrome también salta en un PC,
+                y ahí un icono de Android sería sencillamente falso. */}
+            {esAndroid() ? <IconoAndroid /> : <span aria-hidden="true">📲</span>}
+            {esAndroid() ? "Instalar en Android" : "Instalar la app"}
+          </button>
+        </div>
+      )}
+
       {/* El manual, ANTES del formulario: para decidir si registras tu correo, primero
           hay que poder ver qué hace la app y cómo trata los datos. */}
       <button type="button" className={styles.manualAcceso} onClick={onAbrirManual}>
@@ -346,32 +395,6 @@ export default function LoginFamilia({ onListo, onAbrirManual, onAbrirAdmin }: P
           </a>
         </p>
       </div>
-
-      {/* Instalar la app. Va DESPUÉS del formulario a propósito: es una acción
-          secundaria y no debe competir con entrar o crear la cuenta, que es a lo
-          que viene el adulto. Solo aparece si el navegador dice que se puede
-          (Chrome, con la app aún sin instalar); si no, no se pinta nada, que es
-          mejor que un botón muerto. */}
-      {puedeInstalar && (
-        <button
-          type="button"
-          className={styles.instalarAcceso}
-          onClick={() => void instalar()}
-        >
-          <span className={styles.manualIcono} aria-hidden="true">
-            📲
-          </span>
-          <span>
-            <span className={styles.instalarTitulo}>
-              {esAndroid() ? "Instalar en Android" : "Instalar la app"}
-            </span>
-            <span className={styles.manualTexto}>
-              Añádela a tu pantalla de inicio y ábrela como una app, sin la barra del
-              navegador.
-            </span>
-          </span>
-        </button>
-      )}
 
       {/* La Administración NO cuelga de la sesión de familia: va detrás de su propia
           contraseña (+ 2FA opcional), así que el administrador de la instalación
