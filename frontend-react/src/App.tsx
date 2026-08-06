@@ -349,6 +349,18 @@ function Asistente({
   const porId = Object.fromEntries(personajes.map((p) => [p.id, p]));
   const personaje = porId[estado.personajeId];
 
+  // El paso 3 (escena + chat) es la única pantalla que se comporta como una app
+  // de mensajería: alto fijo de ventana y el historial con su propio scroll, para
+  // que la escena no se vaya de la vista al crecer la conversación. La regla vive
+  // en global.css (`body.pantalla-chat`); aquí solo se marca el body mientras dura,
+  // y la limpieza cubre tanto volver atrás como abrir Manual/Admin/Configuración,
+  // que desmontan este componente.
+  useEffect(() => {
+    if (paso !== 3) return;
+    document.body.classList.add("pantalla-chat");
+    return () => document.body.classList.remove("pantalla-chat");
+  }, [paso]);
+
   return (
     <>
       <Steps pasoActivo={paso} />

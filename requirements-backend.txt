@@ -10,6 +10,10 @@
 #      uv (mismo conjunto de paquetes, sin versiones clavadas):
 #           pip install -r requirements-backend.txt
 #
+#      SE MANTIENE A MANO: si añades una dependencia a pyproject.toml, añádela
+#      también aquí o este fallback deja de arrancar la app (ya pasó una vez;
+#      ver docs/TRABAJO-FUTURO.md § Higiene del repositorio).
+#
 #  Ya NO se genera en local: la generación de imágenes se delega a
 #  Replicate.com (su GPU). Por eso este backend es MUY ligero: no
 #  necesita torch, diffusers, transformers ni rembg.
@@ -40,3 +44,22 @@ uvicorn[standard]         # Servidor ASGI que ejecuta la app FastAPI
 python-multipart          # Recibir la foto subida (modo "Usar mi foto")
 pydantic                  # Validación de datos de entrada/salida (lo usa FastAPI)
 python-dotenv             # Carga la configuración desde el archivo .env
+httpx                     # services/resiliencia.py captura httpx.TransportError para decidir
+                          # qué errores merecen reintento. Es dependencia de PRODUCCIÓN aunque
+                          # los SDKs ya la arrastren: no se depende de una transitiva.
+
+# --- Blindaje operativo (Hito 2) ---
+slowapi                   # Rate limit por IP en chat / generación / voz.
+
+# --- Retrieval y evaluación (Hitos 3 y 4) ---
+fastembed                 # Embeddings y reranker multilingües en ONNX/CPU, SIN torch.
+lingua-language-detector  # Detección de idioma offline (filtro de salida y métricas).
+pyphen                    # Separación silábica para la legibilidad INFLESZ (evals/).
+
+# --- Capa de proveedor de LLM (Hito 5) ---
+openai                    # Cliente de cualquier endpoint openai-compatible (Groq, Mistral,
+                          # Gemini-compat, OpenRouter, Ollama local…), vía LLM_BASE_URL.
+
+# --- Acceso de administración con 2FA (Hito 9.2d) ---
+pyotp                     # Códigos TOTP del segundo factor.
+segno                     # QR del enrolamiento, sin librerías de imagen.

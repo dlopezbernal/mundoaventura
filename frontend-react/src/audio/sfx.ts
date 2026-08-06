@@ -12,12 +12,17 @@
  *     del usuario. Por eso `asegurar()` llama a `resume()` en cada sonido: como
  *     todos salen de un evento de interacción, el primer clic lo despierta (es
  *     también lo que hace que funcione en iOS).
- *   · Esto NO es la voz del personaje. El mp3 de ElevenLabs lo reproduce
- *     `Chat.tsx` con un `Audio()` normal y va por su cuenta; el interruptor de
- *     aquí solo silencia los efectos de interfaz.
+ *   · La voz del personaje NO se sintetiza aquí: es el mp3 de ElevenLabs y lo
+ *     reproduce `Chat.tsx` con un `Audio()` normal. Pero SÍ obedece al mismo
+ *     interruptor: para el niño hay un único botón de sonido, y si lo apaga
+ *     espera silencio, no "silencio a medias". `Chat` consulta `sonidoActivo()`
+ *     antes de reproducir y se suscribe con `suscribirSonido` para callar en el
+ *     acto si se silencia a mitad de una frase.
  *
  * El interruptor global se persiste en `localStorage` (`mdt_sonido`) y lo maneja
- * el botón 🔊/🔇 del HUD.
+ * el botón 🔊/🔇 del HUD. Es un store mínimo (`sonidoActivo`/`suscribirSonido`)
+ * para `useSyncExternalStore`: la preferencia vive en el módulo, no en el estado
+ * de un componente, porque la leen dos sitios independientes (el HUD y el chat).
  */
 
 export type SfxNombre =
@@ -50,12 +55,26 @@ function leerPreferencia(): boolean {
 
 let activo = leerPreferencia();
 
-/** ¿Están encendidos los efectos de sonido? (lo lee el botón del HUD) */
+/** Suscritos al interruptor (HUD y chat), para `useSyncExternalStore`. */
+const oyentes = new Set<() => void>();
+
+/**
+ * ¿Está encendido el sonido? Cubre TODO lo que suena: los efectos de esta
+ * fábrica y la voz del personaje que reproduce `Chat`.
+ */
 export function sonidoActivo(): boolean {
   return activo;
 }
 
-/** Enciende/apaga los efectos y lo recuerda en el dispositivo. */
+/** Avisa de los cambios del interruptor. Devuelve la función para darse de baja. */
+export function suscribirSonido(oyente: () => void): () => void {
+  oyentes.add(oyente);
+  return () => {
+    oyentes.delete(oyente);
+  };
+}
+
+/** Enciende/apaga el sonido (efectos + voz) y lo recuerda en el dispositivo. */
 export function activarSonido(encendido: boolean): void {
   activo = encendido;
   try {
@@ -66,6 +85,7 @@ export function activarSonido(encendido: boolean): void {
   }
   // Al reactivar, un "select" de confirmación: se oye que ha vuelto el sonido.
   if (encendido) sfx("select");
+  oyentes.forEach((oyente) => oyente());
 }
 
 function asegurar(): AudioContext | null {

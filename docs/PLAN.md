@@ -5,9 +5,17 @@ Documento maestro. Cada hito tiene su propio fichero en `docs/plan/`.
 > **Documento histórico: es el plan tal y como se declaró AL EMPEZAR, y se conserva sin
 > reescribir.** Ese es justamente su valor metodológico: las prioridades del §0 se fijaron
 > antes de conocer los resultados y no se reordenaron después para justificarlos. Por eso
-> hay afirmaciones que hoy ya no describen el proyecto — la más visible, el §1, que dice que
-> el despliegue es "un túnel puntual (Colab/ngrok)" y "**no** un despliegue permanente en
-> internet": desde el 2026-08-05 la app corre en `chatmundoaventura.com`.
+> hay afirmaciones que hoy ya no describen el proyecto. Las dos que más engañan si se leen
+> sueltas:
+>
+> - **§1** dice que el despliegue es "un túnel puntual (Colab/ngrok)" y "**no** un despliegue
+>   permanente en internet". Desde el 2026-08-05 la app corre en `chatmundoaventura.com`.
+> - **§2** cierra con que "toda la voz y todo el historial de preguntas del menor se procesan
+>   localmente". Eso describía la app corriendo en el PC de casa. En el servicio publicado el
+>   STT por defecto es **ElevenLabs (nube)** —el local sigue disponible y es la config
+>   recomendada para privacidad—, y aunque el historial del chat efectivamente **no se
+>   persiste**, la pregunta sí viaja a DeepL y al LLM. El estado real está en
+>   [`PRIVACIDAD.md`](PRIVACIDAD.md).
 >
 > Para el **estado final** ve a [`ARQUITECTURA.md`](ARQUITECTURA.md) (qué es hoy),
 > [`EVALUACION.md`](EVALUACION.md) (qué se midió) y

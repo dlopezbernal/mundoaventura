@@ -3,17 +3,58 @@ name: CI
 # Corre en cada push y en cada pull request contra dev (y main).
 # `workflow_dispatch` añade el botón "Run workflow" de la interfaz de GitHub,
 # para poder redesplegar a mano sin inventarse un commit vacío.
+#
+# `paths-ignore`: un cambio que SOLO toca documentación no arranca nada. No es
+# tacañería, es que ejecutar pytest y `npm run build` para corregir una tabla de
+# Markdown no comprueba nada: la rama `docs/congelacion-tribunal` llegó a gastar
+# cuatro corridas completas sin una sola línea de código. Basta con que el commit
+# toque UN fichero fuera de la lista para que el CI vuelva a correr entero, así
+# que un cambio mixto (código + documentación) se verifica como siempre.
+# Consecuencia que hay que conocer: un merge a `main` de solo documentación
+# tampoco despliega, y el servidor se queda con el árbol anterior hasta el
+# siguiente despliegue de verdad. Es inofensivo —la app no sirve los `.md`— pero
+# explica por qué a veces `git log` en el VPS va un commit por detrás.
 on:
   push:
     branches: [dev, main]
+    paths-ignore: ["**.md", "docs/**"]
   pull_request:
     branches: [dev, main]
+    paths-ignore: ["**.md", "docs/**"]
   workflow_dispatch:
 
+# Solo interesa el ÚLTIMO commit de una rama: si se empujan tres seguidos, los
+# dos primeros ya no se van a mirar. Sin esto, cada `git push` de corrección
+# durante una revisión deja corriendo una verificación que nadie leerá.
+#
+# `cancel-in-progress` se apaga a propósito en `main`: ahí la corrida termina en
+# el job de despliegue, y abortarlo a mitad dejaría el servidor en un estado
+# intermedio (a medio `git pull` o a medio `npm run build`). En `main` se espera;
+# en todo lo demás, se cancela.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+# SIN TRABAJO DUPLICADO. Con los dos disparadores de arriba, un PR de `dev` a
+# `main` verificaba dos veces el MISMO commit: una al empujarlo a `dev` (evento
+# push) y otra entera como PR. Se nota sobre todo cuando GitHub va lento —checks
+# "pendientes" en el PR que ya estaban en verde en el otro run— y gasta el doble
+# de minutos.
+#
+# De ahí el `if` que llevan los dos trabajos de verificación: se saltan SOLO
+# cuando el PR viene de `dev` o `main`, que son las ramas que ya disparan el CI
+# por push. Un PR desde cualquier otra rama (`feat/…`, `fix/…`) sigue
+# verificándose —ahí el PR es la única red que hay— y un push directo a `dev` o
+# `main` también.
+#
+# Va repetido en los dos trabajos a propósito: `jobs.<id>.if` NO puede leer el
+# contexto `env`, así que no hay forma de declarar la condición una sola vez.
+# Si la quitas de uno solo, ese trabajo vuelve a duplicarse en silencio.
 jobs:
   backend:
     name: Backend (ruff + pytest)
     runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || !contains(fromJSON('["dev", "main"]'), github.head_ref)
     steps:
       - uses: actions/checkout@v5
 
@@ -39,6 +80,8 @@ jobs:
   frontend:
     name: Frontend (oxlint + build)
     runs-on: ubuntu-latest
+    # Mismo `if` que en `backend`: ver la nota de arriba (no se puede factorizar).
+    if: github.event_name != 'pull_request' || !contains(fromJSON('["dev", "main"]'), github.head_ref)
     defaults:
       run:
         working-directory: frontend-react

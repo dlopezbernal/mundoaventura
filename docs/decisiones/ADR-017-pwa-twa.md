@@ -3,7 +3,7 @@
 - **Estado:** aceptada — PWA instalable **en producción**; el APK (TWA) queda documentado y sin
   generar, por el keystore (ver Consecuencias).
 - **Fecha:** 2026-08-06
-- **Hito:** F2 (despliegue) — `docs/APK-ANDROID.md`
+- **Fase:** F3 (la app en el móvil) — `docs/APK-ANDROID.md`, `docs/TRABAJO-FUTURO.md §Fase 3`
 - **Depende de:** [ADR-015](ADR-015-despliegue-nativo-vps.md) (dominio propio con HTTPS válido).
 
 ## Contexto

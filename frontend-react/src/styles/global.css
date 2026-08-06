@@ -76,6 +76,26 @@ button {
   }
 }
 
+/* --- Paso 3 (escena + chat): la ventana MANDA sobre el contenido -------------
+   `min-height` arriba no basta para el chat: como la altura del contenedor la
+   sigue decidiendo su contenido, cada respuesta nueva estiraba .holo-wrap, el
+   historial nunca llegaba a desbordar (así que su `overflow-y: auto` no
+   entraba nunca) y quien scrolleaba para leer perdía de vista la escena, que es
+   justo lo que el niño acaba de generar.
+
+   Con la clase (la pone App mientras el paso 3 está en pantalla) la altura pasa
+   a ser FIJA: el chat solo puede repartirse lo que hay, así que el desbordamiento
+   ocurre dentro del historial y la escena se queda anclada arriba —o al lado, en
+   PC— pase lo que pase. Vale para los tres tramos, porque lo que cambia entre
+   ellos es cómo se coloca la escena, no esta regla.
+
+   Es una clase y no la regla por defecto porque el resto de pantallas (manual,
+   admin, configuración) SÍ deben crecer y scrollear con normalidad. */
+body.pantalla-chat .holo-wrap {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* Scanlines CRT (efecto "TV antigua"). Fijo a pantalla completa y decorativo,
    pero renderizado DENTRO de .holo-wrap para compartir su contexto de apilado:
    así cubre fondo, botones y cartas (z-index menor), mientras que la imagen

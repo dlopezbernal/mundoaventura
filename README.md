@@ -132,8 +132,9 @@ la sesión es persistente). Al entrar:
 La interfaz tiene **efectos de sonido tipo arcade** (girar el carrusel, elegir, enviar,
 recibir…) **sintetizados con la Web Audio API**: ni un solo fichero de audio ni una librería
 extra. Se apagan y encienden con el interruptor **🔊/🔇** del HUD, que está fuera del menú ☰
-porque es un control del niño, y la preferencia se recuerda en el navegador. No tienen nada que
-ver con la voz del personaje, que va por su cuenta.
+porque es un control del niño, y la preferencia se recuerda en el navegador. Ese interruptor
+silencia **todo lo que suena**, también la voz del personaje: con el sonido apagado el chat
+responde solo por texto, y al volver a encenderlo el personaje vuelve a hablar.
 
 El botón **📖 Manual de usuario** (en el menú ☰ del HUD) abre la **guía en pantalla**, con una sección para el
 niño (los 3 pasos y el chat) y otra para el adulto (cuenta de familia y ⚙️ Configuración). También
@@ -260,7 +261,9 @@ No es solo CI, es **CI/CD**. El flujo de GitHub Actions (`.github/workflows/ci.y
 cada push y cada PR contra **`dev` y `main`** dos trabajos de verificación —lint + formato +
 pytest (backend) y oxlint + build (frontend)— y un tercero, **`deploy`**, que solo se activa en
 `main` y que, si los dos anteriores pasan, **publica en producción por SSH y comprueba después
-el `/health` del sitio**. Es decir: un merge a `main` despliega solo. El procedimiento está en
+el `/health` del sitio**. Es decir: un merge a `main` despliega solo. Cada commit se verifica
+**una sola vez**: el PR de `dev` a `main` se salta los dos primeros trabajos porque ese commit
+ya los pasó al empujarlo a `dev`. El procedimiento está en
 [`DESPLIEGUE.md`](docs/DESPLIEGUE.md).
 
 El **banco de pruebas** (`evals/`) mide la calidad del RAG con números; su metodología y
@@ -284,7 +287,7 @@ resultados están en [`EVALUACION.md`](docs/EVALUACION.md).
   modelo/temperatura del LLM, prompts de sistema, etc. sin reiniciar (se guardan en SQLite; con
   la BBDD vacía la app usa los valores por defecto de `config.py`).
 - **Modelo o estilo de imagen:** `REPLICATE_MODEL` en el `.env`; el estilo (`STYLE_SUFFIX`) es un
-  ajuste editable en 🛡️ Admin → General.
+  ajuste editable en 🛡️ Admin → **Imagen**.
 
 ---
 

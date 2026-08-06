@@ -18,12 +18,13 @@
  * ve una pantalla limpia.
  *
  * El interruptor de sonido 🔊/🔇 queda FUERA del plegado: es un control del niño
- * (silenciar los efectos de la interfaz), no un acceso de adulto, y tiene que
- * poder apagarse de un toque sin abrir ningún menú.
+ * (silencia TODO lo que suena: los efectos de la interfaz y la voz del personaje),
+ * no un acceso de adulto, y tiene que poder apagarse de un toque sin abrir ningún
+ * menú.
  */
 
-import { useState } from "react";
-import { activarSonido, sfx, sonidoActivo } from "../../audio/sfx";
+import { useState, useSyncExternalStore } from "react";
+import { activarSonido, sfx, sonidoActivo, suscribirSonido } from "../../audio/sfx";
 import Marca from "../Marca/Marca";
 import styles from "./Hud.module.css";
 
@@ -55,13 +56,13 @@ export default function Hud({
 }: Props) {
   const [abierto, setAbierto] = useState(false);
   // La preferencia vive en el módulo de sonido (y en localStorage); aquí solo se
-  // refleja para repintar el icono.
-  const [sonido, setSonido] = useState(sonidoActivo);
+  // refleja para repintar el icono. Se lee del store en vez de copiarla a estado
+  // local porque el chat también la escucha: con dos copias, apagar el sonido
+  // repintaba el icono pero el personaje seguía hablando.
+  const sonido = useSyncExternalStore(suscribirSonido, sonidoActivo, () => true);
 
   function alternarSonido() {
-    const encendido = !sonido;
-    activarSonido(encendido); // al encender suena la confirmación
-    setSonido(encendido);
+    activarSonido(!sonido); // al encender suena la confirmación
   }
 
   return (

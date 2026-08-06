@@ -277,8 +277,9 @@ segundo**, todo **medido y comparado contra una línea base inmutable**.
 
 ### 11.b Mediciones de plataforma (no de calidad de la IA)
 
-Además del arco de calidad, hay cuatro mediciones de ingeniería con criterio de aceptación
-declarado **antes** de medir. Viven en [`mediciones/`](mediciones/):
+Además del arco de calidad hay **cinco** mediciones de ingeniería con criterio de aceptación
+declarado **antes** de medir — cuatro ejecutadas y una declarada sin ejecutar. Viven en
+[`mediciones/`](mediciones/):
 
 | Medición | Resultado | Fichero |
 |---|---|---|
@@ -308,6 +309,17 @@ primero que se pregunta después de verla:
 | Entrega de la respuesta | **SSE en streaming** |
 | Traducción | DeepL ES→EN (obligatoria; su retirada se midió y se descartó) |
 
+> **Dónde vive esa configuración, y por qué un clon nuevo no la trae.** Ninguno de esos valores
+> está clavado en el código: el LLM se fija en el `.env` (`LLM_PROVIDER=openai` + `LLM_MODEL` +
+> `LLM_BASE_URL` de Groq) y el resto —embeddings, troceado, reranker y sus umbrales— son ajustes
+> en caliente que viven en el SQLite (`settings_service`). **Los valores por defecto de
+> `config.py` siguen siendo los de la línea base a propósito** (`replicate` + `minilm-en` +
+> `recursivo` + `RERANKER=off`), para que un clon recién hecho reproduzca la baseline sin tocar
+> nada y las comparaciones de este documento se puedan repetir. Por eso llevar la configuración
+> afinada a un servidor es un paso explícito del despliegue
+> ([`DESPLIEGUE.md §3.7`](DESPLIEGUE.md)): sin él, el servidor responde con la línea base y el
+> chat se nota peor.
+
 ## 12. Limitaciones reconocidas del proyecto
 
 No es una debilidad enumerarlas: un tribunal valora más "sabemos qué no hemos podido demostrar y
@@ -324,7 +336,9 @@ por qué" que un informe sin fisuras.
 - **Seguridad juzgada a mano.** El "tacto" del set adversarial (18 preguntas) no tiene métrica
   automática. La corrida adversarial con el LLM real **se ejecutó** el 2026-08-02 sobre los
   cinco candidatos, con **0 fallos de 18** en la configuración entregada; los informes están en
-  `evals/resultados/seguridad/`. Incluyen además las corridas `-hardened`, posteriores a
+  `evals/resultados/seguridad/` y **se versionan a propósito** (el resto de corridas no: son las
+  únicas que se citan como evidencia, así que tienen que viajar con el repositorio para que
+  alguien pueda comprobarlas). Incluyen además las corridas `-hardened`, posteriores a
   endurecer el prompt tras detectar una rotura de personaje — el ciclo **medir → arreglar →
   volver a medir** está documentado, no solo el resultado final.
 - **Corpus monolingüe (inglés).** La retirada de DeepL se descartó **con datos** precisamente

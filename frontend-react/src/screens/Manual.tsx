@@ -289,9 +289,10 @@ export default function Manual({ onCerrar }: Props) {
                 <em>Compartir → Añadir a pantalla de inicio</em>.
               </li>
               <li>
-                🔊 La app tiene <strong className={styles.destacado}>efectos de sonido</strong>. Se
-                silencian con el botón 🔊 de la barra de arriba, que está fuera del menú ☰ para
-                que el niño lo tenga a mano. Eso no calla la voz del personaje.
+                🔊 La app tiene <strong className={styles.destacado}>efectos de sonido</strong> y
+                el personaje habla en voz alta. Todo se silencia con el botón 🔊 de la barra de
+                arriba, que está fuera del menú ☰ para que el niño lo tenga a mano: con el sonido
+                apagado el personaje responde solo por escrito, y al encenderlo vuelve a hablar.
               </li>
             </ul>
           </div>

@@ -29,7 +29,7 @@ instalar y usar; aquí está todo lo demás.
 | [`APK-ANDROID.md`](APK-ANDROID.md) | Empaquetar la app como APK de Android (TWA): PWA instalable, firma y Digital Asset Links. |
 | [`decisiones/`](decisiones/) | Un fichero ADR por decisión (ADR-000 es la plantilla). |
 | [`plan/`](plan/) | El plan de trabajo por hitos (H1–H10) y el plan de reorganización documental. Se archiva tras la entrega. |
-| [`mediciones/`](mediciones/) | Notas de mediciones puntuales (concurrencia, GPU/STT, latencia de streaming). |
+| [`mediciones/`](mediciones/) | Notas de mediciones puntuales de plataforma: concurrencia (H2), GPU/STT (H7), latencia de streaming (H8), despliegue sin corte (F2) y drenado en vuelo (F3, declarada **sin ejecutar**). |
 | [`historico/`](historico/) | Documentos de implementación de hitos pasados (histórico, no describen el estado actual). |
 | [`PLAN.md`](PLAN.md) | Documento maestro del plan de trabajo (prioridades, calendario, reglas). |
 | [`PLATAFORMAS-IA.md`](PLATAFORMAS-IA.md) · [`playwright-mcp.md`](playwright-mcp.md) | Guías puntuales. |

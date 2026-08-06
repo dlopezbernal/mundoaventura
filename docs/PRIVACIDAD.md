@@ -89,9 +89,10 @@ alternativas UE/local más abajo).
 
 ## Almacenamiento en el navegador
 
-La app guarda cinco cosas en el navegador del dispositivo. Ninguna se envía a terceros, y
-todas son necesarias para que el servicio funcione o para respetar una preferencia, así que
-quedan **exentas del consentimiento de cookies** (art. 22.2 LSSI) — pero hay que declararlas:
+La app guarda en el navegador **cinco claves propias** (más la caché de ficheros estáticos del
+service worker). Ninguna se envía a terceros, y todas son necesarias para que el servicio
+funcione o para respetar una preferencia, así que quedan **exentas del consentimiento de
+cookies** (art. 22.2 LSSI) — pero hay que declararlas:
 
 | Clave | Almacén | Qué es |
 |---|---|---|
@@ -242,9 +243,14 @@ también pasa por **DeepL** (traducción, Alemania/UE) en todos los casos.
 - **El correo del adulto se guarda en claro** (es un identificador de contacto, no un
   secreto; la contraseña sí va hasheada) y, en el servicio publicado, **reside en el
   servidor**, no en el dispositivo de la familia.
-- **Las copias de seguridad del servidor incluyen el `.env` en claro** dentro de un `.tgz`
-  sin cifrar, en el mismo disco. No es solo trabajo futuro: hoy es una exposición real si
-  alguien accede al servidor. Ver [`TRABAJO-FUTURO.md`](TRABAJO-FUTURO.md).
+- **Las copias de seguridad del servidor viven en el mismo disco que protegen.** Su contenido
+  es sensible (llevan dentro el `.env` con todas las claves y el SQLite con las cuentas de
+  familia), así que desde el 2026-08-06 `deploy/respaldar.sh` las **cifra con GPG de clave
+  pública** (`BACKUP_GPG_RECIPIENT`): el servidor puede crear copias pero no leerlas, porque la
+  clave privada nunca ha estado en esa máquina. Si esa variable no se define, la copia se hace
+  **en claro** y el script lo avisa por `stderr` — conviene comprobarlo. Lo que sigue sin
+  resolverse es sacarlas del servidor: una pérdida del disco se lleva copias y original
+  ([`TRABAJO-FUTURO.md`](TRABAJO-FUTURO.md), [`DESPLIEGUE.md §5.2`](DESPLIEGUE.md)).
 - No hay registro de actividades de tratamiento ni evaluación de impacto (art. 30 y 35), ni
   contratos de encargo con los proveedores. Proporcionado a un proyecto académico; no a un
   servicio abierto a familias reales.

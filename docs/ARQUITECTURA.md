@@ -11,8 +11,9 @@ App educativa (niños 8–12) cliente-servidor desacoplada:
 - **Frontend (SPA React):** Vite 8 + React 19 + TypeScript 6, en el navegador; asistente por
   pasos: catálogos (carrusel), escena y chat (texto + voz). **Instalable como app** (PWA) y
   utilizable en móvil, tablet y PC. Dos dependencias de producción: `react` y `react-dom`.
-- **Backend (FastAPI):** routers finos → services → config. Sin GPU local. 22 dependencias
-  de producción, ninguna de ellas `torch`.
+- **Backend (FastAPI):** routers finos → services → config. Sin GPU local. **21 dependencias
+  de producción** (`pyproject.toml`), ninguna de ellas `torch`; `faster-whisper` va aparte como
+  extra opcional (`stt-local`).
 - **Nube:** Replicate (imagen + LLM), DeepL (traducción), ElevenLabs (voz).
 - **Producción:** VPS propio con Caddy (TLS) + systemd, despliegue continuo desde `main`.
 
@@ -111,8 +112,11 @@ APK (TWA) está documentado y sin ejecutar: [`APK-ANDROID.md`](APK-ANDROID.md).
 
 **Efectos de sonido.** Sintetizados con la Web Audio API (`audio/sfx.ts`): sin ficheros de
 audio ni dependencias. Un solo `AudioContext`, despertado por el primer gesto del usuario
-(política de autoplay). Es independiente de la voz del personaje, que es el mp3 de
-ElevenLabs. Interruptor 🔊/🔇 en el HUD, persistido en `localStorage`.
+(política de autoplay). La voz del personaje no se sintetiza aquí (es el mp3 de
+ElevenLabs), pero **obedece al mismo interruptor** 🔊/🔇 del HUD: para el niño hay un
+único control de sonido, y apagarlo deja la conversación **solo por texto**, también a
+mitad de una frase. La preferencia vive en el módulo (`sonidoActivo`/`suscribirSonido`,
+leídos con `useSyncExternalStore`) y se persiste en `localStorage`.
 
 ## Blindaje operativo (Hito 2)
 

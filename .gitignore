@@ -49,10 +49,14 @@ Thumbs.db
 # Snapshots y logs de consola que deja cada navegación del MCP de Playwright.
 .playwright-mcp/
 
-# Evals: los resultados de cada corrida no se versionan (salvo la línea base).
+# Evals: los resultados de cada corrida no se versionan (salvo la línea base y las
+# corridas de seguridad, que SÍ son evidencia citada por ADR-010 y EVALUACION.md §12:
+# si no viajan con el repo, esas afirmaciones no se pueden comprobar al clonarlo).
 evals/resultados/*
 !evals/resultados/BASELINE.csv
 !evals/resultados/BASELINE.html
+!evals/resultados/seguridad/
+!evals/resultados/juez_validacion.md
 # Test ciego (H6): papeletas/clave/votos son artefactos de corrida, no se versionan.
 evals/test_ciego/
 
