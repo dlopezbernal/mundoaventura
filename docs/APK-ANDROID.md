@@ -3,6 +3,13 @@
 Cómo empaquetar MundoAventura como aplicación de Android instalable, sin reescribir
 nada y sin duplicar la aplicación web.
 
+> **Estado: no ejecutado, a propósito.** La PWA instalable —que es el requisito de entrada de
+> todo esto— **ya está en producción**, y desde el login se ofrece "Instalar en Android". Como
+> la app instalada desde el navegador **se ve y se comporta igual que el APK**, generar el APK
+> solo añadiría poder distribuirlo como fichero o por Play Store. Se dejó como trabajo futuro
+> (ver [`TRABAJO-FUTURO.md`](TRABAJO-FUTURO.md)); este documento es el procedimiento listo para
+> ejecutar cuando haga falta.
+
 ---
 
 ## 1. Qué es esto y qué no es
