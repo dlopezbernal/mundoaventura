@@ -18,9 +18,9 @@ _CLIENTE = TestClient(app)
 
 
 @pytest.fixture(autouse=True)
-def _sortear_pin():
-    """La zona de config va tras el PIN de adulto: se sortea la dependencia solo en
-    estos tests y se restaura después (el `app` es un singleton compartido)."""
+def _sortear_admin():
+    """La zona de config va tras la contraseña de adulto: se sortea la dependencia solo
+    en estos tests y se restaura después (el `app` es un singleton compartido)."""
     app.dependency_overrides[admin_service.requiere_admin] = lambda: None
     yield
     app.dependency_overrides.pop(admin_service.requiere_admin, None)

@@ -28,7 +28,7 @@ from backend.schemas.admin import (
     Admin2FAConfirmar,
     Admin2FADesactivar,
     AdminCambiar,
-    AdminPin,
+    AdminPassword,
     ImportRequest,
 )
 from backend.schemas.respuestas import (
@@ -62,17 +62,17 @@ def estado(x_admin_token: str | None = Header(default=None)):
 
 
 @router.post("/setup", response_model=TokenResponse)
-def setup(req: AdminPin):
+def setup(req: AdminPassword):
     """Crea la contraseña de administración por primera vez (auto-login). 400 si ya existe o es corta."""
     try:
-        token = admin_service.configurar(req.pin)
+        token = admin_service.configurar(req.password)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True, "token": token}
 
 
 @router.post("/login", response_model=AdminLoginResponse)
-def login(req: AdminPin, request: Request):
+def login(req: AdminPassword, request: Request):
     """Valida la contraseña (y el 2FA si está activo) y devuelve un token de sesión.
 
     Si el 2FA está activo y no se ha aportado código, responde 200 con
@@ -81,7 +81,7 @@ def login(req: AdminPin, request: Request):
     """
     ip = request.client.host if request.client else "?"
     try:
-        token = admin_service.login(req.pin, ip, req.codigo)
+        token = admin_service.login(req.password, ip, req.codigo)
     except admin_service.Requiere2FAError:
         return {"ok": False, "requiere_2fa": True, "token": ""}
     except admin_service.BloqueoLoginError as exc:
@@ -103,10 +103,10 @@ def logout(x_admin_token: str | None = Header(default=None)):
     dependencies=[Depends(admin_service.requiere_admin)],
     response_model=OkResponse,
 )
-def cambiar_pin(req: AdminCambiar):
+def cambiar_password(req: AdminCambiar):
     """Cambia la contraseña (requiere la actual). 400 si la actual no es correcta."""
     try:
-        admin_service.cambiar(req.pin_actual, req.pin_nuevo)
+        admin_service.cambiar(req.password_actual, req.password_nueva)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True}
@@ -147,7 +147,7 @@ def confirmar_2fa(req: Admin2FAConfirmar):
 def desactivar_2fa(req: Admin2FADesactivar):
     """Desactiva el 2FA (exige la contraseña actual). 400 si la contraseña no es correcta."""
     try:
-        admin_service.desactivar_2fa(req.pin)
+        admin_service.desactivar_2fa(req.password)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"ok": True}

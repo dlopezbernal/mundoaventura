@@ -12,10 +12,10 @@ CRUD del catálogo de lugares (la lógica vive en services/ubicaciones_service.p
 Lo consumen tanto la pantalla del niño (elegir mundo) como la pestaña de
 configuración. Las escrituras (POST/PUT/DELETE) van detrás del control de acceso
 admin (`requiere_admin`, enchufado en `main.py`); los `GET` del catálogo siguen
-públicos para el flujo del niño.
+públicos para el flujo del niño, PERO `?todos=1` no: ver abajo.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from fastapi.responses import FileResponse
 
 from backend.schemas.respuestas import (
@@ -33,8 +33,15 @@ _admin = [Depends(admin_service.requiere_admin)]
 
 
 @router.get("/ubicaciones", response_model=UbicacionesResponse)
-def listar_ubicaciones(todos: bool = False):
-    """Catálogo de ubicaciones. Por defecto solo las activas; `?todos=1` incluye inactivas."""
+def listar_ubicaciones(todos: bool = False, x_admin_token: str | None = Header(default=None)):
+    """Catálogo de ubicaciones. Por defecto solo las activas; `?todos=1` incluye inactivas.
+
+    Mismo criterio que en el catálogo de personajes: la lista de ACTIVAS es pública
+    (la SPA la pinta antes de que haya sesión), pero saber qué ubicaciones hay
+    **desactivadas** es información de administración y exige `X-Admin-Token`.
+    """
+    if todos:
+        admin_service.requiere_admin(x_admin_token)
     return {"ubicaciones": ubicaciones_service.listar(incluir_inactivos=todos)}
 
 

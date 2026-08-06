@@ -2,9 +2,11 @@
  * data/holo.ts — Adaptador catálogo → carta-holograma
  * ====================================================
  *
- * Los catálogos (personajes.ts / ubicaciones.ts) siguen siendo la fuente de
- * verdad de QUÉ hay. Aquí sólo los "vestimos" con los adornos de juego que pide
- * la estética Arcade Holo (nivel, nº de serie, energía, tinte de la carta).
+ * Los catálogos (personajes y ubicaciones) son la fuente de verdad de QUÉ hay, y
+ * llegan del backend por API (GET /api/personajes y GET /api/ubicaciones); ya no
+ * hay ficheros de catálogo en el frontend. Aquí sólo los "vestimos" con los
+ * adornos de juego que pide la estética Arcade Holo (nivel, nº de serie, energía,
+ * tinte de la carta).
  *
  * Esos adornos son DECORATIVOS y deterministas: se derivan del id con un hash,
  * así una misma carta muestra siempre los mismos valores entre recargas sin

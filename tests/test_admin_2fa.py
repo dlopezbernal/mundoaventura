@@ -150,7 +150,7 @@ def test_desactivar_requiere_contrasena():
 # ---------------------------------------------------------------------------
 def test_endpoints_flujo_2fa_completo():
     # Setup crea la contraseña y devuelve un token (auto-login).
-    r = _CLIENTE.post("/api/admin/setup", json={"pin": "contrasena-larga"})
+    r = _CLIENTE.post("/api/admin/setup", json={"password": "contrasena-larga"})
     assert r.status_code == 200, r.text
     token = r.json()["token"]
     h = {"X-Admin-Token": token}
@@ -169,11 +169,12 @@ def test_endpoints_flujo_2fa_completo():
     assert _CLIENTE.get("/api/admin/status").json()["dos_factor_activo"] is True
 
     # Login sin código: 200 con requiere_2fa=true y sin token.
-    r = _CLIENTE.post("/api/admin/login", json={"pin": "contrasena-larga"})
+    r = _CLIENTE.post("/api/admin/login", json={"password": "contrasena-larga"})
     assert r.status_code == 200 and r.json()["requiere_2fa"] is True and r.json()["token"] == ""
 
     # Login con código válido: token.
     r = _CLIENTE.post(
-        "/api/admin/login", json={"pin": "contrasena-larga", "codigo": pyotp.TOTP(secreto).now()}
+        "/api/admin/login",
+        json={"password": "contrasena-larga", "codigo": pyotp.TOTP(secreto).now()},
     )
     assert r.status_code == 200 and r.json()["token"]

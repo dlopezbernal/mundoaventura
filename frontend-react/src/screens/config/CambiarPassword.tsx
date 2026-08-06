@@ -1,9 +1,9 @@
 /**
- * CambiarPin — Formulario para cambiar la CONTRASEÑA de administración (Hito 9.2)
- * ==============================================================================
+ * CambiarPassword — Formulario para cambiar la CONTRASEÑA de administración (Hito 9.2)
+ * ====================================================================================
  *
- * (El nombre del fichero/componente es heredado del Hito 7, cuando el acceso era un
- * PIN; desde el Hito 9.2d la credencial de admin es una CONTRASEÑA ≥ 8 caracteres.)
+ * (Nació en el Hito 7 como "CambiarPin", cuando el acceso era un PIN numérico; desde el
+ * Hito 9.2d la credencial de admin es una CONTRASEÑA ≥ 8 caracteres y el nombre lo dice.)
  *
  * Extraído de SistemaTab: el cambio de contraseña es lo que queda en la pestaña
  * "Sistema" de Admin. Requiere la contraseña actual y la nueva; al cambiarla el
@@ -11,7 +11,7 @@
  */
 
 import { useState } from "react";
-import { adminChangePin, BackendError } from "../../api/client";
+import { adminChangePassword, BackendError } from "../../api/client";
 import styles from "../Settings.module.css";
 
 interface Props {
@@ -19,22 +19,22 @@ interface Props {
   onCambiado: () => void;
 }
 
-export default function CambiarPin({ onCambiado }: Props) {
-  const [pinActual, setPinActual] = useState("");
-  const [pinNuevo, setPinNuevo] = useState("");
-  const [pinNuevo2, setPinNuevo2] = useState("");
+export default function CambiarPassword({ onCambiado }: Props) {
+  const [passwordActual, setPasswordActual] = useState("");
+  const [passwordNueva, setPasswordNueva] = useState("");
+  const [passwordNueva2, setPasswordNueva2] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
 
   async function onCambiar() {
     setError(null);
-    if (pinNuevo !== pinNuevo2) {
+    if (passwordNueva !== passwordNueva2) {
       setError("La contraseña nueva y su confirmación no coinciden.");
       return;
     }
     setOcupado(true);
     try {
-      await adminChangePin(pinActual, pinNuevo);
+      await adminChangePassword(passwordActual, passwordNueva);
       // Cambiar la contraseña invalida la sesión actual en el backend: hay que reentrar.
       window.alert("Contraseña cambiada. Vuelve a introducirla para seguir.");
       onCambiado();
@@ -59,9 +59,9 @@ export default function CambiarPin({ onCambiado }: Props) {
         <input
           className={styles.input}
           type="password"
-          value={pinActual}
+          value={passwordActual}
           autoComplete="off"
-          onChange={(e) => setPinActual(e.target.value)}
+          onChange={(e) => setPasswordActual(e.target.value)}
         />
       </label>
       <div className={styles.pjFila2}>
@@ -70,9 +70,9 @@ export default function CambiarPin({ onCambiado }: Props) {
           <input
             className={styles.input}
             type="password"
-            value={pinNuevo}
+            value={passwordNueva}
             autoComplete="off"
-            onChange={(e) => setPinNuevo(e.target.value)}
+            onChange={(e) => setPasswordNueva(e.target.value)}
           />
         </label>
         <label className={styles.pjLabel}>
@@ -80,9 +80,9 @@ export default function CambiarPin({ onCambiado }: Props) {
           <input
             className={styles.input}
             type="password"
-            value={pinNuevo2}
+            value={passwordNueva2}
             autoComplete="off"
-            onChange={(e) => setPinNuevo2(e.target.value)}
+            onChange={(e) => setPasswordNueva2(e.target.value)}
           />
         </label>
       </div>
@@ -91,7 +91,7 @@ export default function CambiarPin({ onCambiado }: Props) {
           type="button"
           className="btn btn-primario"
           onClick={() => void onCambiar()}
-          disabled={ocupado || !pinActual || !pinNuevo}
+          disabled={ocupado || !passwordActual || !passwordNueva}
         >
           Cambiar contraseña
         </button>

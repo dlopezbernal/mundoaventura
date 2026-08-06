@@ -198,10 +198,10 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Cambiar Pin
+         * Cambiar Password
          * @description Cambia la contraseña (requiere la actual). 400 si la actual no es correcta.
          */
-        post: operations["cambiar_pin_api_admin_change_post"];
+        post: operations["cambiar_password_api_admin_change_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -410,6 +410,15 @@ export interface paths {
         /**
          * Listar Personajes
          * @description Catálogo de personajes. Por defecto solo los activos; `?todos=1` incluye inactivos.
+         *
+         *     La lista de ACTIVOS es pública a propósito: la SPA la necesita para pintar el
+         *     carrusel antes de que el niño tenga sesión.
+         *
+         *     `?todos=1` NO lo es. Un personaje desactivado lo está porque un adulto decidió
+         *     retirarlo, así que su existencia es información de administración y solo la usa
+         *     la pestaña de configuración. Por eso ese parámetro exige `X-Admin-Token` en vez
+         *     de ir en un endpoint aparte: el frontend ya manda el token en todas sus
+         *     peticiones y no hay que tocar el cliente.
          *
          *     Incluye `limite` (MAX_PERSONAJES) para que la pestaña de configuración pueda
          *     deshabilitar "Nuevo personaje" sin necesidad de otro endpoint.
@@ -732,6 +741,10 @@ export interface paths {
         /**
          * Listar Ubicaciones
          * @description Catálogo de ubicaciones. Por defecto solo las activas; `?todos=1` incluye inactivas.
+         *
+         *     Mismo criterio que en el catálogo de personajes: la lista de ACTIVAS es pública
+         *     (la SPA la pinta antes de que haya sesión), pero saber qué ubicaciones hay
+         *     **desactivadas** es información de administración y exige `X-Admin-Token`.
          */
         get: operations["listar_ubicaciones_api_ubicaciones_get"];
         put?: never;
@@ -1152,10 +1165,10 @@ export interface components {
          */
         Admin2FADesactivar: {
             /**
-             * Pin
+             * Password
              * @description Contraseña de administración actual.
              */
-            pin: string;
+            password: string;
         };
         /**
          * Admin2FAEnrol
@@ -1185,15 +1198,15 @@ export interface components {
          */
         AdminCambiar: {
             /**
-             * Pin Actual
+             * Password Actual
              * @description Contraseña actual.
              */
-            pin_actual: string;
+            password_actual: string;
             /**
-             * Pin Nuevo
+             * Password Nueva
              * @description Contraseña nueva.
              */
-            pin_nuevo: string;
+            password_nueva: string;
         };
         /**
          * AdminLoginResponse
@@ -1214,15 +1227,15 @@ export interface components {
             token: string;
         };
         /**
-         * AdminPin
+         * AdminPassword
          * @description Contraseña de administración (crear o iniciar sesión), con código 2FA opcional.
          */
-        AdminPin: {
+        AdminPassword: {
             /**
-             * Pin
+             * Password
              * @description Contraseña de administración.
              */
-            pin: string;
+            password: string;
             /**
              * Codigo
              * @description Código 2FA (TOTP o recuperación).
@@ -2592,7 +2605,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AdminPin"];
+                "application/json": components["schemas"]["AdminPassword"];
             };
         };
         responses: {
@@ -2625,7 +2638,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AdminPin"];
+                "application/json": components["schemas"]["AdminPassword"];
             };
         };
         responses: {
@@ -2680,7 +2693,7 @@ export interface operations {
             };
         };
     };
-    cambiar_pin_api_admin_change_post: {
+    cambiar_password_api_admin_change_post: {
         parameters: {
             query?: never;
             header?: {
@@ -3085,7 +3098,9 @@ export interface operations {
             query?: {
                 todos?: boolean;
             };
-            header?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };
@@ -3764,7 +3779,9 @@ export interface operations {
             query?: {
                 todos?: boolean;
             };
-            header?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
             path?: never;
             cookie?: never;
         };

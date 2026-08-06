@@ -14,15 +14,15 @@ from backend.services import admin_service
 def _entorno(monkeypatch):
     admin_service._fallos_login.clear()
     monkeypatch.setattr(admin_service, "_RETARDO_LOGIN", 0)  # sin espera en tests
-    monkeypatch.setattr(admin_service, "_leer_hash", lambda: "salt$hash")  # hay PIN
+    monkeypatch.setattr(admin_service, "_leer_hash", lambda: "salt$hash")  # hay contraseña
     yield
     admin_service._fallos_login.clear()
 
 
 def test_bloqueo_tras_demasiados_fallos(monkeypatch):
-    monkeypatch.setattr(admin_service, "_verificar", lambda pin, guardado: False)
+    monkeypatch.setattr(admin_service, "_verificar", lambda secreto, guardado: False)
     ip = "1.2.3.4"
-    # Los primeros _MAX_FALLOS intentos fallan con "PIN incorrecto" (400).
+    # Los primeros _MAX_FALLOS intentos fallan con "Contraseña incorrecta" (400).
     for _ in range(admin_service._MAX_FALLOS):
         with pytest.raises(ValueError):
             admin_service.login("0000", ip)
@@ -32,7 +32,7 @@ def test_bloqueo_tras_demasiados_fallos(monkeypatch):
 
 
 def test_el_bloqueo_es_por_ip(monkeypatch):
-    monkeypatch.setattr(admin_service, "_verificar", lambda pin, guardado: False)
+    monkeypatch.setattr(admin_service, "_verificar", lambda secreto, guardado: False)
     for _ in range(admin_service._MAX_FALLOS):
         with pytest.raises(ValueError):
             admin_service.login("0000", "1.1.1.1")
@@ -43,7 +43,7 @@ def test_el_bloqueo_es_por_ip(monkeypatch):
 
 def test_login_correcto_limpia_los_fallos(monkeypatch):
     veredictos = iter([False, False, True])  # 2 fallos y luego acierto
-    monkeypatch.setattr(admin_service, "_verificar", lambda pin, guardado: next(veredictos))
+    monkeypatch.setattr(admin_service, "_verificar", lambda secreto, guardado: next(veredictos))
     monkeypatch.setattr(admin_service, "_crear_token", lambda: "tok")
     ip = "3.3.3.3"
     for _ in range(2):

@@ -1,8 +1,7 @@
 # ADR-009 — Streaming de la respuesta (SSE) + TTS por frases + caché de audio
 
-- **Estado:** propuesta — **implementado y verde**; la medición de latencia p50/p95
-  (primer token, primera sílaba) se completa en la máquina del usuario (el sandbox no
-  tiene claves de LLM/TTS para cronometrar el flujo real).
+- **Estado:** aceptada — implementado, verde en CI y **medido** el 2026-08-03 en la
+  máquina del usuario (ver "Medición" más abajo).
 - **Fecha:** 2026-08-02
 - **Hito:** H8 (`feat/h8-streaming`)
 - **Depende de:** H5 (`completar_streaming`), H7 (rama madre; ambos tocan `Chat.tsx`).
@@ -53,16 +52,27 @@ frontend **deduce el tipo de imagen de los bytes** (`SceneView.mimeDeBase64`: we
 jpg→"/9j/", png por defecto), así el formato es intercambiable sin tocar el render.
 Devolver la imagen por URL (en vez de incrustada) queda como trabajo futuro.
 
-## Medición — p50/p95 (a completar en la máquina del usuario)
+## Medición — p50/p95 (hecha: 2026-08-03)
 
-Con el runner (endpoint JSON) y un cronómetro del flujo SSE real. Pegar aquí la tabla:
+Con `scripts/bench_streaming.py` contra el backend real y sus proveedores reales (Groq
+`llama-3.3-70b-versatile`, DeepL, ElevenLabs Flash; embeddings `multi-minilm` + reranker
+`jina-v2`). **n=15** medidas tras 2 corridas de calentamiento, sobre preguntas que
+recuperan por RAG. Informe completo:
+[`mediciones/H8-latencia-streaming.md`](../mediciones/H8-latencia-streaming.md).
 
-| Métrica | Antes (JSON) | Después (SSE) | Objetivo |
-|---|---|---|---|
-| Primer token en pantalla | fin de todo (~s) | | < 1 s |
-| Primera sílaba de audio | fin de todo (~s) | | < 1,5 s |
-| Respuesta completa p50/p95 | | | — |
-| Coste TTS en preguntas repetidas | 100% | | ↓ por caché |
+| Métrica | Antes (JSON) | Después (SSE) | Objetivo | ¿Cumple? |
+|---|---|---|---|---|
+| Primer token en pantalla (TTFT) | fin de todo (p50 3,88 s) | **p50 0,92 s · p95 1,18 s** | < 1 s | ✅ |
+| Primera frase de audio | fin de todo (p50 3,88 s) | **p50 2,30 s · p95 2,87 s** | < 1,5 s | ❌ (ver abajo) |
+| Respuesta completa (texto + voz) | — | **p50 3,88 s · p95 5,57 s** | — | — |
+| Coste TTS en preguntas repetidas | 100 % | 0 % (servido del caché en disco) | ↓ por caché | ✅ |
+
+**Lectura.** El tiempo hasta el primer contenido baja de ~4 s a **<1 s** (≈4× en percepción):
+antes el niño esperaba en blanco a que se generara la respuesta **entera**. La primera voz
+llega en ~2,3 s y **no** alcanza el objetivo de 1,5 s que se puso a ojo antes de medir: el
+audio de la primera frase no puede empezar hasta que el LLM la cierra, así que el TTFT de voz
+depende de lo larga que sea esa frase (y de si su audio estaba cacheado), de ahí su
+dispersión (0,98–3,26 s). Se acepta: para entonces el niño ya lleva ~1,4 s leyendo.
 
 ## Consecuencias
 
