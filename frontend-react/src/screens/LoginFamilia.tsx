@@ -19,7 +19,7 @@
  * el MANUAL (leerlo antes de dar el correo) y la ADMINISTRACIÓN (credencial propia).
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   BackendError,
   familiaEstado,
@@ -30,7 +30,13 @@ import {
 } from "../api/client";
 import type { FamiliaDTO } from "../api/types";
 import Marca from "../components/Marca/Marca";
+import { instalar, sePuedeInstalar, suscribirInstalacion } from "../pwa/instalar";
 import styles from "./Settings.module.css";
+
+/** ¿Es un Android? Solo cambia el rótulo del botón de instalar, no el comportamiento. */
+function esAndroid(): boolean {
+  return typeof navigator !== "undefined" && /android/i.test(navigator.userAgent);
+}
 
 interface Props {
   /** Se llama con la familia una vez autenticada (alta, login o verificación correctos). */
@@ -53,6 +59,13 @@ export default function LoginFamilia({ onListo, onAbrirManual, onAbrirAdmin }: P
   const [error, setError] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  // ¿Puede el navegador instalar la app ahora mismo? Lo decide Chrome (ver
+  // pwa/instalar.ts); en Safari y Firefox esto es siempre false y no hay botón.
+  const puedeInstalar = useSyncExternalStore(
+    suscribirInstalacion,
+    sePuedeInstalar,
+    () => false, // en servidor no hay navegador que pueda instalar
+  );
 
   // Al arrancar: si no hay ninguna familia aún, empezamos por el alta; si ya
   // las hay, por el login. (La sesión existente se comprueba en App, no aquí.)
@@ -333,6 +346,32 @@ export default function LoginFamilia({ onListo, onAbrirManual, onAbrirAdmin }: P
           </a>
         </p>
       </div>
+
+      {/* Instalar la app. Va DESPUÉS del formulario a propósito: es una acción
+          secundaria y no debe competir con entrar o crear la cuenta, que es a lo
+          que viene el adulto. Solo aparece si el navegador dice que se puede
+          (Chrome, con la app aún sin instalar); si no, no se pinta nada, que es
+          mejor que un botón muerto. */}
+      {puedeInstalar && (
+        <button
+          type="button"
+          className={styles.instalarAcceso}
+          onClick={() => void instalar()}
+        >
+          <span className={styles.manualIcono} aria-hidden="true">
+            📲
+          </span>
+          <span>
+            <span className={styles.instalarTitulo}>
+              {esAndroid() ? "Instalar en Android" : "Instalar la app"}
+            </span>
+            <span className={styles.manualTexto}>
+              Añádela a tu pantalla de inicio y ábrela como una app, sin la barra del
+              navegador.
+            </span>
+          </span>
+        </button>
+      )}
 
       {/* La Administración NO cuelga de la sesión de familia: va detrás de su propia
           contraseña (+ 2FA opcional), así que el administrador de la instalación

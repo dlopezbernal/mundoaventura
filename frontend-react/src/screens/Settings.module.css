@@ -607,6 +607,30 @@
   color: var(--muted);
 }
 
+/* Instalar la app (PWA) desde el login. Mismo chasis que el acceso al manual —
+   son la misma clase de tarjeta— pero en lima en vez de cian: van una encima y
+   otra debajo del formulario, y con el mismo color se leerían como el par de
+   botones de una misma cosa. Va debajo porque es secundario: primero entrar. */
+.instalarAcceso {
+  composes: manualAcceso;
+  margin-bottom: 10px;
+  border-color: rgba(141, 255, 207, 0.45);
+  background: linear-gradient(180deg, rgba(141, 255, 207, 0.1), rgba(6, 12, 34, 0.6));
+  box-shadow: inset 0 0 26px rgba(141, 255, 207, 0.06);
+}
+.instalarAcceso:hover {
+  background: linear-gradient(180deg, rgba(141, 255, 207, 0.18), rgba(6, 12, 34, 0.6));
+  box-shadow: 0 0 14px rgba(141, 255, 207, 0.3);
+}
+.instalarTitulo {
+  display: block;
+  font-family: var(--font-disp);
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  color: var(--lime);
+}
+
 /* ===========================================================================
  * Gate de bienvenida (PrimerNino) — alta del primer niño tras activar la cuenta
  *
