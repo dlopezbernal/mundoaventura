@@ -3,7 +3,7 @@
  * ===========================================
  *
  * Coverflow de personajes (la carta central es el personaje elegido) + roster de
- * acceso rápido + consola con el CTA "SIGUIENTE". La carta central siempre
+ * acceso rápido + barra inferior con el CTA "SIGUIENTE". La carta central siempre
  * queda seleccionada, así que el paso está listo desde el primer momento.
  *
  * El catálogo llega por props (cargado por API en App, Hito 4): ya no depende
@@ -80,9 +80,11 @@ export default function CharacterSelect({ personajes, index, onMove, onNext }: P
       <Roster items={cartas} index={index} onPick={(j) => onMove(j - i)} lockedSlots={2} />
 
       <Console
+        // Solo el dato: quién has elegido y de qué grupo. El rótulo "PERSONAJE
+        // FIJADO: … · sector …" decía lo mismo ocupando el doble.
         status={
           <>
-            PERSONAJE FIJADO: <b>{elegido.nombre}</b> · sector{" "}
+            <b>{elegido.nombre}</b> ·{" "}
             {CATEGORIA_LABEL[elegido.categoria ?? ""] ?? elegido.categoria ?? "—"}
           </>
         }

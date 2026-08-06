@@ -115,17 +115,8 @@ export default function PlaceSelect({
       <Roster items={cartas} index={index} onPick={(j) => onMove(j - i)} lockedSlots={2} />
 
       <Console
-        status={
-          ubicacionLista ? (
-            <>
-              MUNDO FIJADO: <b>{nombreCentral}</b> · listo para saltar
-            </>
-          ) : (
-            <>
-              📷 Elige un mundo o sube tu foto para continuar
-            </>
-          )
-        }
+        // Elegido: solo el nombre. Sin elegir: qué hacer para continuar.
+        status={ubicacionLista ? <b>{nombreCentral}</b> : "Elige un mundo o sube tu foto"}
         progress={0.66}
         ctaLabel="¡GENERAR! ▶"
         onCta={onNext}

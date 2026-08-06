@@ -16,6 +16,8 @@ consume el frontend no cambia aunque el endpoint lo envuelva.
 
 from pydantic import BaseModel, ConfigDict
 
+from backend import config
+
 # ---------------------------------------------------------------------------
 # DTOs planos (entidades del dominio)
 # ---------------------------------------------------------------------------
@@ -402,6 +404,7 @@ class FamiliaDTO(BaseModel):
     nombre_familia: str
     ninos: list[NinoDTO] = []  # niños (hermanos) del multi-perfil, con nombre y sexo
     tiene_pin: bool = False  # ¿tiene PIN de familia configurado?
+    max_ninos: int = config.MAX_NINOS  # tope de niños, para que la UI lo respete
 
 
 class FamiliaSesion(BaseModel):

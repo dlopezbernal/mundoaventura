@@ -289,6 +289,12 @@ GROQ_BASE_URL: str = os.getenv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"
 # la app, no por el adulto que la usa día a día.
 MAX_PERSONAJES: int = int(os.getenv("MAX_PERSONAJES", "10"))
 
+# Tope de niños (hermanos) por cuenta de familia, por el mismo motivo y con el
+# mismo carácter: decisión de despliegue, no ajuste del menú de configuración.
+# Se expone en `FamiliaDTO.max_ninos` para que la UI pueda impedir el alta antes
+# de intentarla, en vez de dejar que el guardado falle con un 400.
+MAX_NINOS: int = int(os.getenv("MAX_NINOS", "4"))
+
 
 # ---------------------------------------------------------------------------
 # 3d) Resiliencia de red: timeouts y reintentos (Hito 2)

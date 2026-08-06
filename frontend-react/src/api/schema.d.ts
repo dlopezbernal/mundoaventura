@@ -1685,6 +1685,11 @@ export interface components {
              * @default false
              */
             tiene_pin: boolean;
+            /**
+             * Max Ninos
+             * @default 4
+             */
+            max_ninos: number;
         };
         /**
          * FamiliaLogin
@@ -2516,6 +2521,7 @@ export interface operations {
             query?: never;
             header?: {
                 "x-access-code"?: string | null;
+                "x-family-token"?: string | null;
             };
             path?: never;
             cookie?: never;
