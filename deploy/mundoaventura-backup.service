@@ -32,11 +32,20 @@ WorkingDirectory=/opt/mundoaventura
 ExecStart=/opt/mundoaventura/deploy/respaldar.sh nocturno
 
 # --- Endurecimiento ------------------------------------------------------
-# Solo necesita LEER la app y ESCRIBIR en el directorio de copias.
+# Solo necesita LEER la app y ESCRIBIR en el directorio de copias… y, si las
+# copias se cifran, también en el llavero de GPG.
+#
+# OJO CON ESTO: `ProtectSystem=strict` monta TODO el sistema de ficheros en
+# solo lectura salvo lo que se liste aquí. GPG necesita escribir en su propio
+# directorio (semilla de aleatoriedad, ficheros de bloqueo, trustdb) incluso
+# para cifrar, así que sin esta segunda ruta la copia NOCTURNA fallaría… pero
+# la manual NO, porque a mano el script corre fuera de systemd y sin estas
+# restricciones. Es decir: probarías el cifrado, funcionaría, y luego se te
+# caerían las copias automáticas en silencio. De ahí que esté declarado.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/opt/copias
+ReadWritePaths=/opt/copias /opt/mundoaventura/.gnupg
 ProtectHome=true
 ProtectKernelTunables=true
 ProtectKernelModules=true
