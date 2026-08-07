@@ -1263,6 +1263,67 @@
   text-decoration: underline;
 }
 
+/* --- Saldo de un proveedor ("Consultar saldo", pestaña APIs) --- */
+/* Ocupa toda la fila y cuelga por debajo de .apiActions, que es flex-wrap: así
+   una barra larga no compite por el ancho con los botones. */
+.saldoBox {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(79, 242, 255, 0.22);
+}
+.saldoMensaje {
+  font-size: 0.82rem;
+  color: var(--txt);
+}
+.saldoMedida {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.saldoFila {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 10px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+.saldoEtiqueta {
+  font-weight: 700;
+  color: var(--holo);
+}
+.saldoBarra {
+  height: 8px;
+  border: 1px solid var(--edge);
+  border-radius: 99px;
+  background: rgba(4, 8, 28, 0.6);
+  overflow: hidden;
+}
+/* El relleno cambia de color al acercarse al tope: verde tranquilo, ámbar de
+   aviso, rosa de alarma. Es la señal que busca el adulto de un vistazo. */
+.saldoRelleno {
+  height: 100%;
+  border-radius: 99px;
+  background: var(--lime);
+}
+.saldoRellenoMedio {
+  background: var(--amber);
+}
+.saldoRellenoAlto {
+  background: var(--pink);
+}
+.saldoPanel {
+  font-size: 0.78rem;
+  color: var(--holo);
+  text-decoration: none;
+}
+.saldoPanel:hover {
+  text-decoration: underline;
+}
+
 /* --- Paginación del informe de auditoría --- */
 .auditPaginacion {
   display: flex;

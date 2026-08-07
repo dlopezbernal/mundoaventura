@@ -32,6 +32,8 @@ export type TranscribeResponse = Schemas["TranscribeResponse"];
 // --- APIs (secretos) ---
 export type ApiProviderStatus = Schemas["ApiProviderStatus"];
 export type ApiTestResult = Schemas["ApiTestResult"];
+export type ApiSaldoResult = Schemas["ApiSaldoResult"];
+export type SaldoMedida = Schemas["SaldoMedida"];
 
 // --- Configuración (ajustes en caliente) ---
 export type SettingMeta = Schemas["SettingMeta"];
