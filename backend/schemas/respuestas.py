@@ -128,6 +128,12 @@ class ApiProviderStatus(BaseModel):
     ayuda_url: str
     configurado: bool
     enmascarado: str | None = None
+    # ¿Ofrecer el botón "Consultar saldo"? Es política del backend (saldo_service),
+    # no del frontend: Replicate y SMTP no lo publican por API.
+    saldo_consultable: bool = False
+    # Panel del proveedor donde SÍ se ve el saldo. Se usa como alternativa al botón
+    # cuando no es consultable (Replicate), y como enlace de apoyo cuando sí lo es.
+    panel_url: str | None = None
 
 
 class SecretoEstado(BaseModel):
@@ -322,6 +328,38 @@ class ApiTestResult(BaseModel):
 
     ok: bool
     mensaje: str
+
+
+class SaldoMedida(BaseModel):
+    """Una dimensión de consumo de un proveedor (caracteres, tokens, peticiones…).
+
+    `limite`/`porcentaje` pueden ser None: hay planes sin tope declarado, y ahí
+    pintar una barra de progreso sería inventarse un total que no existe.
+    """
+
+    etiqueta: str
+    usado: int | None = None
+    limite: int | None = None
+    porcentaje: float | None = None
+    # Frase ya montada ("se reinicia en 185ms" / "se renueva el 08/09/2026"): unos
+    # proveedores dan tiempo restante y otros una fecha, y el frontend no debe adivinar.
+    renueva: str | None = None
+
+
+class ApiSaldoResult(BaseModel):
+    """Saldo/consumo de un proveedor (botón "Consultar saldo" de la pestaña APIs).
+
+    `disponible` distingue las dos formas de "no hay número": el proveedor no lo
+    expone por API (False → se ofrece su panel web) frente a que sí lo exponga y
+    la consulta haya fallado (True + ok False → hay algo que arreglar).
+    """
+
+    proveedor: str
+    disponible: bool
+    ok: bool
+    mensaje: str
+    medidas: list[SaldoMedida] = []
+    panel_url: str | None = None
 
 
 class ApiRevealResponse(BaseModel):

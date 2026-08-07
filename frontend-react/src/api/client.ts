@@ -15,6 +15,7 @@ import type {
   AdminLoginResponse,
   AdminStatus,
   ApiProviderStatus,
+  ApiSaldoResult,
   ApiTestResult,
   AskRequest,
   AskResponse,
@@ -466,6 +467,20 @@ export async function testApi(proveedor: string): Promise<ApiTestResult> {
     TIMEOUT_CONFIG,
   );
   return (await response.json()) as ApiTestResult;
+}
+
+/** Cuota restante de un proveedor. POST /api/apis/{proveedor}/saldo.
+ *
+ * Solo la dispara el botón "Consultar saldo": para el LLM, la consulta gasta una
+ * petición de inferencia mínima (es la única que devuelve las cabeceras de cuota).
+ */
+export async function saldoApi(proveedor: string): Promise<ApiSaldoResult> {
+  const response = await fetchBackend(
+    `/api/apis/${proveedor}/saldo`,
+    { method: "POST" },
+    TIMEOUT_CONFIG,
+  );
+  return (await response.json()) as ApiSaldoResult;
 }
 
 /** Revela la clave COMPLETA de un proveedor (icono del ojo). POST .../reveal. */

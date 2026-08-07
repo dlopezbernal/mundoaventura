@@ -380,6 +380,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/apis/{proveedor}/saldo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Saldo Api
+         * @description Cuánta cuota queda en un proveedor: {disponible, ok, mensaje, medidas, panel_url}.
+         *
+         *     Es POST y no GET a propósito, igual que `/test`: no es un recurso que se pueda
+         *     cachear, y en el caso del LLM la consulta **gasta una petición de inferencia**
+         *     (es la única que devuelve las cabeceras de cuota). Nada la dispara sola: solo
+         *     el botón del adulto.
+         */
+        post: operations["saldo_api_api_apis__proveedor__saldo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/apis/{proveedor}/reveal": {
         parameters: {
             query?: never;
@@ -1274,6 +1299,13 @@ export interface components {
             configurado: boolean;
             /** Enmascarado */
             enmascarado?: string | null;
+            /**
+             * Saldo Consultable
+             * @default false
+             */
+            saldo_consultable: boolean;
+            /** Panel Url */
+            panel_url?: string | null;
         };
         /**
          * ApiRevealResponse
@@ -1284,6 +1316,31 @@ export interface components {
             proveedor: string;
             /** Clave */
             clave: string;
+        };
+        /**
+         * ApiSaldoResult
+         * @description Saldo/consumo de un proveedor (botón "Consultar saldo" de la pestaña APIs).
+         *
+         *     `disponible` distingue las dos formas de "no hay número": el proveedor no lo
+         *     expone por API (False → se ofrece su panel web) frente a que sí lo exponga y
+         *     la consulta haya fallado (True + ok False → hay algo que arreglar).
+         */
+        ApiSaldoResult: {
+            /** Proveedor */
+            proveedor: string;
+            /** Disponible */
+            disponible: boolean;
+            /** Ok */
+            ok: boolean;
+            /** Mensaje */
+            mensaje: string;
+            /**
+             * Medidas
+             * @default []
+             */
+            medidas: components["schemas"]["SaldoMedida"][];
+            /** Panel Url */
+            panel_url?: string | null;
         };
         /**
          * ApiTestResult
@@ -2158,6 +2215,25 @@ export interface components {
             fases_activas: string[];
             /** Documentacion */
             documentacion: string;
+        };
+        /**
+         * SaldoMedida
+         * @description Una dimensión de consumo de un proveedor (caracteres, tokens, peticiones…).
+         *
+         *     `limite`/`porcentaje` pueden ser None: hay planes sin tope declarado, y ahí
+         *     pintar una barra de progreso sería inventarse un total que no existe.
+         */
+        SaldoMedida: {
+            /** Etiqueta */
+            etiqueta: string;
+            /** Usado */
+            usado?: number | null;
+            /** Limite */
+            limite?: number | null;
+            /** Porcentaje */
+            porcentaje?: number | null;
+            /** Renueva */
+            renueva?: string | null;
         };
         /**
          * SecretoEstado
@@ -3047,6 +3123,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ApiTestResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    saldo_api_api_apis__proveedor__saldo_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-admin-token"?: string | null;
+            };
+            path: {
+                proveedor: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiSaldoResult"];
                 };
             };
             /** @description Validation Error */

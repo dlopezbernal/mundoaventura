@@ -94,7 +94,14 @@ def _enmascarar(secreto: str) -> str | None:
 
 
 def estado() -> list[dict]:
-    """Estado de los 3 proveedores: configurado (bool) + valor enmascarado (nunca completo)."""
+    """Estado de los 3 proveedores: configurado (bool) + valor enmascarado (nunca completo).
+
+    Incluye además `saldo_consultable` y `panel_url` (de `saldo_service`), para que la
+    pestaña APIs sepa si ofrecer el botón "Consultar saldo", solo un enlace al panel
+    del proveedor, o nada — sin repetir esa política en el frontend.
+    """
+    from backend.services import saldo_service
+
     return [
         {
             "proveedor": proveedor,
@@ -103,6 +110,8 @@ def estado() -> list[dict]:
             "ayuda_url": meta["ayuda_url"],
             "configurado": bool(_valor(proveedor)),
             "enmascarado": _enmascarar(_valor(proveedor)),
+            "saldo_consultable": saldo_service.consultable(proveedor),
+            "panel_url": saldo_service.panel(proveedor),
         }
         for proveedor, meta in _PROVEEDORES.items()
     ]
@@ -281,6 +290,20 @@ def _probar_smtp() -> dict:
             "verificado en el relé, o el envío se rechaza."
         ),
     }
+
+
+def saldo(proveedor: str) -> dict:
+    """Consulta cuánta cuota queda en un proveedor (botón "Consultar saldo").
+
+    Puerta pública: valida el nombre y delega en `saldo_service`, que sabe cuáles
+    lo exponen de verdad y cuáles no (ver su docstring). Import perezoso para no
+    cargar ese módulo en cada arranque.
+    """
+    if proveedor not in _PROVEEDORES:
+        raise ValueError(f"Proveedor desconocido: '{proveedor}'.")
+    from backend.services import saldo_service
+
+    return saldo_service.consultar(proveedor)
 
 
 def probar(proveedor: str) -> dict:
