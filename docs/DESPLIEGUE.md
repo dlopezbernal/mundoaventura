@@ -678,11 +678,39 @@ gpg --import /tmp/publica.asc && rm /tmp/publica.asc
 gpg --list-keys                      # comprueba que aparece
 ```
 
-Y declara el destinatario en la unidad del temporizador, añadiendo bajo `[Service]`:
+Y declara el destinatario **una sola vez**, en el `.env` de la app:
 
-```ini
-Environment=BACKUP_GPG_RECIPIENT=copias-mundoaventura
+```bash
+echo 'BACKUP_GPG_RECIPIENT=copias-mundoaventura' >> /opt/mundoaventura/.env
 ```
+
+Ese es el único sitio que hay que tocar: `respaldar.sh` lo lee de ahí cuando el entorno no se lo
+da, así que lo recogen **las dos** copias —la nocturna y la de predespliegue— sin declararlo dos
+veces. No se hace con `source .env` (ese fichero es para pydantic, no para bash): se extrae solo
+esa clave, tolerando comillas, espacios y finales de línea de Windows.
+
+> ⚠️ **Importa la clave ANTES de añadir esa línea, y compruébalo.** Si el destinatario está
+> declarado y GPG no puede cifrar (clave sin importar, nombre mal escrito, `gnupg` ausente),
+> `respaldar.sh` sale con error **a propósito** —no deja una copia en claro— y eso mata el
+> despliegue en el **paso 1/7, antes del `git pull`**: el despliegue automático se queda
+> **sin poder repararse solo**, porque muere antes de traerse la corrección, y hay que entrar por
+> SSH a arreglarlo a mano. Verifica primero, como el usuario de la app:
+>
+> ```bash
+> gpg --list-keys copias-mundoaventura            # tiene que aparecer
+> sudo -H -u mundoaventura /opt/mundoaventura/deploy/respaldar.sh prueba
+> ```
+>
+> Si esa copia sale como `.tgz.gpg`, ya puedes añadir la línea al `.env` sin riesgo.
+
+> **Por qué el `.env` y no la unidad del temporizador.** Declararlo con `Environment=` bajo
+> `[Service]` también funciona y **tiene prioridad** sobre el `.env`, pero cubre únicamente la
+> copia nocturna: `desplegar.sh` llama a `respaldar.sh` con un `bash` normal, que no hereda nada
+> de systemd. Así estuvo al principio, y el resultado fue el peor posible de diagnosticar —la
+> nocturna cifrada y la de predespliegue en claro, con el `.env` y las claves de los cinco
+> proveedores dentro, una por despliegue—. Se vio en el log del runner, no en el código, porque
+> ninguno de los dos scripts lo delataba al leerlo. Si vienes de una instalación con
+> `Environment=`, puedes dejarla: no cambia nada.
 
 > **Y vuelve a copiar la unidad desde `deploy/`**, porque el endurecimiento tuvo que cambiar:
 > `ProtectSystem=strict` deja todo el sistema en solo lectura salvo lo declarado, y GPG
@@ -823,6 +851,41 @@ Comprobación de que GitHub lo ve, desde tu PC (tiene que salir `online` y las t
 ```bash
 gh api repos/dlopezbernal/mundoaventura/actions/runners \
   --jq '.runners[] | {name, status, labels: [.labels[].name]}'
+```
+
+#### ¿Vuelve solo si se reinicia el servidor?
+
+Sí: `svc.sh install` genera la unidad a partir de una plantilla con
+`WantedBy=multi-user.target` y la habilita. Pero conviene **comprobarlo**, porque un runner
+que no vuelve no da ningún error — los despliegues simplemente se quedan encolados para
+siempre, que es el síntoma peor de diagnosticar. Y ojo con la diferencia: `is-active` dice si
+corre **ahora**; el que responde a "¿arranca al reiniciar?" es `is-enabled`.
+
+```bash
+# El nombre de la unidad es actions.runner.<owner>-<repo>.<nombre del runner>.service
+systemctl show actions.runner.dlopezbernal-mundoaventura.vps-mundoaventura.service \
+  -p UnitFileState -p ActiveState -p Restart -p User
+```
+
+Verificado en este servidor el 2026-08-06: `UnitFileState=enabled` y `ActiveState=active`,
+corriendo como `gha-runner`. Si alguna vez saliera `disabled`, se arregla con
+`systemctl enable <esa misma unidad>`.
+
+**Lo que la plantilla NO trae es `Restart=`**: el agente vuelve tras un reinicio del servidor,
+pero si el proceso se muere por su cuenta —y aquí el OOM killer es un riesgo real, con 4 GB
+compartidos con producción— systemd no lo levanta. Se añade con un *drop-in*, que además
+sobrevive a las actualizaciones del agente (`svc.sh` regenera la unidad, pero no toca los
+drop-ins):
+
+```bash
+UNIT=actions.runner.dlopezbernal-mundoaventura.vps-mundoaventura.service
+mkdir -p /etc/systemd/system/$UNIT.d
+cat > /etc/systemd/system/$UNIT.d/reinicio.conf <<'EOF'
+[Service]
+Restart=always
+RestartSec=15
+EOF
+systemctl daemon-reload && systemctl restart $UNIT
 ```
 
 #### Cerrar el puerto 22 (el premio)

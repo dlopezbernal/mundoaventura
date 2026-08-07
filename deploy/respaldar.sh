@@ -71,6 +71,31 @@ ETIQUETA="${1:-manual}"
 # GUARDA LA CLAVE PRIVADA FUERA DEL SERVIDOR. Sin ella las copias son ruido.
 BACKUP_GPG_RECIPIENT="${BACKUP_GPG_RECIPIENT:-}"
 
+# Si el entorno no lo trae, se lee del .env de la app. Esto no es un adorno: la
+# copia NOCTURNA salía cifrada y la de PREDESPLIEGUE no, y la diferencia no se ve
+# leyendo ninguno de los dos scripts. El temporizador declara la variable con
+# `Environment=` (§5.2), pero `desplegar.sh` invoca este fichero con un `bash`
+# normal, que no hereda nada de systemd: cada actualización dejaba en la carpeta
+# de copias un tarball EN CLARO con el .env y las claves de los cinco proveedores
+# dentro. Con el despliegue automático del ADR-018 pasó a ocurrir en CADA merge a
+# `main`, que es como se detectó (el aviso de `stderr` en el log del runner).
+#
+# Se resuelve AQUÍ y no en `desplegar.sh` para que siga habiendo UN solo sitio que
+# decida el destinatario, igual que hay una sola idea de qué se respalda: quien
+# llame a este script se lleva el mismo cifrado. El entorno mantiene la
+# prioridad, así que una unidad del temporizador ya desplegada con su
+# `Environment=` no cambia de comportamiento.
+if [ -z "$BACKUP_GPG_RECIPIENT" ] && [ -r "$APP_DIR/.env" ]; then
+	# Se extrae la clave a mano en vez de `source .env`: ese fichero es para
+	# pydantic, no para bash, y traerlo entero aquí ejecutaría lo que hubiera
+	# dentro y pisaría variables de este script.
+	BACKUP_GPG_RECIPIENT="$(
+		sed -n 's/^[[:space:]]*BACKUP_GPG_RECIPIENT[[:space:]]*=[[:space:]]*//p' "$APP_DIR/.env" |
+			tail -n 1 | tr -d '\r' |
+			sed -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"
+	)"
+fi
+
 cd "$APP_DIR"
 
 if [ ! -d "$DESTINO" ] || [ ! -w "$DESTINO" ]; then
