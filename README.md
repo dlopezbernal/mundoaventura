@@ -66,7 +66,6 @@ CI/CD: *merge a `main` despliega*
 ▶️ **En YouTube**
 [Ver ahora](COMPLETAR_ENLACE_YOUTUBE)
 
-*≈7 min · guion en [`DEFENSA.md`](docs/DEFENSA.md)*
 
 </td>
 <td width="33%" align="center">
@@ -649,23 +648,9 @@ Cada decisión relevante está en [`docs/decisiones/`](docs/decisiones/) con el 
 
 ## 8. El vídeo demo
 
-[![Ver en YouTube](https://img.shields.io/badge/▶️_Ver_en_YouTube-FF0000?style=for-the-badge)](COMPLETAR_ENLACE_YOUTUBE)
-[![Descargar del repo](https://img.shields.io/badge/📁_docs/demo/video--demo.mp4-24292e?style=for-the-badge)](docs/demo/video-demo.mp4)
+*Pendiente de grabar.*
 
 </div>
-
-Grabado **contra producción** (`chatmundoaventura.com`), no contra `localhost`. Guion completo, con clics exactos y plan B por paso, en [`DEFENSA.md`](docs/DEFENSA.md).
-
-| ⏱️ | Escena | Qué se demuestra |
-|:--:|---|---|
-| 0:00 | **Acceso e instalación** | Cuenta de familia (no es anónima) · **PWA instalable** desde la propia pantalla de acceso |
-| 0:50 | **¿Quién juega? → personaje → mundo** | Multi-perfil · catálogos desde la BBDD, no del código · sonido arcade sintetizado |
-| 2:00 | **La escena se genera** | Generación de imagen en la nube (FLUX) con animación de espera |
-| 2:40 | **RAG en acción** | Pregunta fundamentada → respuesta **en streaming** + voz, y el desplegable **«📚 ¿De dónde lo he sacado?»** |
-| 3:30 | **No inventa** | Pregunta fuera de dominio → el Evaluator rutea a GENERAL/SIN_INFO en vez de alucinar anclado |
-| 4:00 | **Voz y consentimiento** | Micrófono (STT) · subir la foto pasa por el **consentimiento parental** con PIN |
-| 5:20 | **Móvil** | La misma URL, responsive real |
-| 6:00 | **Tras las bambalinas** | 🛡️ Admin: documentos del RAG, umbrales en caliente, auditoría · repo, ADRs y banco de evaluación |
 
 ---
 
