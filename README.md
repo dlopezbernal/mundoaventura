@@ -142,7 +142,8 @@ Anti-inyección, filtro de salida, consentimiento parental, STT local opcional y
 
 <div align="center">
 
-*Más capturas (acceso, «¿quién juega?», consentimiento de la foto, configuración, manual) en [`docs/img/`](docs/img/).*
+*Más capturas (acceso, «¿quién juega?», consentimiento de la foto, configuración, manual) en [`docs/img/`](docs/img/).
+Las del panel de administración están en la [§4](#4-el-panel-de-administración-todo-se-cambia-sin-tocar-código).*
 
 </div>
 
@@ -159,9 +160,10 @@ Anti-inyección, filtro de salida, consentimiento parental, STT local opcional y
 | 🤖 | **IA Generativa** | LLM Llama-3.3-70B en personaje · TTS ElevenLabs · generación de escena con FLUX schnell | [§2](#2-arquitectura-el-viaje-de-una-pregunta) |
 | 🧠 | **Agentes** | **Evaluator**: rutea cada pregunta según la evidencia recuperada, con umbrales calibrados | [§3](#3-el-evaluator-el-cerebro-que-decide) |
 | 🛠️ | **Stack del curso** | FastAPI · React · ChromaDB · embeddings + reranker · APIs LLM · banco de evaluación propio | [§1](#1-stack-tecnológico) |
-| 💻 | **Código en GitHub** | Este repositorio · 18 ADRs · suite de tests · CI/CD real | [§6](#6-estructura-del-repositorio) |
+| 🎛️ | **Producto administrable** | Panel de admin: claves, motor de IA, catálogos y **la base de conocimiento del RAG**, sin tocar código | [§4](#4-el-panel-de-administración-todo-se-cambia-sin-tocar-código) |
+| 💻 | **Código en GitHub** | Este repositorio · 18 ADRs · suite de tests · CI/CD real | [§7](#7-estructura-del-repositorio) |
 | 📝 | **Memoria** | Este README + [`docs/`](docs/README.md) (arquitectura, evaluación, privacidad, despliegue) | *aquí* |
-| 🎬 | **Vídeo demo** | En el repo **y** en YouTube | [§7](#7-el-vídeo-demo) |
+| 🎬 | **Vídeo demo** | En el repo **y** en YouTube | [§8](#8-el-vídeo-demo) |
 
 ---
 
@@ -319,13 +321,147 @@ Es la configuración de la línea base medida.
 **Tres modos de decisión, y cuál se entrega.** Sin reranker, el Evaluator usa umbrales de distancia coseno (`umbral`), un LLM-juez (`llm`) o ambos (`hibrido`, los umbrales resuelven gratis lo claro y el juez desempata la banda ambigua). **Con el reranker activo —la configuración entregada— el ruteo lo decide la puntuación del cross-encoder y el LLM-juez ya no se llama**: mejor decisión y una llamada de red menos ([ADR-006](docs/decisiones/ADR-006-reranker.md)).
 
 > [!IMPORTANT]
-> Los umbrales **no se eligieron a ojo**: se calibraron contra el banco de evaluación (§4) y son **editables desde la pantalla de Admin, en caliente, sin desplegar código**. El umbral del RAG se expone tal cual lo usa el motor (distancia coseno 0–2, o el logit del reranker) — nunca como un «% de similitud» maquillado.
+> Los umbrales **no se eligieron a ojo**: se calibraron contra el banco de evaluación (§5) y son **editables desde la pantalla de Admin, en caliente, sin desplegar código**. El umbral del RAG se expone tal cual lo usa el motor (distancia coseno 0–2, o el logit del reranker) — nunca como un «% de similitud» maquillado.
 
 ---
 
 <div align="center">
 
-## 4. Evaluación: medir antes y después
+## 4. El panel de administración: todo se cambia sin tocar código
+
+### *Un producto administrable — y, de paso, el banco de pruebas que hizo posible la §5*
+
+</div>
+
+Nada de lo que un adulto querría cambiar está clavado en el código. Detrás de **🛡️ Admin** (contraseña + 2FA opcional) hay **nueve pestañas** que editan la instalación **en caliente**: los cambios se guardan en SQLite y surten efecto **en la siguiente petición, sin reiniciar ni volver a desplegar**.
+
+Esto no es un adorno: es lo que hizo **posible la evaluación**. Comparar dos backends de embeddings, activar un reranker o cambiar de LLM es mover un desplegable y volver a correr el banco de pruebas — no editar código, redesplegar y rezar. Y con la BBDD vacía la app usa los valores por defecto de `config.py`, así que un clon nuevo sigue reproduciendo la línea base.
+
+| Pestaña | Qué se administra desde ahí |
+|---|---|
+| 🔑 **APIs** | Claves de los cinco proveedores: **probar la conexión** y **consultar el saldo** que queda |
+| 🧠 **IA** | El motor entero: proveedor y modelo del LLM, temperatura, **umbrales del Evaluator**, embeddings, troceado, reranker y **los prompts de sistema** |
+| 🖼️ **Imagen** | Modelo, estilo (`STYLE_SUFFIX`), encuadre y parámetros de la generación de escenas |
+| 🎙️ **Voz** | Proveedor de STT (nube / **local** / Groq), modelo y dispositivo; y el TTS |
+| 🎭 **Personajes** | Crear, editar y desactivar personajes · su voz · **su avatar generado por IA** · **sus documentos del RAG** |
+| 🗺️ **Ubicaciones** | Lo mismo para los mundos: catálogo en BBDD, no en el código |
+| 📧 **Correo** | SMTP de la verificación por email (host, puerto, usuario, remitente y nombre visible) |
+| 🧾 **Auditoría** | Registro de uso de la instalación, con filtros, **exportación a CSV** y purga por antigüedad |
+| 🛠️ **Sistema** | Contraseña, **2FA**, import/export de la configuración en JSON, copias de seguridad y modo depuración |
+
+<div align="center">
+<img src="docs/img/admin-04-ia.png" alt="Pestaña IA: embeddings, troceado, reranker y umbrales del Evaluator, todos editables" width="88%">
+<br><i>La pestaña <b>🧠 IA</b> con la configuración entregada: <code>multi-minilm</code> + <code>estructura</code> + <code>jina-v2</code> (umbral −2,75).<br>Nótese el aviso <b>«🔒 Inactivo: solo se usa cuando RERANKER = off»</b> en <code>EVALUATOR_MODE</code> y en los umbrales coseno:<br>la propia interfaz explica que, con el reranker activo, es él quien manda.</i>
+</div>
+
+### 📄 La base de conocimiento del RAG se alimenta desde la propia pantalla
+
+**Este es el punto que más se suele pasar por alto**: alimentar un RAG no exige terminal, ni SSH, ni tocar el servidor. Al editar un personaje se abre un visor de documentos completo:
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+**📤 Subir** uno o varios ficheros de golpe (`.pdf`, `.txt`, `.md`), en modo mejor-esfuerzo: lo que falle se reporta sin tumbar el resto.
+
+**🌐 Ingerir un artículo de Wikipedia por URL**: se descarga limpio y se guarda como documento del personaje.
+
+**✏️ Ver, editar, descargar y copiar** cualquier documento — copiarlo a otro personaje crea una copia **independiente**.
+
+</td>
+<td width="50%" valign="top">
+
+**🌍 Detección automática de idioma** (vía DeepL) y traducción a inglés en cada guardado, con el idioma detectado como sufijo del fichero (`_es`, `_fr`…).
+
+**♻️ Reindexado incremental automático**: cambiar los documentos de un personaje reconstruye **solo sus fragmentos**, nunca los de los demás.
+
+**📊 «Reindexar todo»** con **barra de progreso real** (sondea el estado del backend, no es una animación falsa).
+
+</td>
+</tr>
+</table>
+
+<div align="center">
+<img src="docs/img/admin-03-documentos-rag.png" alt="Editor de un personaje con el panel de documentos del RAG" width="62%">
+<br><i>Editar un personaje: sus datos, su <b>avatar generado por IA</b>, su voz — y abajo, el panel <b>📄 Documentos del RAG</b><br>con subida de ficheros, ingesta desde Wikipedia, reindexado del personaje y el <b>idioma detectado</b> de cada documento.</i>
+</div>
+
+> [!TIP]
+> Mientras dura una operación no interrumpible (subir, traducir, reindexar), el modal **se bloquea de verdad**: ni la ✕, ni el fondo, ni `Escape` lo cierran. Y subir un documento con un nombre ya existente devuelve un **409**, no un error genérico, para poder ofrecer «¿sobrescribir?» de forma fiable.
+
+### 🔑 Claves de API: probar y ver cuánto saldo queda
+
+Las claves se guardan **fuera** de la BBDD de ajustes (en el `.env`, escrito de forma atómica) y **nunca** se devuelven completas salvo en una llamada explícita de revelado — así el export de configuración jamás puede filtrar una clave. Por cada proveedor hay **🔌 Probar conexión** y, donde se puede de verdad, **📊 Consultar saldo** con barra de consumo.
+
+Qué proveedor es consultable **lo decide el backend**, no el frontend, porque cada uno lo expone de una forma distinta: DeepL da los caracteres del periodo; **Groq solo informa en las cabeceras de una llamada real de inferencia**, así que consultarlo *cuesta* (una petición de 1 token para el LLM, y **un segundo de silencio WAV generado al vuelo** para el STT); ElevenLabs exige una clave con permiso `user_read` y, si falta, se explica exactamente qué añadir; y Replicate no lo expone, así que solo se ofrece el enlace a su panel.
+
+<div align="center">
+<img src="docs/img/admin-01-apis.png" alt="Pestaña APIs con las seis claves, prueba de conexión y consulta de saldo" width="88%">
+<br><i>Las seis claves, siempre <b>enmascaradas</b>. DeepL responde «conectado» y su saldo real del periodo;<br>Replicate solo ofrece el enlace a su panel porque <b>no expone el dato</b>, y en SMTP no aplica.<br><small>(Los últimos caracteres de cada clave, que la interfaz sí muestra, se han tapado para esta captura.)</small></i>
+</div>
+
+### 🎭 Crear personajes y mundos nuevos, con su avatar generado por IA
+
+El catálogo vive en SQLite y lo consumen **backend y frontend por API**: no hay listas de personajes escritas en el código. Crear uno desde la pestaña escribe su fila **y** crea su carpeta de documentos para el RAG. Al editarlo, **🎨 Generar imagen** dibuja su retrato a partir de su propio prompt y lo recorta sobre fondo transparente para el carrusel (son **dos llamadas a Replicate**, así que cuesta dinero cada clic — está avisado en la propia interfaz).
+
+<div align="center">
+<img src="docs/img/admin-02-personajes.png" alt="Pestaña Personajes con el catálogo y los botones de nuevo personaje y reindexar todo" width="88%">
+<br><i>El catálogo completo, con <b>➕ Nuevo personaje</b> y <b>♻️ Reindexar todo</b>. Las ubicaciones se administran igual.</i>
+</div>
+
+### 🔐 Dos validaciones de identidad, en dos niveles distintos
+
+<table>
+<tr>
+<td width="50%" valign="top">
+
+#### 📧 Familias: verificación por email
+
+El alta es autoservicio (email del adulto + contraseña), y con la verificación activada la cuenta queda **pendiente hasta teclear un código OTP** enviado por SMTP.
+
+En producción el relé es **Brevo**, enviando desde el **dominio propio** (`no-reply@chatmundoaventura.com`), no desde un correo personal. Sin SMTP configurado, el código sale por consola: **desarrollar no exige un servidor de correo**.
+
+Es un *toggle* de despliegue: se puede entregar con o sin verificación.
+
+</td>
+<td width="50%" valign="top">
+
+#### 🛡️ Admin: segundo factor TOTP
+
+Pensado para exponer la app a internet. Se enrola desde **Sistema → Seguridad**: se genera un **QR** (con `segno`, sin librerías de imagen), se confirma un código y se entregan **8 códigos de recuperación** de un solo uso.
+
+El login pasa a **dos pasos**: el backend responde `requiere_2fa` sin dar token, y acepta un código TOTP **o** uno de recuperación.
+
+**Por defecto está desactivado** a propósito: un clon nuevo —o un tribunal— entra solo con la contraseña.
+
+</td>
+</tr>
+</table>
+
+Ambos logins están **endurecidos contra fuerza bruta** por igual: retardo fijo por intento, contador de fallos por IP y bloqueo temporal creciente (→ HTTP 429), con los intentos registrados. Los secretos de 2FA son claves reservadas que **nunca se exportan**.
+
+<div align="center">
+<img src="docs/img/admin-05-sistema-2fa.png" alt="Pestaña Sistema: cambio de contraseña, activación de 2FA, import/export y privacidad" width="88%">
+<br><i>La pestaña <b>🛠️ Sistema</b>: cambio de contraseña, <b>activación del 2FA</b>, copia de seguridad de la configuración<br>(que <b>nunca</b> incluye las claves de las plataformas) y el enlace a la política de privacidad.</i>
+</div>
+
+### 🧾 Y lo que pasa en la instalación queda registrado
+
+El **informe de actividad** le da al adulto trazabilidad de lo que ocurre (accesos, escenas generadas, preguntas), con filtros, exportación a CSV y purga manual. Está gobernado por tres ajustes con criterio de RGPD: guardar **el texto** de las preguntas es un dato personal de un menor, así que va en un flag **aparte y desactivado por defecto**, y todo se borra por **retención** (90 días por defecto) y al eliminar la cuenta.
+
+<div align="center">
+<img src="docs/img/admin-06-auditoria.png" alt="Ajustes de la auditoría: activación, contenido y días de retención" width="88%">
+<br><i>Los tres ajustes de auditoría. <small>(Se muestra solo esta parte de la pestaña: la tabla de eventos<br>contiene nombres reales de familias y de niños, que no deben acabar en un repositorio público.)</small></i>
+</div>
+
+> [!NOTE]
+> **Regla de oro del registro: auditar nunca puede romper el juego del niño.** Todo el registro va envuelto en un `try/except` que como mucho emite un aviso en el log. Si la auditoría falla, el niño ni se entera.
+
+---
+
+<div align="center">
+
+## 5. Evaluación: medir antes y después
 
 </div>
 
@@ -388,7 +524,7 @@ Acierto de ruteo · recall@3 de chunk · distancia · idioma (`lingua`) · legib
 
 <div align="center">
 
-## 5. Tres problemas reales y cómo se resolvieron
+## 6. Tres problemas reales y cómo se resolvieron
 
 </div>
 
@@ -479,7 +615,7 @@ Cada decisión relevante está en [`docs/decisiones/`](docs/decisiones/) con el 
 
 <div align="center">
 
-## 6. Estructura del repositorio
+## 7. Estructura del repositorio
 
 </div>
 
@@ -511,7 +647,7 @@ Cada decisión relevante está en [`docs/decisiones/`](docs/decisiones/) con el 
 
 <div align="center">
 
-## 7. El vídeo demo
+## 8. El vídeo demo
 
 [![Ver en YouTube](https://img.shields.io/badge/▶️_Ver_en_YouTube-FF0000?style=for-the-badge)](COMPLETAR_ENLACE_YOUTUBE)
 [![Descargar del repo](https://img.shields.io/badge/📁_docs/demo/video--demo.mp4-24292e?style=for-the-badge)](docs/demo/video-demo.mp4)
@@ -535,7 +671,7 @@ Grabado **contra producción** (`chatmundoaventura.com`), no contra `localhost`.
 
 <div align="center">
 
-## 8. Ejecutar en local
+## 9. Ejecutar en local
 
 </div>
 
@@ -587,7 +723,7 @@ La app va detrás de una **cuenta de familia** (email + contraseña del adulto, 
 
 La interfaz tiene **efectos de sonido arcade sintetizados con la Web Audio API** (ni un fichero de audio ni una librería extra), con interruptor 🔊/🔇 en el HUD que silencia **también** la voz del personaje. El botón **📖 Manual** abre una guía en pantalla, con una sección para el niño y otra para el adulto.
 
-Dos zonas de adulto: **⚙️ Configuración** (autoservicio de la familia: perfiles, PIN, eliminar la cuenta) y **🛡️ Admin** (configuración global tras contraseña + 2FA opcional, en nueve pestañas: APIs, IA, Imagen, Voz, Personajes, Ubicaciones, Correo, Auditoría y Sistema).
+Dos zonas de adulto, separadas a propósito: **⚙️ Configuración** es el autoservicio de la familia (perfiles de niños, PIN, eliminar la cuenta) y **🛡️ Admin** es la configuración global de la instalación — detallada con capturas en la [§4](#4-el-panel-de-administración-todo-se-cambia-sin-tocar-código). Admin **no** cuelga de la sesión de familia: se entra también desde la pantalla de acceso, porque administrar la instalación no puede exigir crear una cuenta.
 
 Es **responsive** *mobile-first* (cortes en 640 y 960 px) y una **PWA instalable**; empaquetarla como **APK de Android** (TWA) está documentado en [`APK-ANDROID.md`](docs/APK-ANDROID.md).
 
@@ -613,7 +749,7 @@ uv run python -m evals.runner --modo completo --etiqueta baseline   # banco de e
 
 <div align="center">
 
-## 9. Limitaciones y qué viene después
+## 10. Limitaciones y qué viene después
 
 </div>
 
