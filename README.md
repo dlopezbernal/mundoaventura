@@ -748,7 +748,7 @@ uv run python -m evals.runner --modo completo --etiqueta baseline   # banco de e
 
 **🌱 El proyecto ya tiene descendencia**
 
-La arquitectura construida aquí se está reutilizando en **auladis360**, una aplicación didáctica para trabajar la **dislexia** con profesores-personaje, pizarra interactiva y coordinación con logopeda. La mejor prueba de que lo construido no era un ejercicio de clase, sino una base reutilizable.
+La arquitectura construida aquí se está reutilizando en una aplicación didáctica para trabajar la **dislexia** con profesores-personaje, pizarra interactiva y coordinación con logopeda. La mejor prueba de que lo construido no era un ejercicio de clase, sino una base reutilizable.
 
 Lo recortado conscientemente y lo que se haría con más tiempo, en [`TRABAJO-FUTURO.md`](docs/TRABAJO-FUTURO.md).
 
