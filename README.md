@@ -9,7 +9,7 @@
 <br>
 
 [![Ver la app EN VIVO](https://img.shields.io/badge/🌍_PRUÉBALA_EN_VIVO-chatmundoaventura.com-2ea44f?style=for-the-badge&labelColor=1a1a1a)](https://chatmundoaventura.com)
-[![Ver el vídeo demo](https://img.shields.io/badge/🎥_VÍDEO_DEMO-YouTube-FF0000?style=for-the-badge&labelColor=1a1a1a)](COMPLETAR_ENLACE_YOUTUBE)
+[![Ver el vídeo demo](https://img.shields.io/badge/🎥_VÍDEO_DEMO-YouTube-FF0000?style=for-the-badge&labelColor=1a1a1a)](https://youtu.be/SrndAsGQIw0)
 
 **✅ Aplicación desplegada en producción sobre un servidor VPS propio — no es un prototipo local**
 
@@ -57,15 +57,16 @@ CI/CD: *merge a `main` despliega*
 
 ### 🎥 VÍDEO DEMO
 
-**Disponible en dos sitios**
+**Publicado en YouTube**
 
-📁 **En este repositorio**
-`docs/demo/video-demo.mp4`
-*(descargable, sin internet)*
+### [▶️ Ver el vídeo](https://youtu.be/SrndAsGQIw0)
 
-▶️ **En YouTube**
-[Ver ahora](COMPLETAR_ENLACE_YOUTUBE)
+`youtu.be/SrndAsGQIw0`
 
+Arquitectura explicada
+y demo sobre producción
+
+*Ver también la [§8](#8-el-vídeo-demo)*
 
 </td>
 <td width="33%" align="center">
@@ -162,7 +163,7 @@ Las del panel de administración están en la [§4](#4-el-panel-de-administraci�
 | 🎛️ | **Producto administrable** | Panel de admin: claves, motor de IA, catálogos y **la base de conocimiento del RAG**, sin tocar código | [§4](#4-el-panel-de-administración-todo-se-cambia-sin-tocar-código) |
 | 💻 | **Código en GitHub** | Este repositorio · 18 ADRs · suite de tests · CI/CD real | [§7](#7-estructura-del-repositorio) |
 | 📝 | **Memoria** | Este README + [`docs/`](docs/README.md) (arquitectura, evaluación, privacidad, despliegue) | *aquí* |
-| 🎬 | **Vídeo demo** | En el repo **y** en YouTube | [§8](#8-el-vídeo-demo) |
+| 🎬 | **Vídeo demo** | Publicado en YouTube: [`youtu.be/SrndAsGQIw0`](https://youtu.be/SrndAsGQIw0) | [§8](#8-el-vídeo-demo) |
 
 ---
 
@@ -630,15 +631,14 @@ Cada decisión relevante está en [`docs/decisiones/`](docs/decisiones/) con el 
 ├── 📚 docs/
 │   ├── decisiones/       Los 18 ADRs — el diario técnico
 │   ├── mediciones/       Concurrencia, GPU/STT, latencia, despliegue sin corte
-│   ├── img/              📸 Capturas de todas las pantallas + gráficas
-│   └── demo/             🎥 video-demo.mp4
+│   └── img/              📸 Capturas de todas las pantallas + gráficas
 ├── 🚀 deploy/            Lo que corre en el VPS: systemd, Caddyfile, despliegue y copias
 ├── 🔧 scripts/           Arranque doble, generación de tipos desde OpenAPI, bancos de medida
 └── 📖 README.md          Esta memoria
 ```
 
 > [!TIP]
-> **Para evaluación sin conexión**: [`docs/img/`](docs/img/) contiene **capturas de todas las pantallas** y `docs/demo/` el **vídeo como archivo**. Nada de lo evaluable depende de que la web esté disponible.
+> **Para evaluación sin conexión**: [`docs/img/`](docs/img/) contiene **capturas de todas las pantallas** y las gráficas de la evaluación, así que esta memoria se lee entera sin abrir la web ni el vídeo. Lo único que vive fuera del repositorio es el vídeo demo, alojado en YouTube.
 
 **Contrato de tipos autogenerado.** Todos los endpoints declaran un `response_model` de Pydantic, y los tipos del frontend se **generan** del esquema OpenAPI (`uv run python -m scripts.gen_types`): el backend es la única fuente de verdad y no hay tipos escritos a mano que se desincronicen.
 
@@ -648,9 +648,23 @@ Cada decisión relevante está en [`docs/decisiones/`](docs/decisiones/) con el 
 
 ## 8. El vídeo demo
 
-*Pendiente de grabar.*
+<a href="https://youtu.be/SrndAsGQIw0"><img src="docs/img/Miniatura_2_Tecnica_MundoAventura.png" alt="Vídeo demo de MundoAventura en YouTube: arquitectura y demo en producción" width="70%"></a>
+
+### ▶️ [youtu.be/SrndAsGQIw0](https://youtu.be/SrndAsGQIw0)
+
+**Arquitectura + demo sobre la aplicación en producción**
 
 </div>
+
+El vídeo recorre el proyecto de punta a punta: para qué sirve, cómo está construido
+(el viaje de una pregunta de la [§2](#2-arquitectura-el-viaje-de-una-pregunta)) y la aplicación
+funcionando **contra [chatmundoaventura.com](https://chatmundoaventura.com)**, no contra un
+`localhost` — el flujo del niño, el panel de administración y los problemas que se midieron y
+resolvieron.
+
+El guion, el plan B por paso y la lista de lo que **no** puede salir en cámara están en
+[`DEFENSA.md`](docs/DEFENSA.md), que se escribió antes de grabar y se conserva como parte del
+método.
 
 ---
 
