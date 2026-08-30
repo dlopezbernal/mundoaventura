@@ -24,7 +24,7 @@ hay que redactarlo; el resto es adaptar prosa ya escrita.
 
 | Contenido | De dónde |
 |---|---|
-| Contexto y motivación | ✍️ (el "para qué sirve" del vídeo, bloque 1) |
+| Contexto y motivación | ✍️ (el "para qué sirve" del [vídeo](https://youtu.be/SrndAsGQIw0), bloque 1) |
 | Objetivos del proyecto | `docs/PLAN.md` §0 (prioridades declaradas **antes** de empezar) |
 | Alcance: qué entra y qué no | `docs/TRABAJO-FUTURO.md` (lo descartado conscientemente) |
 
@@ -144,6 +144,13 @@ que redibujar nada:
 > Los colores están **validados para daltonismo** (ΔE 24,7 en protanopía frente a un umbral de
 > 8) y las series llevan etiqueta además de color, así que la figura sigue leyéndose impresa en
 > blanco y negro o por alguien con visión del color reducida.
+
+### Vídeo de presentación ✅
+
+Grabado y publicado en **[`youtu.be/SrndAsGQIw0`](https://youtu.be/SrndAsGQIw0)** (arquitectura
++ demo sobre la aplicación en producción). En la memoria va como **enlace**, no incrustado; el
+sitio natural es la portada y el §6 (despliegue y operación). Su miniatura,
+`img/Miniatura_2_Tecnica_MundoAventura.png`, sirve además como figura de portada.
 
 ### Lo que aún falta ✍️
 

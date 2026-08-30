@@ -4,6 +4,13 @@ Qué enseñar, en qué orden y con qué plan B, tanto para la **defensa en sala*
 **vídeo grabado** que se entrega con la memoria. El trabajo futuro está en
 [`TRABAJO-FUTURO.md`](TRABAJO-FUTURO.md); la memoria, en [`MEMORIA.md`](MEMORIA.md).
 
+> **✅ El vídeo ya está grabado y publicado:** [`youtu.be/SrndAsGQIw0`](https://youtu.be/SrndAsGQIw0)
+> (miniatura en [`img/Miniatura_2_Tecnica_MundoAventura.png`](img/Miniatura_2_Tecnica_MundoAventura.png),
+> enlazada desde la §8 del [`README.md`](../README.md)).
+> Lo de abajo se conserva **tal cual se escribió antes de grabar**: sigue siendo el guion de la
+> defensa en sala, y deja constancia del método (ensayo, plan B por paso y qué no puede salir
+> en cámara) en vez de reescribirlo a posteriori para que cuadre con lo grabado.
+
 > **Regla de oro del ensayo:** ensayar contra **`https://chatmundoaventura.com`**, que es lo
 > que se entrega, no contra `localhost:5173`. En producción no hay CORS ni candado que
 > pelear (SPA y API comparten origen) y el micrófono funciona porque hay HTTPS válido —
